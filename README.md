@@ -12,14 +12,11 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 
 ## Screenshots
 
-### Home Screen
-![Stats Screen](screenshots/stats_screen.png)
-
-### Connections Screen
-![Connections Screen](screenshots/connections_screen.png)
-
-### Commands Screen
-![Commands Screen](screenshots/commands_screen.png)
+<p align="center">
+  <img src="screenshots/stats_screen.png" alt="Stats Screen" width="200"/>
+  <img src="screenshots/connections_screen.png" alt="Connections Screen" width="200"/>
+  <img src="screenshots/commands_screen.png" alt="Commands Screen" width="200"/>
+</p>
 
 ## Getting Started
 
