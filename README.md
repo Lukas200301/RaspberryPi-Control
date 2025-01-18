@@ -1,4 +1,3 @@
-
 # RaspberryPi-Control
 
 RaspberryPi-Control is a Flutter application that allows you to control and monitor your Raspberry Pi remotely. You can execute commands, view system stats, and manage SSH connections.
@@ -10,6 +9,17 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - View system stats (temperature, memory, uptime, etc.)
 - Manage multiple SSH connections
 - Light and dark theme support
+
+## Screenshots
+
+### Home Screen
+![Stats Screen](screenshots/stats_screen.png)
+
+### Connections Screen
+![Connections Screen](screenshots/connections_screen.png)
+
+### Commands Screen
+![Commands Screen](screenshots/commands_screen.png)
 
 ## Getting Started
 
@@ -23,7 +33,7 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/RaspberryPi-Control.git
+    git clone https://github.com/Lukas200301/RaspberryPi-Control.git
     cd RaspberryPi-Control
     ```
 
