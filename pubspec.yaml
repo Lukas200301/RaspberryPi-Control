@@ -1,5 +1,5 @@
 name: RaspberryPi_Control
-description: A RaspberryPi_Control Controll app.
+description: A RaspberryPi_Control Control app.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
