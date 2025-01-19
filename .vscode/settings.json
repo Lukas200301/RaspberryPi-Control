@@ -1,7 +1,7 @@
 {
-    "discord.enabled": false,
+    "discord.enabled": true,
     "discord.removeDetails": false,
-    "discord.removeLowerDetails": true,
-    "discord.removeRemoteRepository": true,
+    "discord.removeLowerDetails": false,
+    "discord.removeRemoteRepository": false,
     "discord.removeTimestamp": false
 }
