@@ -2,6 +2,6 @@
     "discord.enabled": true,
     "discord.removeDetails": false,
     "discord.removeLowerDetails": false,
-    "discord.removeRemoteRepository": false,
+    "discord.removeRemoteRepository": true,
     "discord.removeTimestamp": false
 }
