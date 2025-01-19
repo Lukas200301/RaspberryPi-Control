@@ -111,14 +111,14 @@ class _BarsScreenState extends State<BarsScreen> {
       sshService = service;
       connectionStatus = service != null
           ? 'Connected to ${service.name} (${service.host})'
-          : ''; // Clear status on logoff
+          : ''; 
   });
 }
 
   void _logOff() {
     sshService?.disconnect();
     setState(() {
-      connectionStatus = 'Disconnected out from ${sshService?.name} (${sshService?.host})';
+      connectionStatus = 'Disconnected from ${sshService?.name} (${sshService?.host})';
       sshService = null;
       _selectedIndex = 2;
       commandOutput = '';
