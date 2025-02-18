@@ -28,6 +28,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   String connectionStatus = '';
   int? _editingIndex;
   List<Map<String, String>> connections = [];
+  String _testConnectionStatus = '';
 
   @override
   void initState() {
@@ -89,39 +90,6 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     _saveConnections();
   }
 
-  void _connect() async {
-  if (isConnected) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please disconnect from the current Raspberry Pi before connecting to a new one.')),
-    );
-    return;
-  }
-
-  setState(() {
-    connectionStatus = 'Connecting...';
-  });
-    try {
-      sshService = SSHService(
-        name: _nameController.text,
-        host: _hostController.text,
-        port: int.parse(_portController.text),
-        username: _usernameController.text,
-        password: _passwordController.text,
-      );
-      await sshService!.connect();
-      widget.setSSHService(sshService!);
-      setState(() {
-        isConnected = true;
-        connectionStatus = 'Connected to ${_nameController.text}, (${_hostController.text})';
-      });
-    } catch (e) {
-      setState(() {
-        connectionStatus = 'Error: $e';
-      });
-    }
-  }
-
-
   void _connectToSavedConnection(Map<String, String> connection) async {
     if (isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,94 +148,151 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     _passwordController.clear();
   }
 
-  void _editConnectionFields(int index) {
-    final connection = connections[index];
-    _nameController.text = connection['name']!;
-    _hostController.text = connection['host']!;
-    _portController.text = connection['port']!;
-    _usernameController.text = connection['username']!;
-    _passwordController.text = connection['password']!;
-    setState(() {
+  void _showEditDialog({Map<String, String>? connection, int? index}) {
+    if (connection != null) {
+      _nameController.text = connection['name']!;
+      _hostController.text = connection['host']!;
+      _portController.text = connection['port']!;
+      _usernameController.text = connection['username']!;
+      _passwordController.text = connection['password']!;
       _editingIndex = index;
+    } else {
+      _clearFields();
+      _editingIndex = null;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(_editingIndex == null ? 'Add Connection' : 'Edit Connection'),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Connection Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _hostController,
+                      decoration: const InputDecoration(
+                        labelText: 'Host/IP',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _portController,
+                      decoration: const InputDecoration(
+                        labelText: 'Port',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _testConnectionStatus,
+                      style: TextStyle(
+                        color: _testConnectionStatus.startsWith('Error') ? Colors.red : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    await _testConnection(setState);
+                  },
+                  child: const Text('Test Connection'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _saveConnection();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _testConnection(StateSetter setState) async {
+    setState(() {
+      _testConnectionStatus = 'Testing connection...';
     });
+    try {
+      final testSSHService = SSHService(
+        name: _nameController.text,
+        host: _hostController.text,
+        port: int.parse(_portController.text),
+        username: _usernameController.text,
+        password: _passwordController.text,
+      );
+      await testSSHService.connect();
+      setState(() {
+        _testConnectionStatus = 'Connection successful!';
+      });
+      testSSHService.disconnect();
+    } catch (e) {
+      setState(() {
+        _testConnectionStatus = 'Error: $e';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Connection Manager'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showEditDialog(),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Connection Name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _hostController,
-              decoration: const InputDecoration(
-                labelText: 'Host/IP',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _portController,
-              decoration: const InputDecoration(
-                labelText: 'Port',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _saveConnection,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text('Save Connection'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _connect,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text('Connect'),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              connectionStatus,
-              style: TextStyle(
-                color: connectionStatus.startsWith('Error') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
             const Text(
               'Saved Connections:',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -278,29 +303,39 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
               itemCount: connections.length,
               itemBuilder: (context, index) {
                 final connection = connections[index];
-                return ListTile(
-                  title: Text(connection['name']!),
-                  subtitle: Text('Host: ${connection['host']}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () {
-                          _editConnectionFields(index);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _removeConnection(index),
-                      ),
-                    ],
+                return Card(
+                  child: ListTile(
+                    title: Text(connection['name']!),
+                    subtitle: Text('Host: ${connection['host']}'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () {
+                            _showEditDialog(connection: connection, index: index);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _removeConnection(index),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      _connectToSavedConnection(connection);
+                    },
                   ),
-                  onTap: () {
-                    _connectToSavedConnection(connection);
-                  },
                 );
               },
+            ),
+            const SizedBox(height: 16),
+            Text(
+              connectionStatus,
+              style: TextStyle(
+                color: connectionStatus.startsWith('Error') ? Colors.red : Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),

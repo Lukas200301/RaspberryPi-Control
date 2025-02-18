@@ -4,6 +4,7 @@ import 'ssh_service.dart';
 import 'connection_screen.dart';
 import 'command_screen.dart';
 import 'stats_screen.dart';
+import 'file_transfer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -172,11 +173,15 @@ class _BarsScreenState extends State<BarsScreen> {
               commandOutput: commandOutput,
               sendCommand: _sendCommand,
             )
-          : ConnectionScreen(
-              setSSHService: _setSSHService,
-              connectionStatus: connectionStatus,
-            ),
-      bottomNavigationBar: BottomNavigationBar(
+          : _selectedIndex == 2
+              ? ConnectionScreen(
+                  setSSHService: _setSSHService,
+                  connectionStatus: connectionStatus,
+                )
+              : FileTransferScreen(
+                  sshService: sshService,
+                ),
+            bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
@@ -190,9 +195,17 @@ class _BarsScreenState extends State<BarsScreen> {
             icon: Icon(Icons.connect_without_contact),
             label: 'Connections',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.file_copy),
+            label: 'File Explorer',
+          ),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey,
       ),
     );
   }

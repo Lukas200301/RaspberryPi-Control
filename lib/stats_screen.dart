@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'ssh_service.dart';
 import 'dart:async';
 
@@ -15,140 +17,164 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  Map<String, dynamic> statsMap = {
-    'temperature': '',
-    'cpu': '',
-    'processes': '',
-    'uptime': '',
-    'memory': '',
-    'swap': '',
-    'storages': <Map<String, String>>[],
-  };
   Timer? _timer;
   bool isLoading = true;
+  bool isInstallingPackages = false;
+  bool packagesInstalled = false;
+  SharedPreferences? prefs;
+
+  // Historical data storage
+  final List<FlSpot> cpuHistory = [];
+  final List<FlSpot> memoryHistory = [];
+  final List<FlSpot> cpuTempHistory = [];
+  final List<FlSpot> gpuTempHistory = [];
+  final List<FlSpot> networkInHistory = [];
+  final List<FlSpot> networkOutHistory = [];
+  final List<FlSpot> diskUsageHistory = [];
+  double timeIndex = 0;
+
+  // Update current stats storage
+  Map<String, dynamic> currentStats = {
+    'cpu': 0.0,
+    'memory': 0.0,
+    'memory_total': 0.0,
+    'memory_used': 0.0,
+    'cpu_temperature': 0.0,
+    'gpu_temperature': 0.0,
+    'disks': [],
+    'network_in': 0.0,
+    'network_out': 0.0,
+    'uptime': '',
+  };
 
   @override
   void initState() {
     super.initState();
+    _initializePrefs();
     if (widget.sshService != null) {
-      _fetchStats();
-      _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-        _fetchStats();
+      _checkRequiredPackages();
+    }
+  }
+
+  Future<void> _initializePrefs() async {
+    prefs = await SharedPreferences.getInstance();
+    packagesInstalled = prefs?.getBool('packagesInstalled') ?? false;
+    if (packagesInstalled) {
+      _startMonitoring();
+    } else {
+      setState(() {
+        isLoading = false;
       });
     }
   }
 
-  void _parseStats(String rawStats) {
-    statsMap['storages'] = <Map<String, String>>[];
-    
-    final lines = rawStats.split('\n');
-    for (var line in lines) {
-      line = line.trim();
-        if (line.startsWith('temp=')) {
-          final temp = line.replaceAll('temp=', '').trim();
-          statsMap['temperature'] = temp.replaceAll('\'C', '°C');
-        } else if (line.startsWith('%Cpu')) {
-          final cpuParts = line.split(',');
-          if (cpuParts.isNotEmpty) {
-            final userCpu = double.tryParse(
-              cpuParts[0]
-                  .replaceAll('%Cpu(s):', '')
-                  .replaceAll('us', '')
-                  .trim()
-            ) ?? 0.0;
-            statsMap['cpu'] = '${userCpu.toStringAsFixed(2)}%';
-          } else {
-            statsMap['cpu'] = 'Error';
-          }
-        } else if (line.startsWith('Tasks:')) {
-          final tasksParts = line.split(':')[1].trim().split(',');
-          final total = tasksParts[0].replaceAll('total', '').trim();
-          if (total.isNotEmpty) {
-            statsMap['processes'] = '$total tasks';
-          } else {
-            statsMap['processes'] = 'Error';
-          }
-        } else if (line.contains('up ')) {
-          final uptimeMatch = RegExp(r'up (.*?),').firstMatch(line);
-          if (uptimeMatch != null) {
-            statsMap['uptime'] = uptimeMatch.group(1) ?? 'Error';
-          } else {
-            statsMap['uptime'] = 'Error';
-          }
-        } else if (line.startsWith('Mem:')) {
-          try {
-            final memParts = line.split(' ').where((s) => s.isNotEmpty).toList();
-            if (memParts.length >= 7) {
-              final total = double.parse(memParts[1]) / 1024;
-              final used = double.parse(memParts[2]) / 1024;
-              statsMap['memory'] = '${used.toStringAsFixed(1)}GB / ${total.toStringAsFixed(1)}GB';
-            } else {
-              throw Exception('Invalid memory data format');
-            }
-          } catch (e) {
-            statsMap['memory'] = 'Error';
-          }
-        } else if (line.startsWith('Swap:')) {
-          try {
-            final swapParts = line.split(' ').where((s) => s.isNotEmpty).toList();
-            if (swapParts.length >= 3) {
-              final total = double.parse(swapParts[1]) / 1024;
-              final used = double.parse(swapParts[2]) / 1024;
-              statsMap['swap'] = '${used.toStringAsFixed(1)}GB / ${total.toStringAsFixed(1)}GB';
-            } else {
-              throw Exception('Invalid swap data format');
-            }
-          } catch (e) {
-            statsMap['swap'] = 'Error';
-          }
-        } else if (line.contains('/dev/') && !line.contains('tmpfs') && !line.contains('udev')) {
-          try {
-            final parts = line.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
-            if (parts.length >= 6 && parts[0].startsWith('/dev/')) {
-              final size = parts[1];
-              final used = parts[2];
-              final percentage = parts[4];
-              final mountPoint = parts[5];
-              
-              if (!mountPoint.startsWith('/boot')) {
-                (statsMap['storages'] as List<Map<String, String>>).add({
-                  'mountPoint': mountPoint,
-                  'info': '$used / $size ($percentage)',
-                });
+  void _startMonitoring() {
+    _fetchStats();
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      _fetchStats();
+    });
+  }
+
+  Future<void> _checkRequiredPackages() async {
+    if (!packagesInstalled) {
+      final hasPackages = await widget.sshService!.checkRequiredPackages();
+      if (!hasPackages) {
+        if (mounted) {
+          final shouldInstall = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('Additional Packages Required'),
+              content: const Text(
+                'To enable advanced monitoring features, the following packages '
+                'need to be installed:\n\n'
+                '• sysstat (system statistics)\n'
+                '• ifstat (network monitoring)\n'
+                '• nmon (performance monitoring)\n'
+                '• vcgencmd (GPU temperature monitoring)\n'
+                'Would you like to install them now?'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Skip'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Install'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldInstall == true) {
+            setState(() {
+              isLoading = true;
+              isInstallingPackages = true;
+            });
+            try {
+              await widget.sshService!.installRequiredPackages();
+              packagesInstalled = true;
+              await prefs?.setBool('packagesInstalled', true);
+              _startMonitoring();
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to install packages: $e')),
+                );
               }
             }
-          } catch (e) {
-            (statsMap['storages'] as List<Map<String, String>>).add({
-              'mountPoint': 'Error',
-              'info': 'Failed to read storage info',
+            setState(() {
+              isLoading = false;
+              isInstallingPackages = false;
             });
           }
         }
+      } else {
+        packagesInstalled = true;
+        await prefs?.setBool('packagesInstalled', true);
+        _startMonitoring();
+      }
     }
   }
 
   Future<void> _fetchStats() async {
-    if (widget.sshService != null) {
-      setState(() {
-        isLoading = true;
-      });
-      
+    if (widget.sshService != null && packagesInstalled) {
       try {
-        final result = await widget.sshService!.getStats();
-        setState(() {
-          _parseStats(result);
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() {
-          statsMap.forEach((key, value) {
-            if (key != 'storages') {
-              statsMap[key] = 'Connection Error';
+        if (!widget.sshService!.isConnected()) {
+          await widget.sshService!.connect();
+        }
+        final stats = await widget.sshService!.getDetailedStats();
+        if (mounted) {
+          setState(() {
+            currentStats = stats;
+            timeIndex += 1;
+
+            // Update all history lists
+            cpuHistory.add(FlSpot(timeIndex, stats['cpu'] ?? 0));
+            memoryHistory.add(FlSpot(timeIndex, stats['memory'] ?? 0));
+            cpuTempHistory.add(FlSpot(timeIndex, stats['cpu_temperature'] ?? 0));
+            gpuTempHistory.add(FlSpot(timeIndex, stats['gpu_temperature'] ?? 0));
+            networkInHistory.add(FlSpot(timeIndex, stats['network_in'] ?? 0));
+            networkOutHistory.add(FlSpot(timeIndex, stats['network_out'] ?? 0));
+            diskUsageHistory.add(FlSpot(timeIndex, double.tryParse(stats['disk_used'] ?? '0') ?? 0));
+
+            // Limit history length to prevent memory issues
+            if (cpuHistory.length > 50) {
+              cpuHistory.removeAt(0);
+              memoryHistory.removeAt(0);
+              cpuTempHistory.removeAt(0);
+              gpuTempHistory.removeAt(0);
+              networkInHistory.removeAt(0);
+              networkOutHistory.removeAt(0);
+              diskUsageHistory.removeAt(0);
             }
+
+            isLoading = false;
           });
-          statsMap['storages'] = <Map<String, String>>[];
-          isLoading = false;
-        });
+        }
+      } catch (e) {
+        print('Error fetching stats: $e');
       }
     }
   }
@@ -159,58 +185,69 @@ class _StatsScreenState extends State<StatsScreen> {
     super.dispose();
   }
 
-  Color _getTemperatureColor(String temp) {
-    if (temp.isEmpty) return Colors.grey;
-    final value = double.tryParse(temp.replaceAll('°C', '').replaceAll('\'C', '')) ?? 0;
-    if (value >= 75) return Colors.red;
-    if (value >= 67.5) return Colors.orange;
-    if (value >= 60) return Colors.yellow;
-    return Colors.green;
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    bool isStorageCard = title.startsWith('Storage:');
-    double titleFontSize = isStorageCard ? 12 : 14;
-
+  Widget _buildChart(String title, List<FlSpot> spots, Color color, String suffix, String maxValue, {double maxY = 100}) {
     return Card(
-      elevation: 3,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon, 
-              size: 24, 
-              color: title == 'Temperature' 
-                ? _getTemperatureColor(value)
-                : Theme.of(context).primaryColor
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: titleFontSize,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,  
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            isLoading
-                ? const SizedBox(
-                    height: 12,
-                    width: 12,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(
-                    value.isEmpty ? 'N/A' : value,
-                    style: const TextStyle(fontSize: 12),
-                    textAlign: TextAlign.center,
-                    maxLines: 3, 
-                    overflow: TextOverflow.ellipsis,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+                Text(
+                  maxValue,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${spots.isEmpty ? 0 : spots.last.y.toStringAsFixed(1)}$suffix',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 150,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true),
+                  titlesData: FlTitlesData(show: false),
+                  borderData: FlBorderData(show: true),
+                  minX: spots.isEmpty ? 0 : spots.first.x,
+                  maxX: spots.isEmpty ? timeIndex : spots.last.x,
+                  minY: 0,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      colors: [color],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        colors: [color.withOpacity(0.1), color.withOpacity(0)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -219,60 +256,212 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> mainStats = [
-      _buildStatCard('Temperature', 
-          statsMap['temperature'] ?? '', 
-          Icons.thermostat),
-      _buildStatCard('CPU Usage', 
-          statsMap['cpu'] ?? '', 
-          Icons.memory),
-      _buildStatCard('Tasks', 
-          statsMap['processes'] ?? '', 
-          Icons.apps),
-      _buildStatCard('RAM Memory', 
-          statsMap['memory'] ?? '', 
-          Icons.storage),
-      _buildStatCard('Uptime',
-          statsMap['uptime'] ?? '',
-          Icons.timer),
-      _buildStatCard('Swap', 
-          statsMap['swap'] ?? '', 
-          Icons.swap_horiz),
-    ];
-
-    if (statsMap['storages'] is List) {
-      for (final storage in statsMap['storages']) {
-        mainStats.add(
-          _buildStatCard(
-            'Storage: ${storage['mountPoint']}',
-            storage['info'] ?? '',
-            Icons.sd_storage,
-          ),
-        );
-      }
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
     }
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _fetchStats,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                childAspectRatio: 1.3,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                children: mainStats,
-              ),
-            ],
-          ),
+    if (isInstallingPackages) {
+      return const Center(
+        child: Text(
+          'Installing required packages, please wait...',
+          style: TextStyle(fontSize: 16),
         ),
+      );
+    }
+
+    if (!packagesInstalled) {
+      return const Center(
+        child: Text(
+          'Install required packages to enable monitoring',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchStats,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            _buildUptimeInfo(),
+            _buildChart(
+              'CPU Usage',
+              cpuHistory,
+              Colors.blue,
+              '%',
+              'Max: 100%',
+            ),
+            const SizedBox(height: 16),
+            _buildChart(
+              'Memory Usage',
+              memoryHistory,
+              Colors.green,
+              '%',
+              'Max: ${currentStats['memory_total']} MB',
+            ),
+            const SizedBox(height: 16),
+            _buildChart(
+              'CPU Temperature',
+              cpuTempHistory,
+              Colors.orange,
+              '°C',
+              'Max: 90°C',
+            ),
+            const SizedBox(height: 16),
+            _buildChart(
+              'GPU Temperature',
+              gpuTempHistory,
+              Colors.red,
+              '°C',
+              'Max: 90°C',
+            ),
+            const SizedBox(height: 16),
+            _buildChart(
+              'Network In',
+              networkInHistory,
+              Colors.purple,
+              'KB/s',
+              'Network Traffic',
+              maxY: 1000000, 
+            ),
+            const SizedBox(height: 16),
+            _buildChart(
+              'Network Out',
+              networkOutHistory,
+              Colors.indigo,
+              'KB/s',
+              'Network Traffic',
+              maxY: 1000000,
+            ),
+            const SizedBox(height: 16),
+            _buildDiskUsage(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiskUsage() {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Disk Usage',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...currentStats['disks'].map<Widget>((disk) {
+            final usedPercentage = double.tryParse(disk['used_percentage']?.replaceAll('%', '') ?? '0') ?? 0.0;
+            Color progressColor;
+            if (usedPercentage >= 90) {
+              progressColor = Colors.red;
+            } else if (usedPercentage >= 75) {
+              progressColor = Colors.orange;
+            } else if (usedPercentage >= 50) {
+              progressColor = Colors.yellow;
+            } else {
+              progressColor = Colors.green;
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${disk['name']} - ${disk['size']}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  height: 8,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child:LinearProgressIndicator(
+                      value: usedPercentage / 100,
+                      backgroundColor:progressColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${disk['used']} used of ${disk['size']} (${disk['used_percentage']}%)',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    ),
+  );
+}
+
+  Widget _buildUptimeInfo() {
+    String formatUptime(String uptime) {
+      if (uptime.isEmpty) return 'N/A';
+      return uptime;
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'System Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildInfoRow(
+              'Uptime', 
+              formatUptime(currentStats['uptime']?.toString() ?? '')
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14),
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
