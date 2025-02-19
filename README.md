@@ -1,21 +1,24 @@
 # RaspberryPi-Control
 
-RaspberryPi-Control is a Flutter application that allows you to control and monitor your Raspberry Pi remotely. You can execute commands, view system stats, and manage SSH connections.
+RaspberryPi-Control is a Flutter application that allows you to control and monitor your Raspberry Pi remotely. You can execute commands, view system stats, manage SSH connections, and transfer files.
 
 ## Features
 
 - Connect to Raspberry Pi via SSH
 - Execute commands on the Raspberry Pi
-- View system stats (temperature, memory, uptime, etc.)
+- View detailed system stats (CPU, memory, temperature, disk usage, network traffic, etc.)
 - Manage multiple SSH connections
+- Transfer files between your device and the Raspberry Pi
+- Start, stop, and restart services on the Raspberry Pi
 - Light and dark theme support
 
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/stats_screen.png" alt="Stats Screen" width="200"/>
-  <img src="screenshots/commands_screen.png" alt="Commands Screen" width="200"/>
-  <img src="screenshots/connections_screen.png" alt="Connections Screen" width="200"/>
+  <img src="screenshots/stats.png" alt="Stats Screen" width="200"/>
+  <img src="screenshots/terminal.png" alt="Commands Screen" width="200"/>
+  <img src="screenshots/connections.png" alt="Connections Screen" width="200"/>
+  <img src="screenshots/file_explorer.png" alt="File Explorer Screen" width="200"/>
 </p>
 
 ## Getting Started
@@ -50,8 +53,10 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 2. Navigate to the "Connections" tab to add a new SSH connection.
 3. Enter the connection details (name, host, port, username, password) and save the connection.
 4. Select the saved connection to connect to your Raspberry Pi.
-5. Use the "Commands" tab to execute commands on the Raspberry Pi.
-6. Use the "Stats" tab to view system stats.
+5. Use the "Terminal" tab to execute commands on the Raspberry Pi.
+6. Use the "Stats" tab to view detailed system stats.
+7. Use the "File Explorer" tab to transfer files between your device and the Raspberry Pi.
+8. Use the "Service Control" section in the "Stats" tab to start, stop, and restart services.
 
 ## Dependencies
 
@@ -59,6 +64,8 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - `dartssh2`: SSH client library for Dart
 - `shared_preferences`: For storing connection details locally
 - `convert`: For encoding and decoding data
+- `file_picker`: For picking files to upload
+- `fl_chart`: For displaying charts
 
 ## Development
 

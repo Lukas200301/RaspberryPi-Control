@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'ssh_service.dart';
 import 'dart:io';
 
-class FileTransferScreen extends StatefulWidget {
+class FileExplorerScreen extends StatefulWidget {
   final SSHService? sshService;
 
-  const FileTransferScreen({
+  const FileExplorerScreen({
     super.key,
     required this.sshService,
   });
 
   @override
-  _FileTransferScreenState createState() => _FileTransferScreenState();
+  _FileExplorerScreenState createState() => _FileExplorerScreenState();
 }
 
 enum SortOption {
@@ -24,7 +25,7 @@ enum SortOption {
   sizeLargeSmall,
 }
 
-class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticKeepAliveClientMixin<FileTransferScreen> {
+class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticKeepAliveClientMixin<FileExplorerScreen> {
   String _currentPath = '/';
   List<FileEntity> _contents = [];
   bool _isLoading = false;
@@ -151,57 +152,68 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
     }
 
     final result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.any);
-    if (result != null && result.files.isNotEmpty) {
+    if (result == null || result.files.isEmpty) {
       setState(() {
-        _isLoading = true;
-        _isUploading = true;
-        _progress = 0.0;  
-        _progressMessage = 'Uploading files...';
+        _isLoading = false;
+        _isUploading = false;
       });
+      return;
+    }
 
-      try {
-        int totalSize = result.files.fold(0, (sum, file) => sum + file.size);
-        int uploadedSize = 0;
+    setState(() {
+      _isLoading = true;
+      _isUploading = true;
+      _progress = 0.0;  
+      _progressMessage = 'Uploading files...';
+    });
 
-        for (int i = 0; i < result.files.length; i++) {
-          if (_isCancelled) break;
-          final file = result.files[i];
+    try {
+      int totalSize = result.files.fold(0, (sum, file) => sum + file.size);
+      int uploadedSize = 0;
 
-          if (file.path != null) {
-            final localPath = file.path!;
-            final fileName = file.name;
-            final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$fileName';
+      for (int i = 0; i < result.files.length; i++) {
+        if (_isCancelled) break;
+        final file = result.files[i];
 
-            setState(() {
-              _currentFileName = fileName;
-              _sourcePath = localPath;
-              _destinationPath = remotePath;
+        if (file.path != null) {
+          final localPath = file.path!;
+          final fileName = file.name;
+          final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$fileName';
+
+          setState(() {
+            _currentFileName = fileName;
+            _sourcePath = localPath;
+            _destinationPath = remotePath;
+          });
+
+          if (FileSystemEntity.isDirectorySync(localPath)) {
+            await _uploadDirectory(localPath, remotePath);
+          } else {
+            await widget.sshService!.uploadFile(localPath, remotePath, (sent, total) {
+              if (mounted) {
+                setState(() {
+                  uploadedSize = sent;  
+                  _progress = uploadedSize / totalSize; 
+                });
+              }
             });
-
-            if (FileSystemEntity.isDirectorySync(localPath)) {
-              await _uploadDirectory(localPath, remotePath);
-            } else {
-              await widget.sshService!.uploadFile(localPath, remotePath, (sent, total) {
-                if (mounted) {
-                  setState(() {
-                    uploadedSize = sent;  
-                    _progress = uploadedSize / totalSize; 
-                  });
-                }
-              });
-            }
           }
         }
+      }
 
-        await _loadCurrentDirectory();
+      await _loadCurrentDirectory();
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload Completed Successfully!')),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload Completed Successfully!')),
+        );
+      }
 
-      } catch (e) {
+    } catch (e) {
+      if (e.toString().contains('Not connected')) {
+        await widget.sshService!.connect();
+        await _uploadFile();
+      } else {
         if (!mounted) return;
         setState(() {
           _errorMessage = 'Upload error: $e';
@@ -210,19 +222,19 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to upload: $e')),
         );
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _isUploading = false;  
-            _progress = 0.0;
-            _progressMessage = '';
-            _isCancelled = false;
-            _currentFileName = '';
-            _sourcePath = '';
-            _destinationPath = '';
-          });
-        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isUploading = false;  
+          _progress = 0.0;
+          _progressMessage = '';
+          _isCancelled = false;
+          _currentFileName = '';
+          _sourcePath = '';
+          _destinationPath = '';
+        });
       }
     }
   }
@@ -257,7 +269,7 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
           (sent, total) {
             if (mounted) {
               setState(() {
-                uploadedSize = sent;
+                uploadedSize += sent;
                 _progress = uploadedSize / totalSize;
               });
             }
@@ -269,10 +281,15 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
       setState(() {
         _isUploading = false; 
         _isLoading = false;
+        _progress = 0.0;
+        _progressMessage = '';
+        _isCancelled = false;
+        _currentFileName = '';
+        _sourcePath = '';
+        _destinationPath = '';
       });
     }
   }
-
 
   Future<void> _uploadFolder() async {
     if (widget.sshService == null) {
@@ -302,14 +319,19 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
           SnackBar(content: Text('Uploaded folder: $directoryName')),
         );
       } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'Upload error: $e';
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload folder: $e')),
-        );
+        if (e.toString().contains('Not connected')) {
+          await widget.sshService!.connect();
+          await _uploadFolder();
+        } else {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = 'Upload error: $e';
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to upload folder: $e')),
+          );
+        }
       } finally {
         if (mounted) {
           setState(() {
@@ -384,12 +406,17 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
         _selectedItems.clear();
       });
     } catch (e) {
-      if (!mounted) return;
-      
-      setState(() => _errorMessage = 'Download error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to download: $e')),
-      );
+      if (e.toString().contains('Not connected')) {
+        await widget.sshService!.connect();
+        await _downloadSelected();
+      } else {
+        if (!mounted) return;
+        
+        setState(() => _errorMessage = 'Download error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -500,12 +527,17 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
         _selectedItems.clear();
       });
     } catch (e) {
-      if (!mounted) return;
+      if (e.toString().contains('Not connected')) {
+        await widget.sshService!.connect();
+        await _deleteSelected();
+      } else {
+        if (!mounted) return;
 
-      setState(() => _errorMessage = 'Delete error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete: $e')),
-      );
+        setState(() => _errorMessage = 'Delete error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -552,7 +584,15 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
-        title: Text(_currentPath),
+        title: GestureDetector(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Path copied to clipboard')),
+            );
+            Clipboard.setData(ClipboardData(text: _currentPath));
+          },
+          child: Text(_currentPath),
+        ),
         leading: _isSelectionMode
           ? IconButton(
               icon: const Icon(Icons.close),
@@ -636,8 +676,8 @@ class _FileTransferScreenState extends State<FileTransferScreen> with AutomaticK
                 Text(_progressMessage),
                 const SizedBox(height: 10),
                 Center(child: Text('File: $_currentFileName')),
-                Center(child: Text('Source: $_sourcePath')),
-                Center(child: Text('Destination: $_destinationPath')),
+                Center(child: Text('Source: $_sourcePath', textAlign: TextAlign.center)),
+                Center(child: Text('Destination: $_destinationPath', textAlign: TextAlign.center)),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: _cancelOperation,

@@ -4,7 +4,7 @@ import 'ssh_service.dart';
 import 'connection_screen.dart';
 import 'command_screen.dart';
 import 'stats_screen.dart';
-import 'file_transfer_screen.dart';
+import 'file_explorer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,12 +88,32 @@ class BarsScreen extends StatefulWidget {
   State<BarsScreen> createState() => _BarsScreenState();
 }
 
-class _BarsScreenState extends State<BarsScreen> {
+class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   int _selectedIndex = 2;
   SSHService? sshService;
   final TextEditingController _commandController = TextEditingController();
   String commandOutput = '';
   String connectionStatus = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    sshService?.disconnect();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && sshService != null && !sshService!.isConnected()) {
+      sshService!.reconnect();
+    }
+  }
 
   void _onItemTapped(int index) {
     if (sshService != null || index == 2) {
@@ -178,7 +198,7 @@ class _BarsScreenState extends State<BarsScreen> {
                   setSSHService: _setSSHService,
                   connectionStatus: connectionStatus,
                 )
-              : FileTransferScreen(
+              : FileExplorerScreen(
                   sshService: sshService,
                 ),
             bottomNavigationBar: BottomNavigationBar(
@@ -189,7 +209,7 @@ class _BarsScreenState extends State<BarsScreen> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.code),
-            label: 'Commands',
+            label: 'Terminal',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.connect_without_contact),

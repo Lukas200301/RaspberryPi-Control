@@ -38,7 +38,7 @@ class _CommandScreenState extends State<CommandScreen> {
     super.dispose();
   }
 
-  void _sendCommand() {
+  void _sendCommand() async {
     final command = widget.commandController.text.trim();
     if (command.isNotEmpty) {
       if (_commandHistory.isEmpty || _commandHistory.last != command) {
@@ -88,6 +88,7 @@ class _CommandScreenState extends State<CommandScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -98,17 +99,17 @@ class _CommandScreenState extends State<CommandScreen> {
               padding: const EdgeInsets.all(16.0),
               child: SelectableText(
                 widget.commandOutput,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 14,
-                  color: Colors.white,
+                  color: isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: Colors.transparent,
               border: Border(
                 top: BorderSide(
                   color: Colors.grey[850]!,
@@ -135,15 +136,15 @@ class _CommandScreenState extends State<CommandScreen> {
                     child: TextField(
                       controller: widget.commandController,
                       focusNode: _focusNode,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white : Colors.black,
                         fontSize: 14,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: 'Enter command',
                         hintStyle: TextStyle(
-                          color: Colors.grey,
+                          color: isDarkMode ? Colors.grey : Colors.black54,
                           fontSize: 14,
                         ),
                       ),

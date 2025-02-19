@@ -17,13 +17,17 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
-  Timer? _timer;
   bool isLoading = true;
   bool isInstallingPackages = false;
   bool packagesInstalled = false;
+  bool _showSearchBar = false;
   SharedPreferences? prefs;
+  List<Map<String, String>> services = [];
+  String _sortOption = 'Name';
+  List<Map<String, String>> filteredServices = [];
 
-  // Historical data storage
+  final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
   final List<FlSpot> cpuHistory = [];
   final List<FlSpot> memoryHistory = [];
   final List<FlSpot> cpuTempHistory = [];
@@ -31,9 +35,9 @@ class _StatsScreenState extends State<StatsScreen> {
   final List<FlSpot> networkInHistory = [];
   final List<FlSpot> networkOutHistory = [];
   final List<FlSpot> diskUsageHistory = [];
+
   double timeIndex = 0;
 
-  // Update current stats storage
   Map<String, dynamic> currentStats = {
     'cpu': 0.0,
     'memory': 0.0,
@@ -47,13 +51,60 @@ class _StatsScreenState extends State<StatsScreen> {
     'uptime': '',
   };
 
+   @override
+void initState() {
+  super.initState();
+  _initializePrefs();
+  if (widget.sshService != null) {
+    _checkRequiredPackages();
+  }
+  _searchController.addListener(_filterServices);
+  _startInitialFetch();
+}
+
   @override
-  void initState() {
-    super.initState();
-    _initializePrefs();
-    if (widget.sshService != null) {
-      _checkRequiredPackages();
+  void dispose() {
+    _searchFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+
+  void _filterServices() {
+    if (_searchController.text.isEmpty) {
+      filteredServices = List.from(services);
+    } else {
+      final query = _searchController.text.toLowerCase();
+      filteredServices = services.where((service) {
+        return service['name']!.toLowerCase().contains(query) ||
+               service['description']!.toLowerCase().contains(query);
+      }).toList();
     }
+    _sortServices();
+  }
+
+  void _sortServices() {
+    setState(() {
+      if (_sortOption == 'Name') {
+        filteredServices.sort((a, b) => a['name']!.toLowerCase().compareTo(b['name']!.toLowerCase()));
+      } else if (_sortOption == 'Status') {
+        filteredServices.sort((a, b) {
+          const statusOrder = {'running': 0, 'exited': 1, 'dead': 2};
+          return statusOrder[a['status']]!.compareTo(statusOrder[b['status']]!);
+        });
+      }
+    });
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _startMonitoring() {
+    _fetchStats();
+    Timer.periodic(const Duration(seconds: 2), (timer) {
+      _fetchStats();
+    });
   }
 
   Future<void> _initializePrefs() async {
@@ -66,13 +117,6 @@ class _StatsScreenState extends State<StatsScreen> {
         isLoading = false;
       });
     }
-  }
-
-  void _startMonitoring() {
-    _fetchStats();
-    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      _fetchStats();
-    });
   }
 
   Future<void> _checkRequiredPackages() async {
@@ -92,6 +136,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 '• ifstat (network monitoring)\n'
                 '• nmon (performance monitoring)\n'
                 '• vcgencmd (GPU temperature monitoring)\n'
+                '• lsb-release (Show operating system)\n'
                 'Would you like to install them now?'
               ),
               actions: [
@@ -150,7 +195,6 @@ class _StatsScreenState extends State<StatsScreen> {
             currentStats = stats;
             timeIndex += 1;
 
-            // Update all history lists
             cpuHistory.add(FlSpot(timeIndex, stats['cpu'] ?? 0));
             memoryHistory.add(FlSpot(timeIndex, stats['memory'] ?? 0));
             cpuTempHistory.add(FlSpot(timeIndex, stats['cpu_temperature'] ?? 0));
@@ -159,8 +203,7 @@ class _StatsScreenState extends State<StatsScreen> {
             networkOutHistory.add(FlSpot(timeIndex, stats['network_out'] ?? 0));
             diskUsageHistory.add(FlSpot(timeIndex, double.tryParse(stats['disk_used'] ?? '0') ?? 0));
 
-            // Limit history length to prevent memory issues
-            if (cpuHistory.length > 50) {
+            if (cpuHistory.length > 100) {
               cpuHistory.removeAt(0);
               memoryHistory.removeAt(0);
               cpuTempHistory.removeAt(0);
@@ -174,16 +217,86 @@ class _StatsScreenState extends State<StatsScreen> {
           });
         }
       } catch (e) {
-        print('Error fetching stats: $e');
+        if (e.toString().contains('Not connected')) {
+          await Future.delayed(const Duration(seconds: 5));
+          _fetchStats();
+        }
       }
     }
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  Future<void> _startInitialFetch() async {
+    if (widget.sshService != null) {
+      await Future.delayed(const Duration(milliseconds: 500)); 
+      await _fetchServices();
+      _filterServices(); 
+      _sortServices();  
+    }
   }
+
+  Future<void> _fetchServices() async {
+    if (widget.sshService == null) {
+      return;
+    }
+
+    try {
+      if (!widget.sshService!.isConnected()) {
+        await widget.sshService!.connect();
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+      final fetchedServices = await widget.sshService!.getServices();
+      if (mounted) {
+        setState(() {
+          services = fetchedServices;
+          _filterServices(); 
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to fetch services: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _startService(String serviceName) async {
+    if (widget.sshService != null) {
+      await widget.sshService!.startService(serviceName);
+      _showMessage('Service $serviceName started');
+    }
+  }
+
+  Future<void> _stopService(String serviceName) async {
+    if (widget.sshService != null) {
+      await widget.sshService!.stopService(serviceName);
+      _showMessage('Service $serviceName stopped');
+    }
+  }
+
+  Future<void> _restartService(String serviceName) async {
+    if (widget.sshService != null) {
+      await widget.sshService!.restartService(serviceName);
+      _showMessage('Service $serviceName restarted');
+    }
+  }
+
+  Future<void> _refreshServices() async {
+    await _fetchServices();
+    _filterServices();
+    _sortServices();
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'running') {
+      return Colors.green;
+    } else if (status == 'dead') {
+      return Colors.red;
+    } else if (status == 'exited') {
+      return Colors.orange;
+    }
+    return Colors.grey;
+  } 
 
   Widget _buildChart(String title, List<FlSpot> spots, Color color, String suffix, String maxValue, {double maxY = 100}) {
     return Card(
@@ -254,7 +367,7 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(
@@ -288,7 +401,12 @@ class _StatsScreenState extends State<StatsScreen> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            _buildUptimeInfo(),
+            _buildSystemInfo(),
+            const SizedBox(height: 16),
+            _buildServiceControl(),
+            const SizedBox(height: 16),
+            _buildDiskUsage(),
+            const SizedBox(height: 16),
             _buildChart(
               'CPU Usage',
               cpuHistory,
@@ -327,7 +445,7 @@ class _StatsScreenState extends State<StatsScreen> {
               Colors.purple,
               'KB/s',
               'Network Traffic',
-              maxY: 1000000, 
+              maxY: 200000,
             ),
             const SizedBox(height: 16),
             _buildChart(
@@ -336,15 +454,274 @@ class _StatsScreenState extends State<StatsScreen> {
               Colors.indigo,
               'KB/s',
               'Network Traffic',
-              maxY: 1000000,
+              maxY: 200000,
             ),
-            const SizedBox(height: 16),
-            _buildDiskUsage(),
           ],
         ),
       ),
     );
   }
+  
+  Widget _buildServiceControl() {
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Service Control',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    tooltip: 'Search Services',
+                    onPressed: () {
+                      setState(() {
+                        _showSearchBar = !_showSearchBar;
+                        if (!_showSearchBar) {
+                          _searchController.clear();
+                          _filterServices();
+                        }
+                      });
+                    },
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.sort),
+                    tooltip: 'Sort Services',
+                    onSelected: (String value) {
+                      setState(() {
+                        _sortOption = value;
+                        _sortServices();
+                      });
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'Name',
+                        child: Text('Name'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'Status',
+                        child: Text('Status'),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh Services',
+                    onPressed: _refreshServices,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (_showSearchBar) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Search services...',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _filterServices();
+                });
+              },
+            ),
+          ],
+          const SizedBox(height: 16),
+          Container(
+            height: 300,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: filteredServices.length,
+              itemBuilder: (context, index) {
+                final service = filteredServices[index];
+                final serviceName = service['name'] ?? '';
+                final status = service['status'] ?? '';
+                final description = service['description'] ?? '';
+                
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey.shade300,
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: ListTile(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        serviceName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Description:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  description,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Status: ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Text(
+                                      status,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: _getStatusColor(status),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    title: Text(
+                      serviceName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Text(
+                            description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _getStatusColor(status),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.play_arrow,
+                            size: 16,
+                          ),
+                          tooltip: 'Start Service',
+                          onPressed: () => _startService(serviceName),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          color: Colors.green,
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.stop,
+                            size: 16,
+                          ),
+                          tooltip: 'Stop Service',
+                          onPressed: () => _stopService(serviceName),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          color: Colors.red,
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 16,
+                          ),
+                          tooltip: 'Restart Service',
+                          onPressed: () => _restartService(serviceName),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 24,
+                            minHeight: 24,
+                          ),
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildDiskUsage() {
   return Card(
@@ -410,59 +787,75 @@ class _StatsScreenState extends State<StatsScreen> {
   );
 }
 
-  Widget _buildUptimeInfo() {
-    String formatUptime(String uptime) {
-      if (uptime.isEmpty) return 'N/A';
-      return uptime;
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'System Information',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-              'Uptime', 
-              formatUptime(currentStats['uptime']?.toString() ?? '')
-            ),
-          ],
-        ),
-      ),
-    );
+  Widget _buildSystemInfo() {
+  String formatUptime(String uptime) {
+    if (uptime.isEmpty) return 'N/A';
+    return uptime;
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          const Text(
+            'System Information',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 14),
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 16),
+          Table(
+            border: TableBorder.all(
+              color: Colors.grey,
+              width: 1,
+              style: BorderStyle.solid,
             ),
+            columnWidths: const {
+              0: FlexColumnWidth(1),
+              1: FlexColumnWidth(2),
+            },
+            children: [
+              _buildTableRow('Hostname', currentStats['hostname']?.toString() ?? 'N/A'),
+              _buildTableRow('Operating System', currentStats['os']?.toString().replaceAll('Description:', '').trim() ?? 'N/A'),
+              _buildTableRow('IP Address', currentStats['ip_address']?.toString() ?? 'N/A'),
+              _buildTableRow('Uptime', formatUptime(currentStats['uptime']?.toString() ?? '')),
+              _buildTableRow('CPU Model', currentStats['cpu_model']?.toString() ?? 'N/A'),
+              _buildTableRow('Total Disk Space', currentStats['total_disk_space']?.toString() ?? 'N/A'),
+              _buildTableRow('Swap Memory Usage', currentStats['swap_memory']?.toString() ?? 'N/A'),
+            ],
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+TableRow _buildTableRow(String label, String value) {
+  return TableRow(
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Text(
+          value,
+          style: const TextStyle(fontSize: 14),
+          textAlign: TextAlign.end,
+          overflow: TextOverflow.visible,
+        ),
+      ),
+    ],
+  );
+}
 }
