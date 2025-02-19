@@ -349,12 +349,15 @@ void initState() {
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      colors: [color],
+                      color: color,
                       barWidth: 2,
                       dotData: FlDotData(show: false),
                       belowBarData: BarAreaData(
-                        show: true,
-                        colors: [color.withOpacity(0.1), color.withOpacity(0)],
+                        gradient: LinearGradient(
+                          colors: [color.withOpacity(0.1), color.withOpacity(0)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
                       ),
                     ),
                   ],
