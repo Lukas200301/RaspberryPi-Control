@@ -526,15 +526,13 @@ void initState() {
   }
 
   Widget _buildNetworkChart() {
-    // Calculate dynamic maxY based on highest value in both histories
-    double maxY = 1.0;  // minimum to avoid division by zero
+    double maxY = 1.0;  
     for (var spot in networkInHistory) {
       if (spot.y > maxY) maxY = spot.y;
     }
     for (var spot in networkOutHistory) {
       if (spot.y > maxY) maxY = spot.y;
     }
-    // Round up to next power of 10
     maxY = pow(10, (log(maxY) / ln10).ceil()).toDouble();
 
     return Card(

@@ -16,6 +16,7 @@ class SSHService {
   Timer? _connectionMonitor;
   final _connectionStatusController = StreamController<bool>.broadcast();
   Stream<bool> get connectionStatus => _connectionStatusController.stream;
+  bool get isReconnecting => _isReconnecting;
 
   SSHService({
     required this.name,
@@ -48,8 +49,7 @@ class SSHService {
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
 
-    // Send keepalive every 30 seconds
-    _keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
       if (_client != null) {
         try {
           await _client!.run('echo keepalive');
@@ -60,7 +60,6 @@ class SSHService {
       }
     });
 
-    // Monitor connection status every 5 seconds
     _connectionMonitor = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (_client != null && !_isReconnecting) {
         try {
@@ -109,7 +108,12 @@ class SSHService {
 
   Future<void> reconnect() async {
     if (!isConnected()) {
-      await connect();
+      _isReconnecting = true;
+      try {
+        await connect();
+      } finally {
+        _isReconnecting = false;
+      }
     }
   }
 
@@ -124,7 +128,7 @@ class SSHService {
     } catch (e) {
       if (!_isReconnecting) {
         await _handleReconnection();
-        return executeCommand(command); // Retry once after reconnection
+        return executeCommand(command); 
       }
       throw Exception('Failed to execute command: $e');
     }
@@ -310,9 +314,7 @@ class SSHService {
         echo "===SYSTEM_UPTIME===" &&
         uptime
       ''');
-       print('Raw command output:');
-      print(result);
-        final sections = result.split('\n');
+      final sections = result.split('\n');
       String currentSection = '';
 
       for (var line in sections) {
@@ -332,7 +334,6 @@ class SSHService {
 
           case 'IP_ADDRESS':
             if (line.isNotEmpty) {
-              // Take only the first IP address
               stats['ip_address'] = line.split(' ')[0];
             }
             break;

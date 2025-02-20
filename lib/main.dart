@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ssh_service.dart';
 import 'connection_screen.dart';
-import 'command_screen.dart';
+import 'terminal_screen.dart';
 import 'stats_screen.dart';
 import 'file_explorer_screen.dart';
 
@@ -94,6 +94,8 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   final TextEditingController _commandController = TextEditingController();
   String commandOutput = '';
   String connectionStatus = '';
+  bool _isReconnecting = false;
+  bool _wasConnectedBeforePause = false;
 
   @override
   void initState() {
@@ -110,13 +112,23 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      if (sshService != null && !sshService!.isConnected()) {
-        sshService!.reconnect();
+    if (state == AppLifecycleState.paused) {
+      _wasConnectedBeforePause = sshService?.isConnected() ?? false;
+    } else if (state == AppLifecycleState.resumed) {
+      if (_wasConnectedBeforePause && sshService != null) {
+        setState(() => _isReconnecting = true);
+        sshService!.reconnect().then((_) {
+          if (mounted) {
+            setState(() => _isReconnecting = false);
+          }
+        }).catchError((_) {
+          if (mounted) {
+            setState(() => _isReconnecting = false);
+          }
+        });
       }
     }
   }
-
 
   void _onItemTapped(int index) {
     if (sshService != null || index == 2) {
@@ -172,6 +184,30 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    if (_isReconnecting) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Raspberry Pi Control'),
+          actions: [
+            IconButton(
+              icon: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
+              onPressed: widget.toggleTheme,
+            ),
+          ],
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Reconnecting to server...'),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Raspberry Pi Control'),
@@ -190,7 +226,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
       body: _selectedIndex == 0
       ? StatsScreen(sshService: sshService)
       : _selectedIndex == 1
-          ? CommandScreen(
+          ? TerminalScreen(
               sshService: sshService,
               commandController: _commandController,
               commandOutput: commandOutput,
