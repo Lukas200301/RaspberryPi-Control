@@ -58,15 +58,15 @@ class _StatsScreenState extends State<StatsScreen> {
   };
 
    @override
-void initState() {
-  super.initState();
-  _initializePrefs();
-  if (widget.sshService != null) {
-    _checkRequiredPackages();
+  void initState() {
+    super.initState();
+    _initializePrefs();
+    if (widget.sshService != null) {
+      _checkRequiredPackages();
+    }
+    _searchController.addListener(_filterServices);
+    _startInitialFetch();
   }
-  _searchController.addListener(_filterServices);
-  _startInitialFetch();
-}
 
   @override
   void dispose() {
@@ -714,403 +714,403 @@ void initState() {
   }
   
   Widget _buildServiceControl() {
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Service Control',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Service Control',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: 'Search Services',
-                    onPressed: () {
-                      setState(() {
-                        _showSearchBar = !_showSearchBar;
-                        if (!_showSearchBar) {
-                          _searchController.clear();
-                          _filterServices();
-                        }
-                      });
-                    },
-                  ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.sort),
-                    tooltip: 'Sort Services',
-                    onSelected: (String value) {
-                      setState(() {
-                        _sortOption = value;
-                        _sortServices();
-                      });
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'Name',
-                        child: Text('Name'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'Status',
-                        child: Text('Status'),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Refresh Services',
-                    onPressed: _refreshServices,
-                  ),
-                ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      tooltip: 'Search Services',
+                      onPressed: () {
+                        setState(() {
+                          _showSearchBar = !_showSearchBar;
+                          if (!_showSearchBar) {
+                            _searchController.clear();
+                            _filterServices();
+                          }
+                        });
+                      },
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.sort),
+                      tooltip: 'Sort Services',
+                      onSelected: (String value) {
+                        setState(() {
+                          _sortOption = value;
+                          _sortServices();
+                        });
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'Name',
+                          child: Text('Name'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'Status',
+                          child: Text('Status'),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh Services',
+                      onPressed: _refreshServices,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (_showSearchBar) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Search services...',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _filterServices();
+                  });
+                },
               ),
             ],
-          ),
-          if (_showSearchBar) ...[
             const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Search services...',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
+            Container(
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(4),
               ),
-              onChanged: (value) {
-                setState(() {
-                  _filterServices();
-                });
-              },
-            ),
-          ],
-          const SizedBox(height: 16),
-          Container(
-            height: 300,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: filteredServices.length,
-              itemBuilder: (context, index) {
-                final service = filteredServices[index];
-                final serviceName = service['name'] ?? '';
-                final status = service['status'] ?? '';
-                final description = service['description'] ?? '';
-                
-                return Container(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.grey.shade300,
-                        width: 0.5,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filteredServices.length,
+                itemBuilder: (context, index) {
+                  final service = filteredServices[index];
+                  final serviceName = service['name'] ?? '';
+                  final status = service['status'] ?? '';
+                  final description = service['description'] ?? '';
+                  
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 0.5,
+                        ),
                       ),
                     ),
-                  ),
-                  child: ListTile(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Dialog(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        serviceName,
-                                        style: const TextStyle(
-                                          fontSize: 18,
+                    child: ListTile(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          serviceName,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Description:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    description,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Status: ',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        status,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: _getStatusColor(status),
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: () => Navigator.pop(context),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Description:',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  description,
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Status: ',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    Text(
-                                      status,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: _getStatusColor(status),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
+                        );
+                      },
+                      title: Text(
+                        serviceName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    },
-                    title: Text(
-                      serviceName,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Text(
+                              description,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _getStatusColor(status),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.play_arrow,
+                              size: 16,
+                            ),
+                            tooltip: 'Start Service',
+                            onPressed: () => _startService(serviceName),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
+                            color: Colors.green,
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.stop,
+                              size: 16,
+                            ),
+                            tooltip: 'Stop Service',
+                            onPressed: () => _stopService(serviceName),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
+                            color: Colors.red,
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.refresh,
+                              size: 16,
+                            ),
+                            tooltip: 'Restart Service',
+                            onPressed: () => _restartService(serviceName),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 24,
+                              minHeight: 24,
+                            ),
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiskUsage() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Disk Usage',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (currentStats['disks'] == null || (currentStats['disks'] as List).isEmpty)
+              const Text('No disk information available')
+            else
+              ...(currentStats['disks'] as List).map<Widget>((disk) {
+                final usedPercentage = double.tryParse(
+                    disk['used_percentage']?.replaceAll('%', '') ?? '0') ?? 0.0;
+                Color progressColor;
+                if (usedPercentage >= 90) {
+                  progressColor = Colors.red;
+                } else if (usedPercentage >= 75) {
+                  progressColor = Colors.orange;
+                } else if (usedPercentage >= 50) {
+                  progressColor = Colors.yellow;
+                } else {
+                  progressColor = Colors.green;
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${disk['name']} - ${disk['size']}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Text(
-                            description,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 8,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: usedPercentage / 100,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                         ),
-                        Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _getStatusColor(status),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.play_arrow,
-                            size: 16,
-                          ),
-                          tooltip: 'Start Service',
-                          onPressed: () => _startService(serviceName),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 24,
-                            minHeight: 24,
-                          ),
-                          color: Colors.green,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.stop,
-                            size: 16,
-                          ),
-                          tooltip: 'Stop Service',
-                          onPressed: () => _stopService(serviceName),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 24,
-                            minHeight: 24,
-                          ),
-                          color: Colors.red,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.refresh,
-                            size: 16,
-                          ),
-                          tooltip: 'Restart Service',
-                          onPressed: () => _restartService(serviceName),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 24,
-                            minHeight: 24,
-                          ),
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-  Widget _buildDiskUsage() {
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Disk Usage',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (currentStats['disks'] == null || (currentStats['disks'] as List).isEmpty)
-            const Text('No disk information available')
-          else
-            ...(currentStats['disks'] as List).map<Widget>((disk) {
-              final usedPercentage = double.tryParse(
-                  disk['used_percentage']?.replaceAll('%', '') ?? '0') ?? 0.0;
-              Color progressColor;
-              if (usedPercentage >= 90) {
-                progressColor = Colors.red;
-              } else if (usedPercentage >= 75) {
-                progressColor = Colors.orange;
-              } else if (usedPercentage >= 50) {
-                progressColor = Colors.yellow;
-              } else {
-                progressColor = Colors.green;
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${disk['name']} - ${disk['size']}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 8,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: usedPercentage / 100,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${disk['used']} used of ${disk['size']} (${disk['used_percentage']})',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              );
-            }).toList(),
-        ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '${disk['used']} used of ${disk['size']} (${disk['used_percentage']})',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }).toList(),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
-  Widget _buildSystemInfo() {
-  String formatUptime(String uptime) {
-    if (uptime.isEmpty) return 'N/A';
-    return uptime;
+    );
   }
 
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'System Information',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Table(
-            border: TableBorder.all(
-              color: Colors.grey,
-              width: 1,
-              style: BorderStyle.solid,
-            ),
-            columnWidths: const {
-              0: FlexColumnWidth(1),
-              1: FlexColumnWidth(2),
-            },
-            children: [
-              _buildTableRow('Hostname', currentStats['hostname']?.toString() ?? 'N/A'),
-              _buildTableRow('Operating System', currentStats['os']?.toString().replaceAll('Description:', '').trim() ?? 'N/A'),
-              _buildTableRow('IP Address', currentStats['ip_address']?.toString() ?? 'N/A'),
-              _buildTableRow('Uptime', formatUptime(currentStats['uptime']?.toString() ?? '')),
-              _buildTableRow('CPU Model', currentStats['cpu_model']?.toString() ?? 'N/A'),
-              _buildTableRow('Total Disk Space', currentStats['total_disk_space']?.toString() ?? 'N/A'),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
+  Widget _buildSystemInfo() {
+    String formatUptime(String uptime) {
+      if (uptime.isEmpty) return 'N/A';
+      return uptime;
+    }
 
-TableRow _buildTableRow(String label, String value) {
-  return TableRow(
-    children: [
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'System Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              border: TableBorder.all(
+                color: Colors.grey,
+                width: 1,
+                style: BorderStyle.solid,
+              ),
+              columnWidths: const {
+                0: FlexColumnWidth(1),
+                1: FlexColumnWidth(2),
+              },
+              children: [
+                _buildTableRow('Hostname', currentStats['hostname']?.toString() ?? 'N/A'),
+                _buildTableRow('Operating System', currentStats['os']?.toString().replaceAll('Description:', '').trim() ?? 'N/A'),
+                _buildTableRow('IP Address', currentStats['ip_address']?.toString() ?? 'N/A'),
+                _buildTableRow('Uptime', formatUptime(currentStats['uptime']?.toString() ?? '')),
+                _buildTableRow('CPU Model', currentStats['cpu_model']?.toString() ?? 'N/A'),
+                _buildTableRow('Total Disk Space', currentStats['total_disk_space']?.toString() ?? 'N/A'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TableRow _buildTableRow(String label, String value) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Text(
-          value,
-          style: const TextStyle(fontSize: 14),
-          textAlign: TextAlign.end,
-          overflow: TextOverflow.visible,
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.visible,
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 }

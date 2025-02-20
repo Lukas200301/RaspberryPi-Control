@@ -49,8 +49,8 @@ class SSHService {
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
 
-    _keepAliveTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
-      if (_client != null) {
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (_client != null && !_isReconnecting) {
         try {
           await _client!.run('echo keepalive');
         } catch (e) {
@@ -60,40 +60,50 @@ class SSHService {
       }
     });
 
-    _connectionMonitor = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (_client != null && !_isReconnecting) {
-        try {
-          await _client!.run('echo test');
-        } catch (e) {
-          print('Connection check failed: $e');
-          await _handleReconnection();
-        }
+    _connectionMonitor = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (_client == null && !_isReconnecting) {
+        await _handleReconnection();
       }
     });
   }
 
+  Future<void> handleAppResume() async {
+    if (!isConnected()) {
+      print("App resumed: Reconnecting...");
+      await reconnect();
+    }
+  }
+
   Future<void> _handleReconnection() async {
-    if (_isReconnecting) return;
+    if (_isReconnecting) return; 
     _isReconnecting = true;
     _connectionStatusController.add(false);
 
-    while (true) {
+    int retryCount = 0;
+    const int maxRetries = 5;
+
+    while (retryCount < maxRetries) {
       try {
         _client?.close();
         _client = null;
-        
         final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
         _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
-        
+
         _isReconnecting = false;
         _connectionStatusController.add(true);
-        break;
+        print("Reconnection successful.");
+        return;
       } catch (e) {
-        print('Reconnection attempt failed: $e');
+        retryCount++;
+        print('Reconnection attempt $retryCount failed: $e');
         await Future.delayed(const Duration(seconds: 5));
       }
     }
+
+    _isReconnecting = false;
+    print('Reconnection failed after $maxRetries attempts.');
   }
+
 
   bool isConnected() {
     return _client != null;
@@ -181,81 +191,81 @@ class SSHService {
   }
 
   Future<void> uploadFile(String localPath, String remotePath, [void Function(int, int)? onProgress]) async {
-  if (_client == null) {
-    await connect();
-  }
-
-  try {
-    final file = File(localPath);
-    final totalBytes = await file.length();
-    int uploadedBytes = 0;
-
-    final sftp = await _client!.sftp();
-    final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
-    final controller = StreamController<Uint8List>();
-
-    file.openRead().map((chunk) => Uint8List.fromList(chunk)).listen(
-      (chunk) {
-        uploadedBytes += chunk.length;
-        if (onProgress != null) {
-          onProgress(uploadedBytes, totalBytes);
-        }
-        controller.add(chunk);
-      },
-      onDone: () => controller.close(),
-      onError: (error) {
-        controller.addError(error);
-        controller.close();
-      },
-    );
-
-    await remoteFile.write(controller.stream);
-    await remoteFile.close();
-  } catch (e) {
-    if (!_isReconnecting) {
-      await _handleReconnection();
-      return uploadFile(localPath, remotePath, onProgress);
+    if (_client == null) {
+      await connect();
     }
-    throw Exception('Failed to upload file: $e');
+
+    try {
+      final file = File(localPath);
+      final totalBytes = await file.length();
+      int uploadedBytes = 0;
+
+      final sftp = await _client!.sftp();
+      final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
+      final controller = StreamController<Uint8List>();
+
+      file.openRead().map((chunk) => Uint8List.fromList(chunk)).listen(
+        (chunk) {
+          uploadedBytes += chunk.length;
+          if (onProgress != null) {
+            onProgress(uploadedBytes, totalBytes);
+          }
+          controller.add(chunk);
+        },
+        onDone: () => controller.close(),
+        onError: (error) {
+          controller.addError(error);
+          controller.close();
+        },
+      );
+
+      await remoteFile.write(controller.stream);
+      await remoteFile.close();
+    } catch (e) {
+      if (!_isReconnecting) {
+        await _handleReconnection();
+        return uploadFile(localPath, remotePath, onProgress);
+      }
+      throw Exception('Failed to upload file: $e');
+    }
   }
-}
 
   Future<void> downloadFile(String remotePath, String localPath, [void Function(int, int)? onProgress]) async {
-  if (_client == null) {
-    await connect();
-  }
+    if (_client == null) {
+      await connect();
+    }
 
-  try {
-    final sftp = await _client!.sftp();
-    final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
-    final file = File(localPath);
-    
-    final stats = await remoteFile.stat();
-    final totalSize = stats.size ?? 0;
-    int downloadedSize = 0;
+    try {
+      final sftp = await _client!.sftp();
+      final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
+      final file = File(localPath);
+      
+      final stats = await remoteFile.stat();
+      final totalSize = stats.size ?? 0;
+      int downloadedSize = 0;
 
-    final sink = file.openWrite();
+      final sink = file.openWrite();
 
-    await for (final chunk in remoteFile.read()) { 
-      sink.add(chunk);
-      downloadedSize += chunk.length;
+      await for (final chunk in remoteFile.read()) { 
+        sink.add(chunk);
+        downloadedSize += chunk.length;
 
-      if (onProgress != null && totalSize > 0) { 
-        onProgress(downloadedSize, totalSize);
+        if (onProgress != null && totalSize > 0) { 
+          onProgress(downloadedSize, totalSize);
+        }
       }
-    }
 
-    await sink.flush();
-    await sink.close();
-    await remoteFile.close();
-  } catch (e) {
-    if (!_isReconnecting) {
-      await _handleReconnection();
-      return downloadFile(remotePath, localPath, onProgress);
+      await sink.flush();
+      await sink.close();
+      await remoteFile.close();
+    } catch (e) {
+      if (!_isReconnecting) {
+        await _handleReconnection();
+        return downloadFile(remotePath, localPath, onProgress);
+      }
+      throw Exception('Failed to download file: $e');
     }
-    throw Exception('Failed to download file: $e');
   }
-}
 
 
 
@@ -277,7 +287,7 @@ class SSHService {
       }
     }
 
-   Future<void> installRequiredPackages() async {
+    Future<void> installRequiredPackages() async {
     await executeCommand('''
       sudo apt-get update 
       sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin 

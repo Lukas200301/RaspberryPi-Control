@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background/flutter_background.dart';
 import 'ssh_service.dart';
 import 'connection_screen.dart';
 import 'terminal_screen.dart';
@@ -10,6 +11,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final isDarkMode = prefs.getBool('isDarkMode') ?? false;
+
+  // Initialize flutter_background
+  const androidConfig = FlutterBackgroundAndroidConfig(
+    notificationTitle: "Raspberry Pi Control",
+    notificationText: "Running in background",
+    notificationImportance: AndroidNotificationImportance.Default,
+    notificationIcon: AndroidResource(name: 'background_icon', defType: 'drawable'),
+  );
+  await FlutterBackground.initialize(androidConfig: androidConfig);
+
   runApp(MyApp(isDarkMode: isDarkMode));
 }
 
@@ -101,13 +112,25 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startBackgroundExecution();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     sshService?.disconnect();
+    _stopBackgroundExecution();
     super.dispose();
+  }
+
+  Future<void> _startBackgroundExecution() async {
+    if (await FlutterBackground.hasPermissions) {
+      await FlutterBackground.enableBackgroundExecution();
+    }
+  }
+
+  Future<void> _stopBackgroundExecution() async {
+    await FlutterBackground.disableBackgroundExecution();
   }
 
   @override
