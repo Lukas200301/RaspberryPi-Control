@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ssh_service.dart';
 import 'dart:async';
+import 'dart:math';
 
 class StatsScreen extends StatefulWidget {
   final SSHService? sshService;
@@ -35,6 +36,11 @@ class _StatsScreenState extends State<StatsScreen> {
   final List<FlSpot> networkInHistory = [];
   final List<FlSpot> networkOutHistory = [];
   final List<FlSpot> diskUsageHistory = [];
+  final List<FlSpot> cpuUserHistory = [];
+  final List<FlSpot> cpuSystemHistory = [];
+  final List<FlSpot> cpuNiceHistory = [];
+  final List<FlSpot> cpuIoWaitHistory = [];
+  final List<FlSpot> cpuIrqHistory = [];
 
   double timeIndex = 0;
 
@@ -202,6 +208,11 @@ void initState() {
             networkInHistory.add(FlSpot(timeIndex, stats['network_in'] ?? 0));
             networkOutHistory.add(FlSpot(timeIndex, stats['network_out'] ?? 0));
             diskUsageHistory.add(FlSpot(timeIndex, double.tryParse(stats['disk_used'] ?? '0') ?? 0));
+            cpuUserHistory.add(FlSpot(timeIndex, stats['cpu_user'] ?? 0));
+            cpuSystemHistory.add(FlSpot(timeIndex, stats['cpu_system'] ?? 0));
+            cpuNiceHistory.add(FlSpot(timeIndex, stats['cpu_nice'] ?? 0));
+            cpuIoWaitHistory.add(FlSpot(timeIndex, stats['cpu_iowait'] ?? 0));
+            cpuIrqHistory.add(FlSpot(timeIndex, stats['cpu_irq'] ?? 0));
 
             if (cpuHistory.length > 100) {
               cpuHistory.removeAt(0);
@@ -211,6 +222,11 @@ void initState() {
               networkInHistory.removeAt(0);
               networkOutHistory.removeAt(0);
               diskUsageHistory.removeAt(0);
+              cpuUserHistory.removeAt(0);
+              cpuSystemHistory.removeAt(0);
+              cpuNiceHistory.removeAt(0);
+              cpuIoWaitHistory.removeAt(0);
+              cpuIrqHistory.removeAt(0);
             }
 
             isLoading = false;
@@ -349,20 +365,276 @@ void initState() {
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: color,
+                      colors: [color],
                       barWidth: 2,
                       dotData: FlDotData(show: false),
                       belowBarData: BarAreaData(
-                        gradient: LinearGradient(
-                          colors: [color.withOpacity(0.1), color.withOpacity(0)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
+                        show: true,
+                        colors: [color.withOpacity(0.1), color.withOpacity(0)],
                       ),
                     ),
                   ],
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCpuChart() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'CPU Usage',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(
+                  'Max: 100%',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${cpuHistory.isEmpty ? 0 : cpuHistory.last.y.toStringAsFixed(1)}%',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 150,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true),
+                  titlesData: FlTitlesData(show: false),
+                  borderData: FlBorderData(show: true),
+                  minX: cpuHistory.isEmpty ? 0 : cpuHistory.first.x,
+                  maxX: cpuHistory.isEmpty ? timeIndex : cpuHistory.last.x,
+                  minY: 0,
+                  maxY: 100,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: cpuUserHistory,
+                      isCurved: true,
+                      colors: [Colors.yellow],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: cpuSystemHistory,
+                      isCurved: true,
+                      colors: [Colors.red],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: cpuNiceHistory,
+                      isCurved: true,
+                      colors: [Colors.green],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: cpuIoWaitHistory,
+                      isCurved: true,
+                      colors: [Colors.orange],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: cpuIrqHistory,
+                      isCurved: true,
+                      colors: [Colors.purple],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _buildLegendItem('User', Colors.yellow),
+                _buildLegendItem('System', Colors.red),
+                _buildLegendItem('Nice', Colors.green),
+                _buildLegendItem('I/O Wait', Colors.orange),
+                _buildLegendItem('IRQ', Colors.purple),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(label),
+      ],
+    );
+  }
+
+  String _formatNetworkSpeed(double kbps) {
+    if (kbps < 1) {
+      return '${(kbps * 1024).toStringAsFixed(1)} B/s';
+    } else if (kbps < 1024) {
+      return '${kbps.toStringAsFixed(1)} KB/s';
+    } else if (kbps < 1024 * 1024) {
+      return '${(kbps / 1024).toStringAsFixed(1)} MB/s';
+    } else {
+      return '${(kbps / (1024 * 1024)).toStringAsFixed(1)} GB/s';
+    }
+  }
+
+  String _formatMaxSpeed(double kbps) {
+    if (kbps < 1024) {
+      return '${kbps.toStringAsFixed(0)} KB/s';
+    } else if (kbps < 1024 * 1024) {
+      return '${(kbps / 1024).toStringAsFixed(1)} MB/s';
+    } else {
+      return '${(kbps / (1024 * 1024)).toStringAsFixed(1)} GB/s';
+    }
+  }
+
+  Widget _buildNetworkChart() {
+    // Calculate dynamic maxY based on highest value in both histories
+    double maxY = 1.0;  // minimum to avoid division by zero
+    for (var spot in networkInHistory) {
+      if (spot.y > maxY) maxY = spot.y;
+    }
+    for (var spot in networkOutHistory) {
+      if (spot.y > maxY) maxY = spot.y;
+    }
+    // Round up to next power of 10
+    maxY = pow(10, (log(maxY) / ln10).ceil()).toDouble();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Network Traffic',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Max: ${_formatMaxSpeed(maxY)}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'In: ${_formatNetworkSpeed(networkInHistory.isEmpty ? 0 : networkInHistory.last.y)}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    'Out: ${_formatNetworkSpeed(networkOutHistory.isEmpty ? 0 : networkOutHistory.last.y)}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 150,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: true),
+                  titlesData: FlTitlesData(show: false),
+                  borderData: FlBorderData(show: true),
+                  minX: networkInHistory.isEmpty ? 0 : networkInHistory.first.x,
+                  maxX: networkInHistory.isEmpty ? timeIndex : networkInHistory.last.x,
+                  minY: 0,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: networkInHistory,
+                      isCurved: true,
+                      colors: [Colors.green],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        colors: [Colors.green.withOpacity(0.1), Colors.green.withOpacity(0)],
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: networkOutHistory,
+                      isCurved: true,
+                      colors: [Colors.blue],
+                      barWidth: 2,
+                      dotData: FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        colors: [Colors.blue.withOpacity(0.1), Colors.blue.withOpacity(0)],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _buildLegendItem('Network In', Colors.green),
+                _buildLegendItem('Network Out', Colors.blue),
+              ],
             ),
           ],
         ),
@@ -410,13 +682,7 @@ void initState() {
             const SizedBox(height: 16),
             _buildDiskUsage(),
             const SizedBox(height: 16),
-            _buildChart(
-              'CPU Usage',
-              cpuHistory,
-              Colors.blue,
-              '%',
-              'Max: 100%',
-            ),
+            _buildCpuChart(),
             const SizedBox(height: 16),
             _buildChart(
               'Memory Usage',
@@ -442,23 +708,7 @@ void initState() {
               'Max: 90°C',
             ),
             const SizedBox(height: 16),
-            _buildChart(
-              'Network In',
-              networkInHistory,
-              Colors.purple,
-              'KB/s',
-              'Network Traffic',
-              maxY: 200000,
-            ),
-            const SizedBox(height: 16),
-            _buildChart(
-              'Network Out',
-              networkOutHistory,
-              Colors.indigo,
-              'KB/s',
-              'Network Traffic',
-              maxY: 200000,
-            ),
+            _buildNetworkChart(),
           ],
         ),
       ),
@@ -741,49 +991,54 @@ void initState() {
             ),
           ),
           const SizedBox(height: 16),
-          ...currentStats['disks'].map<Widget>((disk) {
-            final usedPercentage = double.tryParse(disk['used_percentage']?.replaceAll('%', '') ?? '0') ?? 0.0;
-            Color progressColor;
-            if (usedPercentage >= 90) {
-              progressColor = Colors.red;
-            } else if (usedPercentage >= 75) {
-              progressColor = Colors.orange;
-            } else if (usedPercentage >= 50) {
-              progressColor = Colors.yellow;
-            } else {
-              progressColor = Colors.green;
-            }
+          if (currentStats['disks'] == null || (currentStats['disks'] as List).isEmpty)
+            const Text('No disk information available')
+          else
+            ...(currentStats['disks'] as List).map<Widget>((disk) {
+              final usedPercentage = double.tryParse(
+                  disk['used_percentage']?.replaceAll('%', '') ?? '0') ?? 0.0;
+              Color progressColor;
+              if (usedPercentage >= 90) {
+                progressColor = Colors.red;
+              } else if (usedPercentage >= 75) {
+                progressColor = Colors.orange;
+              } else if (usedPercentage >= 50) {
+                progressColor = Colors.yellow;
+              } else {
+                progressColor = Colors.green;
+              }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${disk['name']} - ${disk['size']}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  height: 8,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child:LinearProgressIndicator(
-                      value: usedPercentage / 100,
-                      backgroundColor:progressColor,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${disk['name']} - ${disk['size']}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${disk['used']} used of ${disk['size']} (${disk['used_percentage']}%)',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-              ],
-            );
-          }).toList(),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    height: 8,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: usedPercentage / 100,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${disk['used']} used of ${disk['size']} (${disk['used_percentage']})',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            }).toList(),
         ],
       ),
     ),
@@ -827,7 +1082,6 @@ void initState() {
               _buildTableRow('Uptime', formatUptime(currentStats['uptime']?.toString() ?? '')),
               _buildTableRow('CPU Model', currentStats['cpu_model']?.toString() ?? 'N/A'),
               _buildTableRow('Total Disk Space', currentStats['total_disk_space']?.toString() ?? 'N/A'),
-              _buildTableRow('Swap Memory Usage', currentStats['swap_memory']?.toString() ?? 'N/A'),
             ],
           ),
         ],

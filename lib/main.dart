@@ -110,10 +110,13 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && sshService != null && !sshService!.isConnected()) {
-      sshService!.reconnect();
+    if (state == AppLifecycleState.resumed) {
+      if (sshService != null && !sshService!.isConnected()) {
+        sshService!.reconnect();
+      }
     }
   }
+
 
   void _onItemTapped(int index) {
     if (sshService != null || index == 2) {

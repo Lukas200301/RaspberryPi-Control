@@ -41,6 +41,12 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   String _currentFileName = '';
   String _sourcePath = '';
   String _destinationPath = '';
+  bool _showSearchBar = false;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  List<FileEntity> _filteredContents = [];
+  bool _isSearching = false;
+  String _lastSearchQuery = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -48,7 +54,15 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_filterContents);
     _loadCurrentDirectory();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCurrentDirectory() async {
@@ -86,6 +100,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
 
       setState(() {
         _contents = contents;
+        _filteredContents = List.from(contents);
         _sortContents();
         _isLoading = false;
         _errorMessage = '';
@@ -99,32 +114,33 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   void _sortContents() {
+    final listToSort = _filteredContents;
     switch (_sortOption) {
       case SortOption.foldersFirst:
-        _contents.sort((a, b) {
+        listToSort.sort((a, b) {
           if (a.isDirectory && !b.isDirectory) return -1;
           if (!a.isDirectory && b.isDirectory) return 1;
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
         break;
       case SortOption.filesFirst:
-        _contents.sort((a, b) {
+        listToSort.sort((a, b) {
           if (a.isDirectory && !b.isDirectory) return 1;
           if (!a.isDirectory && b.isDirectory) return -1;
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
         break;
       case SortOption.nameAZ:
-        _contents.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        listToSort.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         break;
       case SortOption.nameZA:
-        _contents.sort((a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
+        listToSort.sort((a, b) => b.name.toLowerCase().compareTo(a.name.toLowerCase()));
         break;
       case SortOption.sizeSmallLarge:
-        _contents.sort((a, b) => int.parse(a.size).compareTo(int.parse(b.size)));
+        listToSort.sort((a, b) => int.parse(a.size).compareTo(int.parse(b.size)));
         break;
       case SortOption.sizeLargeSmall:
-        _contents.sort((a, b) => int.parse(b.size).compareTo(int.parse(a.size)));
+        listToSort.sort((a, b) => int.parse(b.size).compareTo(int.parse(a.size)));
         break;
     }
   }
@@ -152,12 +168,9 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
     }
 
     final result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.any);
-    if (result == null || result.files.isEmpty) {
-      setState(() {
-        _isLoading = false;
-        _isUploading = false;
-      });
-      return;
+    if (result == null || result.files.isEmpty) return;
+    if (!widget.sshService!.isConnected()) {
+      await widget.sshService!.reconnect();
     }
 
     setState(() {
@@ -240,56 +253,47 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _uploadDirectory(String localPath, String remotePath) async {
-    final directory = Directory(localPath);
-    if (!directory.existsSync()) {
-      return;
-    }
+  final directory = Directory(localPath);
+  if (!directory.existsSync()) {
+    return;
+  }
 
-    final List<FileSystemEntity> entities = directory.listSync(recursive: true);
-    int totalSize = entities.whereType<File>().fold(0, (sum, file) => sum + file.lengthSync());
-    int uploadedSize = 0;
+  final List<FileSystemEntity> entities = await directory.list(recursive: true).toList();
+  int totalSize = 0;
+  for (final entity in entities.whereType<File>()) {
+    totalSize += await entity.length();
+  }
+  int uploadedSize = 0;
 
-    for (final entity in entities) {
-      if (_isCancelled) break;
-      final relativePath = entity.path.substring(localPath.length + 1);
-      final remoteFilePath = '$remotePath/$relativePath';
+  for (final entity in entities) {
+    if (_isCancelled) break;
+    final relativePath = entity.path.substring(localPath.length + 1);
+    final remoteFilePath = '$remotePath/$relativePath';
 
-      if (entity is Directory) {
-        await widget.sshService!.executeCommand('mkdir -p "$remoteFilePath"');
-      } else if (entity is File) {
-        setState(() {
-          _currentFileName = entity.path.split(Platform.pathSeparator).last;
-          _sourcePath = entity.path;
-          _destinationPath = remoteFilePath;
-        });
-
-        await widget.sshService!.uploadFile(
-          entity.path,
-          remoteFilePath,
-          (sent, total) {
-            if (mounted) {
-              setState(() {
-                uploadedSize += sent;
-                _progress = uploadedSize / totalSize;
-              });
-            }
-          },
-        );
-      }
-    }
-    if (mounted) {
+    if (entity is Directory) {
+      await widget.sshService!.executeCommand('mkdir -p "$remoteFilePath"');
+    } else if (entity is File) {
       setState(() {
-        _isUploading = false; 
-        _isLoading = false;
-        _progress = 0.0;
-        _progressMessage = '';
-        _isCancelled = false;
-        _currentFileName = '';
-        _sourcePath = '';
-        _destinationPath = '';
+        _currentFileName = entity.path.split(Platform.pathSeparator).last;
+        _sourcePath = entity.path;
+        _destinationPath = remoteFilePath;
       });
+
+      await widget.sshService!.uploadFile(
+        entity.path,
+        remoteFilePath,
+        (sent, total) {
+          if (mounted) {
+            setState(() {
+              uploadedSize += sent;
+              _progress = uploadedSize / totalSize;
+            });
+          }
+        },
+      );
     }
   }
+}
 
   Future<void> _uploadFolder() async {
     if (widget.sshService == null) {
@@ -431,46 +435,57 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _downloadDirectory(String remotePath, String localPath) async {
-    final result = await widget.sshService!.executeCommand('ls -la "$remotePath"');
-    final List<FileEntity> contents = [];
-    
-    final lines = result.split('\n');
-    for (var line in lines.skip(1)) {
-      if (line.trim().isEmpty) continue;
-      
-      final parts = line.split(RegExp(r'\s+'));
-      if (parts.length >= 9) {
-        final permissions = parts[0];
-        final size = parts[4];
-        final name = parts.sublist(8).join(' ');
-        
-        if (name == '.' || name == '..') continue;
-        
-        contents.add(FileEntity(
-          name: name,
-          isDirectory: permissions.startsWith('d'),
-          size: size,
-          permissions: permissions,
-        ));
-      }
-    }
+  final result = await widget.sshService!.executeCommand('ls -la "$remotePath"');
+  final List<FileEntity> contents = [];
 
-    final directory = Directory(localPath);
-    if (!directory.existsSync()) {
-      directory.createSync(recursive: true);
-    }
+  final lines = result.split('\n');
+  for (var line in lines.skip(1)) {
+    if (line.trim().isEmpty) continue;
 
-    for (final item in contents) {
-      if (_isCancelled) break;
-      final itemRemotePath = '$remotePath/${item.name}';
-      final itemLocalPath = '$localPath${Platform.pathSeparator}${item.name}';
-      if (item.isDirectory) {
-        await _downloadDirectory(itemRemotePath, itemLocalPath);
-      } else {
-        await widget.sshService!.downloadFile(itemRemotePath, itemLocalPath);
-      }
+    final parts = line.split(RegExp(r'\s+'));
+    if (parts.length >= 9) {
+      final permissions = parts[0];
+      final name = parts.sublist(8).join(' ');
+
+      if (name == '.' || name == '..') continue;
+
+      contents.add(FileEntity(
+        name: name,
+        isDirectory: permissions.startsWith('d'),
+        size: '0',  
+        permissions: permissions,
+      ));
     }
   }
+
+  final directory = Directory(localPath);
+  if (!directory.existsSync()) {
+    directory.createSync(recursive: true);
+  }
+
+  for (final item in contents) {
+    if (_isCancelled) break;
+    final itemRemotePath = '$remotePath/${item.name}';
+    final itemLocalPath = '$localPath/${item.name}';
+
+    if (item.isDirectory) {
+      await _downloadDirectory(itemRemotePath, itemLocalPath);
+    } else {
+      await widget.sshService!.downloadFile(
+        itemRemotePath, 
+        itemLocalPath,
+        (downloaded, total) {
+          if (mounted) {
+            setState(() {
+              _progress = downloaded / total;
+            });
+          }
+        }
+      );
+    }
+  }
+}
+
 
   Future<void> _confirmDeleteSelected() async {
     if (_selectedItems.isEmpty) return;
@@ -578,6 +593,91 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
     });
   }
 
+  Future<List<FileEntity>> _searchAllDirectories(String path, String query) async {
+    List<FileEntity> results = [];
+    try {
+      // Search only from current path
+      final searchCommand = 'cd "$path" && find . -iname "*$query*"';
+      final result = await widget.sshService!.executeCommand(searchCommand);
+      
+      if (result.contains('No such file or directory') || result.trim().isEmpty) {
+        return results;
+      }
+
+      final files = result.split('\n');
+      for (var file in files) {
+        if (file.trim().isEmpty || file == '.') continue;
+        
+        // Remove './' from the beginning of the path
+        final cleanPath = file.startsWith('./') ? file.substring(2) : file;
+        if (cleanPath.isEmpty) continue;
+
+        final fullPath = '$path/${cleanPath}';
+        try {
+          final statResult = await widget.sshService!.executeCommand('ls -la "$fullPath"');
+          final parts = statResult.trim().split(RegExp(r'\s+'));
+          if (parts.length >= 9) {
+            final permissions = parts[0];
+            final size = parts[4];
+            final name = fullPath.split('/').last;
+            
+            results.add(FileEntity(
+              name: name,
+              isDirectory: permissions.startsWith('d'),
+              size: size,
+              permissions: permissions,
+              fullPath: fullPath,
+            ));
+          }
+        } catch (e) {
+          print('Error getting file details: $e');
+          continue;
+        }
+      }
+    } catch (e) {
+      print('Search error: $e');
+    }
+    return results;
+  }
+
+  void _filterContents() async {
+    final query = _searchController.text;
+    if (query.isEmpty) {
+      setState(() {
+        _filteredContents = List.from(_contents);
+        _isSearching = false;
+        _lastSearchQuery = '';
+      });
+      return;
+    }
+
+    if (query != _lastSearchQuery) {
+      setState(() => _isSearching = true);
+      _lastSearchQuery = query;
+      
+      try {
+        // Search from root if we're at root, otherwise search from current directory
+        final searchPath = _currentPath == '/' ? '/' : _currentPath;
+        final results = await _searchAllDirectories(searchPath, query);
+        
+        if (mounted) {
+          setState(() {
+            _filteredContents = results;
+            _isSearching = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Search error: $e';
+            _isSearching = false;
+          });
+        }
+      }
+    }
+    _sortContents();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -619,6 +719,20 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
               onPressed: _selectAllFiles,
             ),
           ] else if (widget.sshService != null) ...[
+            if (_currentPath != '/') 
+              IconButton(
+                icon: const Icon(Icons.search),
+                tooltip: 'Search Files',
+                onPressed: () {
+                  setState(() {
+                    _showSearchBar = !_showSearchBar;
+                    if (!_showSearchBar) {
+                      _searchController.clear();
+                      _filterContents();
+                    }
+                  });
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.upload_file),
               onPressed: _uploadFile,
@@ -662,102 +776,153 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       ),
       body: RefreshIndicator(
         onRefresh: _loadCurrentDirectory,
-        child: _isLoading && (_isUploading || _isDownloading)
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: 200,
-                  child: LinearProgressIndicator(value: _progress),
-                ),
-                const SizedBox(height: 10),
-                Text(_progressMessage),
-                const SizedBox(height: 10),
-                Center(child: Text('File: $_currentFileName')),
-                Center(child: Text('Source: $_sourcePath', textAlign: TextAlign.center)),
-                Center(child: Text('Destination: $_destinationPath', textAlign: TextAlign.center)),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: _cancelOperation,
-                  child: const Text('Cancel'),
-                ),
-              ],
-            )
-          : _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _errorMessage.isNotEmpty
-                  ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)))
-                  : Column(
-                      children: [
-                        if (_currentPath != '/')
-                          ListTile(
-                            leading: const Icon(Icons.folder),
-                            title: const Text('..'),
-                            onTap: () => _navigateToDirectory('..'),
+        child: Column(
+          children: [
+            if (_showSearchBar)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: 'Search all files...',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _isSearching 
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                        Expanded(
-                          child: ListView.builder(
-                            key: PageStorageKey<String>(_currentPath),
-                            itemCount: _contents.length,
-                            itemBuilder: (context, index) {
-                              final item = _contents[index];
-                              final bool isSelected = _selectedItems.contains(item);
-
-                              return ListTile(
-                                leading: Icon(
-                                  item.isDirectory ? Icons.folder : Icons.insert_drive_file,
-                                  color: item.isDirectory ? Colors.blue : null,
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _filterContents();
+                          },
+                        ),
+                  ),
+                  onChanged: (value) => _filterContents(),
+                ),
+              ),
+            Expanded(
+              child: _isLoading && (_isUploading || _isDownloading)
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: 200,
+                        child: LinearProgressIndicator(value: _progress),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(_progressMessage),
+                      const SizedBox(height: 10),
+                      Center(child: Text('File: $_currentFileName')),
+                      Center(child: Text('Source: $_sourcePath', textAlign: TextAlign.center)),
+                      Center(child: Text('Destination: $_destinationPath', textAlign: TextAlign.center)),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _cancelOperation,
+                        child: const Text('Cancel'),
+                      ),
+                    ],
+                  )
+                : _isLoading || _isSearching
+                    ? const Center(child: CircularProgressIndicator())
+                    : _errorMessage.isNotEmpty
+                        ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.red)))
+                        : Column(
+                            children: [
+                              if (_currentPath != '/')
+                                ListTile(
+                                  leading: const Icon(Icons.folder),
+                                  title: const Text('..'),
+                                  onTap: () => _navigateToDirectory('..'),
                                 ),
-                                title: Text(item.name),
-                                subtitle: Text('${item.size} ${item.permissions}'),
-                                selected: isSelected,
-                                trailing: _isSelectionMode
-                                    ? Checkbox(
-                                        value: isSelected,
-                                        onChanged: (bool? value) {
+                              Expanded(
+                                child: ListView.builder(
+                                  key: PageStorageKey<String>(_currentPath),
+                                  itemCount: _filteredContents.length,
+                                  itemBuilder: (context, index) {
+                                    final item = _filteredContents[index];
+                                    final bool isSelected = _selectedItems.contains(item);
+
+                                    return ListTile(
+                                      leading: Icon(
+                                        item.isDirectory ? Icons.folder : Icons.insert_drive_file,
+                                        color: item.isDirectory ? Colors.blue : null,
+                                      ),
+                                      title: Text(item.name),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('${item.size} ${item.permissions}'),
+                                          if (_showSearchBar && item.fullPath != null)
+                                            Text(
+                                              item.fullPath!,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                        ],
+                                      ),
+                                      selected: isSelected,
+                                      trailing: _isSelectionMode
+                                          ? Checkbox(
+                                              value: isSelected,
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  if (value == true) {
+                                                    _selectedItems.add(item);
+                                                  } else {
+                                                    _selectedItems.remove(item);
+                                                  }
+                                                });
+                                              },
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        if (_isSelectionMode) {
                                           setState(() {
-                                            if (value == true) {
-                                              _selectedItems.add(item);
-                                            } else {
+                                            if (isSelected) {
                                               _selectedItems.remove(item);
+                                            } else {
+                                              _selectedItems.add(item);
                                             }
                                           });
-                                        },
-                                      )
-                                    : null,
-                                onTap: () {
-                                  if (_isSelectionMode) {
-                                    setState(() {
-                                      if (isSelected) {
-                                        _selectedItems.remove(item);
-                                      } else {
-                                        _selectedItems.add(item);
-                                      }
-                                    });
-                                  } else {
-                                    if (item.isDirectory) {
-                                      _navigateToDirectory(item.name);
-                                    } else {
-                                      _downloadSelected();
-                                    }
-                                  }
-                                },
-                                onLongPress: () {
-                                  if (!_isSelectionMode) {
-                                    setState(() {
-                                      _isSelectionMode = true;
-                                      _selectedItems.add(item);
-                                    });
-                                  }
-                                },
-                              );
-                            },
+                                        } else {
+                                          if (item.isDirectory) {
+                                            _navigateToDirectory(item.name);
+                                          } else {
+                                            _downloadSelected();
+                                          }
+                                        }
+                                      },
+                                      onLongPress: () {
+                                        if (!_isSelectionMode) {
+                                          setState(() {
+                                            _isSelectionMode = true;
+                                            _selectedItems.add(item);
+                                          });
+                                        }
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -768,12 +933,14 @@ class FileEntity {
   final bool isDirectory;
   final String size;
   final String permissions;
+  final String? fullPath;
 
   FileEntity({
     required this.name,
     required this.isDirectory,
     required this.size,
     required this.permissions,
+    this.fullPath,
   });
 
   @override

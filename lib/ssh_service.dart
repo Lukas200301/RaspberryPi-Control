@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
 
 class SSHService {
@@ -10,6 +11,11 @@ class SSHService {
   final String username;
   final String password;
   SSHClient? _client;
+  bool _isReconnecting = false;
+  Timer? _keepAliveTimer;
+  Timer? _connectionMonitor;
+  final _connectionStatusController = StreamController<bool>.broadcast();
+  Stream<bool> get connectionStatus => _connectionStatusController.stream;
 
   SSHService({
     required this.name,
@@ -20,18 +26,73 @@ class SSHService {
   });
 
   Future<void> connect() async {
-    if (_client != null) {
-      return; 
-    }
+    if (_client != null) return;
     try {
-      final socket = await SSHSocket.connect(host, port, timeout: Duration(seconds: 10));
-      _client = SSHClient(
-        socket,
-        username: username,
-        onPasswordRequest: () => password,
-      );
+      if (_isReconnecting) return;
+      _isReconnecting = true;
+      
+      final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
+      _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
+      
+      _startConnectionMonitoring();
+      _isReconnecting = false;
+      _connectionStatusController.add(true);
     } catch (e) {
+      _isReconnecting = false;
+      _connectionStatusController.add(false);
       throw Exception('Failed to connect: $e');
+    }
+  }
+
+  void _startConnectionMonitoring() {
+    _keepAliveTimer?.cancel();
+    _connectionMonitor?.cancel();
+
+    // Send keepalive every 30 seconds
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (_client != null) {
+        try {
+          await _client!.run('echo keepalive');
+        } catch (e) {
+          print('Keepalive failed: $e');
+          await _handleReconnection();
+        }
+      }
+    });
+
+    // Monitor connection status every 5 seconds
+    _connectionMonitor = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (_client != null && !_isReconnecting) {
+        try {
+          await _client!.run('echo test');
+        } catch (e) {
+          print('Connection check failed: $e');
+          await _handleReconnection();
+        }
+      }
+    });
+  }
+
+  Future<void> _handleReconnection() async {
+    if (_isReconnecting) return;
+    _isReconnecting = true;
+    _connectionStatusController.add(false);
+
+    while (true) {
+      try {
+        _client?.close();
+        _client = null;
+        
+        final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
+        _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
+        
+        _isReconnecting = false;
+        _connectionStatusController.add(true);
+        break;
+      } catch (e) {
+        print('Reconnection attempt failed: $e');
+        await Future.delayed(const Duration(seconds: 5));
+      }
     }
   }
 
@@ -53,21 +114,19 @@ class SSHService {
   }
 
   Future<String> executeCommand(String command) async {
-    if (!isConnected()) {
-      throw Exception('Not connected');
+    if (_client == null) {
+      await connect();
     }
 
     try {
-      final session = await _client!.execute(command);
-      final output = await utf8.decodeStream(session.stdout);
-      session.close();
-      return output;
+      final result = await _client!.run(command);
+      return utf8.decode(result);
     } catch (e) {
-      if (e.toString().contains('SSHAuthFailError')) {
-        throw Exception('Authentication failed: Please check your username and password.');
-      } else {
-        throw Exception('Failed to execute command: $e');
+      if (!_isReconnecting) {
+        await _handleReconnection();
+        return executeCommand(command); // Retry once after reconnection
       }
+      throw Exception('Failed to execute command: $e');
     }
   }
 
@@ -117,65 +176,85 @@ class SSHService {
     return services..sort((a, b) => a['name']!.compareTo(b['name']!));
   }
 
-  Future<void> uploadFile(String localPath, String remotePath, void Function(int, int) onProgress) async {
-    if (!isConnected()) {
-      throw Exception('Not connected');
-    }
-
-    try {
-      final file = File(localPath);
-      final fileStream = file.openRead().map((data) => Uint8List.fromList(data));
-
-      final sftp = await _client!.sftp();
-      final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
-
-      int totalBytes = await file.length();
-      int sentBytes = 0;
-
-      final progressStream = fileStream.map((chunk) {
-        sentBytes += chunk.length;
-        onProgress(sentBytes, totalBytes); 
-        return chunk;
-      });
-
-      await remoteFile.write(progressStream);
-      await remoteFile.close();
-    } catch (e) {
-      throw Exception('Failed to upload file: $e');
-    }
+  Future<void> uploadFile(String localPath, String remotePath, [void Function(int, int)? onProgress]) async {
+  if (_client == null) {
+    await connect();
   }
 
-  Future<void> downloadFile(String remotePath, String localPath) async {
-    if (!isConnected()) {
-      throw Exception('Not connected');
+  try {
+    final file = File(localPath);
+    final totalBytes = await file.length();
+    int uploadedBytes = 0;
+
+    final sftp = await _client!.sftp();
+    final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
+    final controller = StreamController<Uint8List>();
+
+    file.openRead().map((chunk) => Uint8List.fromList(chunk)).listen(
+      (chunk) {
+        uploadedBytes += chunk.length;
+        if (onProgress != null) {
+          onProgress(uploadedBytes, totalBytes);
+        }
+        controller.add(chunk);
+      },
+      onDone: () => controller.close(),
+      onError: (error) {
+        controller.addError(error);
+        controller.close();
+      },
+    );
+
+    await remoteFile.write(controller.stream);
+    await remoteFile.close();
+  } catch (e) {
+    if (!_isReconnecting) {
+      await _handleReconnection();
+      return uploadFile(localPath, remotePath, onProgress);
     }
-
-    RandomAccessFile? localFile;
-    SftpFile? remoteFile;
-
-    try {
-      final file = File(localPath);
-      localFile = await file.open(mode: FileMode.write);
-      final sftp = await _client!.sftp();
-      remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
-
-      final stream = remoteFile.read();
-      await for (final Uint8List chunk in stream) {
-        if (chunk.isEmpty) break;
-        await localFile.writeFrom(chunk);
-      }
-
-    } catch (e) {
-      throw Exception('Failed to download file: $e');
-    } finally {
-      try {
-        await remoteFile?.close();
-        await localFile?.close();
-      } catch (e) {
-        throw Exception('Error closing files: $e');
-      }
-    }
+    throw Exception('Failed to upload file: $e');
   }
+}
+
+  Future<void> downloadFile(String remotePath, String localPath, [void Function(int, int)? onProgress]) async {
+  if (_client == null) {
+    await connect();
+  }
+
+  try {
+    final sftp = await _client!.sftp();
+    final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
+    final file = File(localPath);
+    
+    final stats = await remoteFile.stat();
+    final totalSize = stats.size ?? 0;
+    int downloadedSize = 0;
+
+    final sink = file.openWrite();
+
+    await for (final chunk in remoteFile.read()) { 
+      sink.add(chunk);
+      downloadedSize += chunk.length;
+
+      if (onProgress != null && totalSize > 0) { 
+        onProgress(downloadedSize, totalSize);
+      }
+    }
+
+    await sink.flush();
+    await sink.close();
+    await remoteFile.close();
+  } catch (e) {
+    if (!_isReconnecting) {
+      await _handleReconnection();
+      return downloadFile(remotePath, localPath, onProgress);
+    }
+    throw Exception('Failed to download file: $e');
+  }
+}
+
+
+
 
   Future<bool> checkRequiredPackages() async {
       try {
@@ -217,15 +296,13 @@ class SSHService {
         echo "===CPU_MODEL===" &&
         lscpu | grep 'Model name' &&
         echo "===CPU_USAGE===" &&
-        mpstat 1 1 | awk '/Average/ {print \$3}' &&
+        mpstat 1 1 &&
         echo "===CPU_TEMP===" &&
         cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null || echo "N/A" &&
         echo "===GPU_TEMP===" &&
         vcgencmd measure_temp 2>/dev/null || echo "N/A" &&
         echo "===MEM_INFO===" &&
         free -m &&
-        echo "===SWAP_INFO===" &&
-        free -m | grep Swap &&
         echo "===DISK_INFO===" &&
         df -h --total &&
         echo "===NETWORK_INFO===" &&
@@ -233,7 +310,9 @@ class SSHService {
         echo "===SYSTEM_UPTIME===" &&
         uptime
       ''');
-      final sections = result.split('\n');
+       print('Raw command output:');
+      print(result);
+        final sections = result.split('\n');
       String currentSection = '';
 
       for (var line in sections) {
@@ -253,56 +332,61 @@ class SSHService {
 
           case 'IP_ADDRESS':
             if (line.isNotEmpty) {
-              stats['ip_address'] = line.split(' ').first;
+              // Take only the first IP address
+              stats['ip_address'] = line.split(' ')[0];
             }
             break;
 
           case 'OS_INFO':
-            if (line.isNotEmpty) {
+            if (line.startsWith('Description:')) {
               stats['os'] = line.replaceAll('Description:', '').trim();
             }
             break;
 
           case 'CPU_MODEL':
-            if (line.isNotEmpty) {
+            if (line.startsWith('Model name:')) {
               stats['cpu_model'] = line.replaceAll('Model name:', '').trim();
-            }
-            break;
-
-          case 'CPU_USAGE':
-            if (line.isNotEmpty) {
-              stats['cpu'] = double.tryParse(line) ?? 0.0;
-            }
-            break;
-
-          case 'MEM_INFO':
-            if (line.startsWith('Mem:')) {
-              final memParts = line.split(RegExp(r'\s+'));
-              if (memParts.length >= 7) {
-                final total = double.parse(memParts[1]);
-                final used = double.parse(memParts[2]);
-                stats['memory'] = (used / total) * 100;
-                stats['memory_total'] = total;
-                stats['memory_used'] = used;
-              }
-            }
-            break;
-
-          case 'SWAP_INFO':
-            if (line.startsWith('Swap:')) {
-              final swapParts = line.split(RegExp(r'\s+'));
-              if (swapParts.length >= 4) {
-                final total = double.parse(swapParts[1]);
-                final used = double.parse(swapParts[2]);
-                stats['swap_memory'] = '$used MB / $total MB';
-              }
             }
             break;
 
           case 'CPU_TEMP':
             if (line.isNotEmpty && line != "N/A") {
               final temp = double.tryParse(line)?.toDouble() ?? 0.0;
-              stats['cpu_temperature'] = temp / 1000.0;
+              stats['cpu_temperature'] = temp / 1000.0; 
+            }
+            break;
+
+          case 'CPU_USAGE':
+            if (line.contains('Average:')) {
+              final parts = line.split(RegExp(r'\s+'));
+              if (parts.length >= 12) {
+                final userCpu = double.tryParse(parts[3]) ?? 0.0;
+                final niceCpu = double.tryParse(parts[4]) ?? 0.0;
+                final systemCpu = double.tryParse(parts[5]) ?? 0.0;
+                final iowaitCpu = double.tryParse(parts[6]) ?? 0.0;
+                final irqCpu = double.tryParse(parts[7]) ?? 0.0;
+                final softCpu = double.tryParse(parts[8]) ?? 0.0;
+                final stealCpu = double.tryParse(parts[9]) ?? 0.0;
+                final guestCpu = double.tryParse(parts[10]) ?? 0.0;
+                final idleCpu = double.tryParse(parts[11]) ?? 0.0;
+
+                stats['cpu_user'] = userCpu;
+                stats['cpu_nice'] = niceCpu;
+                stats['cpu_system'] = systemCpu;
+                stats['cpu_iowait'] = iowaitCpu;
+                stats['cpu_irq'] = irqCpu;
+                stats['cpu_soft'] = softCpu;
+                stats['cpu_steal'] = stealCpu;
+                stats['cpu_guest'] = guestCpu;
+                stats['cpu_idle'] = idleCpu;
+
+                final combinedUsage = userCpu + niceCpu + systemCpu + 
+                                    iowaitCpu + irqCpu + softCpu + 
+                                    stealCpu + guestCpu;
+                                    
+                stats['cpu'] = combinedUsage;
+                stats['cpu_combined'] = combinedUsage; 
+              }
             }
             break;
 
@@ -313,37 +397,48 @@ class SSHService {
             }
             break;
 
-          case 'DISK_INFO':
-            if (line.startsWith('total')) {
-              final diskParts = line.split(RegExp(r'\s+'));
-              if (diskParts.length >= 6) {
-                final totalSize = diskParts[1];
-                stats['total_disk_space'] = totalSize;
+          case 'MEM_INFO':
+            if (line.startsWith('Mem:')) {
+              final memParts = line.split(RegExp(r'\s+'));
+              if (memParts.length >= 7) {
+                final total = double.parse(memParts[1]);
+                final available = double.parse(memParts[6]);
+                final actualUsed = total - available;
+                stats['memory'] = (actualUsed / total) * 100;
+                stats['memory_total'] = total;
+                stats['memory_used'] = actualUsed;
               }
-            } else if (line.startsWith('/dev/')) {
+            }
+            break;
+
+          case 'DISK_INFO':
+            if (stats['disks'] == null) {
+              stats['disks'] = [];
+            }
+            if (line.startsWith('/dev/')) {
               final diskParts = line.split(RegExp(r'\s+'));
               if (diskParts.length >= 6) {
-                final diskName = diskParts[0];
-                final diskSize = diskParts[1];
-                final diskUsed = diskParts[2];
-                final diskAvailable = diskParts[3];
-                final diskUsedPercentage = diskParts[4];
-                stats['disks'] ??= [];
-                stats['disks'].add({
-                  'name': diskName,
-                  'size': diskSize,
-                  'used': diskUsed,
-                  'available': diskAvailable,
-                  'used_percentage': diskUsedPercentage,
+                (stats['disks'] as List).add({
+                  'name': diskParts[0],
+                  'size': diskParts[1],
+                  'used': diskParts[2],
+                  'available': diskParts[3],
+                  'used_percentage': diskParts[4],
+                  'mount_point': diskParts[5],
                 });
+              }
+            } else if (line.startsWith('total')) {
+              final totalParts = line.split(RegExp(r'\s+'));
+              if (totalParts.length >= 4) {
+                stats['total_disk_space'] = totalParts[1];
               }
             }
             break;
 
           case 'NETWORK_INFO':
-            if (line.isNotEmpty) {
-              final netParts = line.split(RegExp(r'\s+'));
-              if (netParts.length >= 3) {
+            if (line.isNotEmpty && !line.contains('KB/s')) {
+              final netParts = line.trim().split(RegExp(r'\s+'));
+              if (netParts.length >= 2) {
                 stats['network_in'] = double.tryParse(netParts[0]) ?? 0.0;
                 stats['network_out'] = double.tryParse(netParts[1]) ?? 0.0;
               }
@@ -352,17 +447,16 @@ class SSHService {
 
           case 'SYSTEM_UPTIME':
             if (line.isNotEmpty) {
-              final uptimeMatch = RegExp(r'up\s+([^,]+)').firstMatch(line);
+              final uptimeMatch = RegExp(r'up\s+(.*?),').firstMatch(line);
               if (uptimeMatch != null) {
-                stats['uptime'] = uptimeMatch.group(1) ?? 'Error';
-              } else {
-                stats['uptime'] = 'Error';
+                stats['uptime'] = uptimeMatch.group(1)?.trim() ?? 'Error';
               }
             }
             break;
         }
       }
     } catch (e) {
+      print('Error parsing stats: $e');
       return {
         'cpu': 0.0,
         'memory': 0.0,
@@ -372,5 +466,13 @@ class SSHService {
     }
 
     return stats;
+  }
+
+  void dispose() {
+    _keepAliveTimer?.cancel();
+    _connectionMonitor?.cancel();
+    _connectionStatusController.close();
+    _client?.close();
+    _client = null;
   }
 }
