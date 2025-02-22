@@ -275,7 +275,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     }
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -288,58 +288,75 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Saved Connections:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: connections.length,
-              itemBuilder: (context, index) {
-                final connection = connections[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(connection['name']!),
-                    subtitle: Text('Host: ${connection['host']}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () {
-                            _showEditDialog(connection: connection, index: index);
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Saved Connections:',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: connections.length,
+                    itemBuilder: (context, index) {
+                      final connection = connections[index];
+                      return Card(
+                        child: ListTile(
+                          title: Text(connection['name']!),
+                          subtitle: Text('Host: ${connection['host']}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () {
+                                  _showEditDialog(connection: connection, index: index);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => _removeConnection(index),
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            _connectToSavedConnection(connection);
                           },
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _removeConnection(index),
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      _connectToSavedConnection(connection);
+                      );
                     },
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Text(
-              connectionStatus,
-              style: TextStyle(
-                color: connectionStatus.startsWith('Error') ? Colors.red : Colors.green,
-                fontWeight: FontWeight.bold,
+                  const SizedBox(height: 16),
+                  Text(
+                    connectionStatus,
+                    style: TextStyle(
+                      color: connectionStatus.startsWith('Error') ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              'Version 1.2.2',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
-    );
+    );  
   }
 }

@@ -391,36 +391,42 @@ class SSHService {
             break;
 
           case 'CPU_USAGE':
-            if (line.contains('Average:')) {
-              final parts = line.split(RegExp(r'\s+'));
-              if (parts.length >= 12) {
-                final userCpu = double.tryParse(parts[3]) ?? 0.0;
-                final niceCpu = double.tryParse(parts[4]) ?? 0.0;
-                final systemCpu = double.tryParse(parts[5]) ?? 0.0;
-                final iowaitCpu = double.tryParse(parts[6]) ?? 0.0;
-                final irqCpu = double.tryParse(parts[7]) ?? 0.0;
-                final softCpu = double.tryParse(parts[8]) ?? 0.0;
-                final stealCpu = double.tryParse(parts[9]) ?? 0.0;
-                final guestCpu = double.tryParse(parts[10]) ?? 0.0;
-                final idleCpu = double.tryParse(parts[11]) ?? 0.0;
+            if (line.contains('Average:') || line.contains('Durchschn.:')) {
+                final parts = line.split(RegExp(r'\s+'));
+                if (parts.length >= 12) {
+                    final startIndex = 2;
+                    final userCpu = double.tryParse(parts[startIndex]) ?? 0.0;
+                    final niceCpu = double.tryParse(parts[startIndex + 1]) ?? 0.0;
+                    final systemCpu = double.tryParse(parts[startIndex + 2]) ?? 0.0;
+                    final iowaitCpu = double.tryParse(parts[startIndex + 3]) ?? 0.0;
+                    final irqCpu = double.tryParse(parts[startIndex + 4]) ?? 0.0;
+                    final softCpu = double.tryParse(parts[startIndex + 5]) ?? 0.0;
+                    final stealCpu = double.tryParse(parts[startIndex + 6]) ?? 0.0;
+                    final guestCpu = double.tryParse(parts[startIndex + 7]) ?? 0.0;
+                    final idleCpu = double.tryParse(parts[startIndex + 8]) ?? 0.0;
 
-                stats['cpu_user'] = userCpu;
-                stats['cpu_nice'] = niceCpu;
-                stats['cpu_system'] = systemCpu;
-                stats['cpu_iowait'] = iowaitCpu;
-                stats['cpu_irq'] = irqCpu;
-                stats['cpu_soft'] = softCpu;
-                stats['cpu_steal'] = stealCpu;
-                stats['cpu_guest'] = guestCpu;
-                stats['cpu_idle'] = idleCpu;
+                    String normalizeNumber(String value) {
+                        return value.replaceAll(',', '.');
+                    }
 
-                final combinedUsage = userCpu + niceCpu + systemCpu + 
-                                    iowaitCpu + irqCpu + softCpu + 
-                                    stealCpu + guestCpu;
-                                    
-                stats['cpu'] = combinedUsage;
-                stats['cpu_combined'] = combinedUsage; 
-              }
+                    stats['cpu_user'] = double.tryParse(normalizeNumber(userCpu.toString())) ?? 0.0;
+                    stats['cpu_nice'] = double.tryParse(normalizeNumber(niceCpu.toString())) ?? 0.0;
+                    stats['cpu_system'] = double.tryParse(normalizeNumber(systemCpu.toString())) ?? 0.0;
+                    stats['cpu_iowait'] = double.tryParse(normalizeNumber(iowaitCpu.toString())) ?? 0.0;
+                    stats['cpu_irq'] = double.tryParse(normalizeNumber(irqCpu.toString())) ?? 0.0;
+                    stats['cpu_soft'] = double.tryParse(normalizeNumber(softCpu.toString())) ?? 0.0;
+                    stats['cpu_steal'] = double.tryParse(normalizeNumber(stealCpu.toString())) ?? 0.0;
+                    stats['cpu_guest'] = double.tryParse(normalizeNumber(guestCpu.toString())) ?? 0.0;
+                    stats['cpu_idle'] = double.tryParse(normalizeNumber(idleCpu.toString())) ?? 0.0;
+
+                    final combinedUsage = stats['cpu_user'] + stats['cpu_nice'] + 
+                                        stats['cpu_system'] + stats['cpu_iowait'] + 
+                                        stats['cpu_irq'] + stats['cpu_soft'] + 
+                                        stats['cpu_steal'] + stats['cpu_guest'];
+                    
+                    stats['cpu'] = combinedUsage;
+                    stats['cpu_combined'] = combinedUsage;
+                }
             }
             break;
 
@@ -432,16 +438,27 @@ class SSHService {
             break;
 
           case 'MEM_INFO':
-            if (line.startsWith('Mem:')) {
-              final memParts = line.split(RegExp(r'\s+'));
-              if (memParts.length >= 7) {
-                final total = double.parse(memParts[1]);
-                final available = double.parse(memParts[6]);
-                final actualUsed = total - available;
-                stats['memory'] = (actualUsed / total) * 100;
-                stats['memory_total'] = total;
-                stats['memory_used'] = actualUsed;
-              }
+            if (line.startsWith('Mem:') || line.startsWith('Speicher')) {
+                final memParts = line.split(RegExp(r'\s+'));
+                if (line.startsWith('Speicher')) {
+                    if (memParts.length >= 7) {
+                        final total = double.parse(memParts[2]); 
+                        final available = double.parse(memParts[6]); 
+                        final actualUsed = total - available;
+                        stats['memory'] = (actualUsed / total) * 100;
+                        stats['memory_total'] = total;
+                        stats['memory_used'] = actualUsed;
+                    }
+                } else {
+                    if (memParts.length >= 7) {
+                        final total = double.parse(memParts[1]);
+                        final available = double.parse(memParts[6]);
+                        final actualUsed = total - available;
+                        stats['memory'] = (actualUsed / total) * 100;
+                        stats['memory_total'] = total;
+                        stats['memory_used'] = actualUsed;
+                    }
+                }
             }
             break;
 
