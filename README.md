@@ -12,6 +12,10 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - Start, stop, and restart services on the Raspberry Pi
 - Light and dark theme support
 
+## Important Notes
+
+⚠️ **Language Requirement**: The Raspberry Pi must be set to English or German locale for all features to work correctly. Some monitoring features may not work properly with other system languages.
+
 ## Screenshots
 
 <p align="center">
