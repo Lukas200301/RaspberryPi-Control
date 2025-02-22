@@ -29,6 +29,7 @@ dependencies:
   file_picker: ^8.0.0+1
   open_file: ^3.3.2
   fl_chart: ^0.40.0
+  android_intent_plus: ^4.0.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

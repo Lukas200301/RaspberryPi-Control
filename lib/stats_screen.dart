@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'ssh_service.dart';
+import 'services/ssh_service.dart';
 import 'dart:async';
 import 'dart:math';
-
+import 'services/stats_controller.dart';  
 class StatsScreen extends StatefulWidget {
   final SSHService? sshService;
+  final VoidCallback? onDispose;   
 
   const StatsScreen({
     super.key,
     required this.sshService,
+    this.onDispose,  
   });
 
   @override
@@ -18,6 +20,7 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> {
+  Timer? _monitoringTimer;
   bool isLoading = true;
   bool isInstallingPackages = false;
   bool packagesInstalled = false;
@@ -70,6 +73,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   void dispose() {
+    _monitoringTimer?.cancel();
     _searchFocusNode.dispose();
     _searchController.dispose();
     super.dispose();
@@ -107,9 +111,41 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   void _startMonitoring() {
-    _fetchStats();
-    Timer.periodic(const Duration(seconds: 2), (timer) {
-      _fetchStats();
+    if (widget.sshService == null) {
+      print("Error: SSHService is null. Monitoring cannot start.");
+      return;
+    }
+  StatsController.instance.startMonitoring(widget.sshService!);
+    StatsController.instance.statsStream.listen((stats) {
+      if (mounted) {
+        setState(() {
+          currentStats = stats;
+          timeIndex = StatsController.instance.timeIndex;
+          cpuHistory.clear();
+          cpuHistory.addAll(StatsController.instance.cpuHistory);
+          memoryHistory.clear();
+          memoryHistory.addAll(StatsController.instance.memoryHistory);
+          cpuTempHistory.clear();
+          cpuTempHistory.addAll(StatsController.instance.cpuTempHistory);
+          gpuTempHistory.clear();
+          gpuTempHistory.addAll(StatsController.instance.gpuTempHistory);
+          networkInHistory.clear();
+          networkInHistory.addAll(StatsController.instance.networkInHistory);
+          networkOutHistory.clear();
+          networkOutHistory.addAll(StatsController.instance.networkOutHistory);
+          cpuUserHistory.clear();
+          cpuUserHistory.addAll(StatsController.instance.cpuUserHistory);
+          cpuSystemHistory.clear();
+          cpuSystemHistory.addAll(StatsController.instance.cpuSystemHistory);
+          cpuNiceHistory.clear();
+          cpuNiceHistory.addAll(StatsController.instance.cpuNiceHistory);
+          cpuIoWaitHistory.clear();
+          cpuIoWaitHistory.addAll(StatsController.instance.cpuIoWaitHistory);
+          cpuIrqHistory.clear();
+          cpuIrqHistory.addAll(StatsController.instance.cpuIrqHistory);
+          isLoading = false;
+        });
+      }
     });
   }
 
@@ -195,43 +231,34 @@ class _StatsScreenState extends State<StatsScreen> {
         if (!widget.sshService!.isConnected()) {
           await widget.sshService!.connect();
         }
-        final stats = await widget.sshService!.getDetailedStats();
-        if (mounted) {
-          setState(() {
-            currentStats = stats;
-            timeIndex += 1;
-
-            cpuHistory.add(FlSpot(timeIndex, stats['cpu'] ?? 0));
-            memoryHistory.add(FlSpot(timeIndex, stats['memory'] ?? 0));
-            cpuTempHistory.add(FlSpot(timeIndex, stats['cpu_temperature'] ?? 0));
-            gpuTempHistory.add(FlSpot(timeIndex, stats['gpu_temperature'] ?? 0));
-            networkInHistory.add(FlSpot(timeIndex, stats['network_in'] ?? 0));
-            networkOutHistory.add(FlSpot(timeIndex, stats['network_out'] ?? 0));
-            diskUsageHistory.add(FlSpot(timeIndex, double.tryParse(stats['disk_used'] ?? '0') ?? 0));
-            cpuUserHistory.add(FlSpot(timeIndex, stats['cpu_user'] ?? 0));
-            cpuSystemHistory.add(FlSpot(timeIndex, stats['cpu_system'] ?? 0));
-            cpuNiceHistory.add(FlSpot(timeIndex, stats['cpu_nice'] ?? 0));
-            cpuIoWaitHistory.add(FlSpot(timeIndex, stats['cpu_iowait'] ?? 0));
-            cpuIrqHistory.add(FlSpot(timeIndex, stats['cpu_irq'] ?? 0));
-
-            if (cpuHistory.length > 100) {
-              cpuHistory.removeAt(0);
-              memoryHistory.removeAt(0);
-              cpuTempHistory.removeAt(0);
-              gpuTempHistory.removeAt(0);
-              networkInHistory.removeAt(0);
-              networkOutHistory.removeAt(0);
-              diskUsageHistory.removeAt(0);
-              cpuUserHistory.removeAt(0);
-              cpuSystemHistory.removeAt(0);
-              cpuNiceHistory.removeAt(0);
-              cpuIoWaitHistory.removeAt(0);
-              cpuIrqHistory.removeAt(0);
-            }
-
-            isLoading = false;
-          });
-        }
+        setState(() {
+          currentStats = StatsController.instance.currentStats;
+          cpuHistory.clear();
+          cpuHistory.addAll(StatsController.instance.cpuHistory);
+          memoryHistory.clear();
+          memoryHistory.addAll(StatsController.instance.memoryHistory);
+          cpuTempHistory.clear();
+          cpuTempHistory.addAll(StatsController.instance.cpuTempHistory);
+          gpuTempHistory.clear();
+          gpuTempHistory.addAll(StatsController.instance.gpuTempHistory);
+          networkInHistory.clear();
+          networkInHistory.addAll(StatsController.instance.networkInHistory);
+          networkOutHistory.clear();
+          networkOutHistory.addAll(StatsController.instance.networkOutHistory);
+          diskUsageHistory.clear();
+          diskUsageHistory.addAll(StatsController.instance.diskUsageHistory);
+          cpuUserHistory.clear();
+          cpuUserHistory.addAll(StatsController.instance.cpuUserHistory);
+          cpuSystemHistory.clear();
+          cpuSystemHistory.addAll(StatsController.instance.cpuSystemHistory);
+          cpuNiceHistory.clear();
+          cpuNiceHistory.addAll(StatsController.instance.cpuNiceHistory);
+          cpuIoWaitHistory.clear();
+          cpuIoWaitHistory.addAll(StatsController.instance.cpuIoWaitHistory);
+          cpuIrqHistory.clear();
+          cpuIrqHistory.addAll(StatsController.instance.cpuIrqHistory);
+          isLoading = false;
+        });
       } catch (e) {
         if (e.toString().contains('Not connected')) {
           await Future.delayed(const Duration(seconds: 5));

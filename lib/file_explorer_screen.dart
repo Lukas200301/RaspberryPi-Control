@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'ssh_service.dart';
+import 'services/ssh_service.dart';
 import 'dart:io';
 
 class FileExplorerScreen extends StatefulWidget {
@@ -55,7 +55,11 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   void initState() {
     super.initState();
     _searchController.addListener(_filterContents);
-    _loadCurrentDirectory();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.sshService != null && mounted) {
+        _loadCurrentDirectory();
+      }
+    });
   }
 
   @override
@@ -66,7 +70,8 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _loadCurrentDirectory() async {
-    if (widget.sshService == null) {
+    final sshService = widget.sshService;
+    if (sshService == null) {
       setState(() => _errorMessage = 'Not connected');
       return;
     }
@@ -74,7 +79,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
     setState(() => _isLoading = true);
 
     try {
-      final result = await widget.sshService!.executeCommand('ls -la "$_currentPath"');
+      final result = await sshService.executeCommand('ls -la "$_currentPath"');
       final List<FileEntity> contents = [];
       
       final lines = result.split('\n');
@@ -253,101 +258,166 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _uploadDirectory(String localPath, String remotePath) async {
-  final directory = Directory(localPath);
-  if (!directory.existsSync()) {
-    return;
-  }
+    final sshService = widget.sshService;
+    if (sshService == null) return;
 
-  final List<FileSystemEntity> entities = await directory.list(recursive: true).toList();
-  int totalSize = 0;
-  for (final entity in entities.whereType<File>()) {
-    totalSize += await entity.length();
-  }
-  int uploadedSize = 0;
+    final directory = Directory(localPath);
+    if (!directory.existsSync()) return;
 
-  for (final entity in entities) {
-    if (_isCancelled) break;
-    final relativePath = entity.path.substring(localPath.length + 1);
-    final remoteFilePath = '$remotePath/$relativePath';
+    await sshService.executeCommand('mkdir -p "$remotePath"');
 
-    if (entity is Directory) {
-      await widget.sshService!.executeCommand('mkdir -p "$remoteFilePath"');
-    } else if (entity is File) {
-      setState(() {
-        _currentFileName = entity.path.split(Platform.pathSeparator).last;
-        _sourcePath = entity.path;
-        _destinationPath = remoteFilePath;
-      });
+    final List<FileSystemEntity> entities = [];
+    int totalSize = 0;
 
-      await widget.sshService!.uploadFile(
-        entity.path,
-        remoteFilePath,
-        (sent, total) {
-          if (mounted) {
-            setState(() {
-              uploadedSize += sent;
-              _progress = uploadedSize / totalSize;
-            });
-          }
-        },
-      );
+    try {
+      final lister = directory.list(recursive: true, followLinks: false);
+      await for (final entity in lister) {
+        entities.add(entity);
+        if (entity is File) {
+          totalSize += await entity.length();
+        }
+      }
+
+      int uploadedSize = 0;
+      final String baseLocalPath = directory.path;
+
+      for (final entity in entities) {
+        if (_isCancelled) break;
+
+        String relativePath = entity.path.substring(baseLocalPath.length);
+        if (relativePath.startsWith(Platform.pathSeparator)) {
+          relativePath = relativePath.substring(1);
+        }
+        
+        final String targetRemotePath = '$remotePath/${relativePath.replaceAll(Platform.pathSeparator, '/')}';
+
+        setState(() {
+          _currentFileName = entity.path.split(Platform.pathSeparator).last;
+          _sourcePath = entity.path;
+          _destinationPath = targetRemotePath;
+        });
+
+        if (entity is Directory) {
+          await sshService.executeCommand('mkdir -p "$targetRemotePath"');
+        } else if (entity is File) {
+          await sshService.uploadFile(
+            entity.path,
+            targetRemotePath,
+            (sent, total) {
+              if (mounted) {
+                setState(() {
+                  uploadedSize += sent;
+                  _progress = uploadedSize / totalSize;
+                });
+              }
+            },
+          );
+        }
+      }
+    } catch (e) {
+      print('Error during directory upload: $e');
+      rethrow;
     }
   }
-}
 
   Future<void> _uploadFolder() async {
-    if (widget.sshService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not connected to server')),
-      );
-      return;
-    }
+    if (widget.sshService == null) return;
 
-    final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    if (selectedDirectory != null) {
+    try {
+      final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      if (selectedDirectory == null) return;
+
       setState(() {
         _isLoading = true;
         _isUploading = true;
-        _progressMessage = 'Uploading folder...';
+        _progressMessage = 'Analyzing folder...';
       });
 
-      try {
-        final directoryName = selectedDirectory.split(Platform.pathSeparator).last;
-        final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$directoryName';
-        await widget.sshService!.executeCommand('mkdir -p "$remotePath"');
-        await _uploadDirectory(selectedDirectory, remotePath);
-        await _loadCurrentDirectory();
+      final entities = await _getAllFilesInDirectory(selectedDirectory);
+      final totalSize = await _calculateTotalSize(entities);
+      int uploadedSize = 0;
 
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Uploaded folder: $directoryName')),
-        );
-      } catch (e) {
-        if (e.toString().contains('Not connected')) {
-          await widget.sshService!.connect();
-          await _uploadFolder();
-        } else {
-          if (!mounted) return;
-          setState(() {
-            _errorMessage = 'Upload error: $e';
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to upload folder: $e')),
+      if (_isCancelled) return;
+
+      final directoryName = selectedDirectory.split(Platform.pathSeparator).last;
+      final baseRemotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$directoryName';
+
+      await widget.sshService!.executeCommand('mkdir -p "$baseRemotePath"');
+
+      for (final entity in entities) {
+        if (_isCancelled) break;
+
+        final relativePath = entity.path.substring(selectedDirectory.length);
+        final remoteFilePath = '$baseRemotePath${relativePath.replaceAll(Platform.pathSeparator, '/')}';
+
+        setState(() {
+          _currentFileName = entity.path.split(Platform.pathSeparator).last;
+          _sourcePath = entity.path;
+          _destinationPath = remoteFilePath;
+        });
+
+        if (entity is Directory) {
+          await widget.sshService!.executeCommand('mkdir -p "$remoteFilePath"');
+        } else if (entity is File) {
+          await widget.sshService!.uploadFile(
+            entity.path,
+            remoteFilePath,
+            (sent, _) {
+              if (mounted) {
+                setState(() {
+                  uploadedSize += sent;
+                  _progress = uploadedSize / totalSize;
+                });
+              }
+            },
           );
         }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _isUploading = false;
-            _progress = 0.0;
-            _progressMessage = '';
-            _isCancelled = false;
-          });
-        }
+      }
+
+      await _loadCurrentDirectory();
+
+    } catch (e) {
+      print('Error uploading folder: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isUploading = false;
+          _progress = 0.0;
+          _isCancelled = false;
+        });
       }
     }
+  }
+
+  Future<List<FileSystemEntity>> _getAllFilesInDirectory(String path) async {
+    final List<FileSystemEntity> entities = [];
+    final Directory dir = Directory(path);
+    
+    try {
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        entities.add(entity);
+      }
+    } catch (e) {
+      print('Error listing directory contents: $e');
+    }
+    
+    return entities;
+  }
+
+  Future<int> _calculateTotalSize(List<FileSystemEntity> entities) async {
+    int total = 0;
+    for (final entity in entities) {
+      if (entity is File) {
+        total += await entity.length();
+      }
+    }
+    return total;
   }
 
   Future<void> _downloadSelected() async {
@@ -388,21 +458,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       if (!mounted) return;
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Downloaded ${_selectedItems.length} item(s)'),
-          action: SnackBarAction(
-            label: 'Open Folder',
-            onPressed: () async {
-              if (Platform.isWindows) {
-                await Process.run('explorer.exe', [selectedDirectory]);
-              } else if (Platform.isLinux) {
-                await Process.run('xdg-open', [selectedDirectory]);
-              } else if (Platform.isMacOS) {
-                await Process.run('open', [selectedDirectory]);
-              }
-            },
-          ),
-        ),
+        SnackBar(content: Text('Downloaded ${_selectedItems.length} item(s)')),
       );
 
       setState(() {
@@ -435,56 +491,59 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _downloadDirectory(String remotePath, String localPath) async {
-  final result = await widget.sshService!.executeCommand('ls -la "$remotePath"');
-  final List<FileEntity> contents = [];
+    final sshService = widget.sshService;
+    if (sshService == null) return;
 
-  final lines = result.split('\n');
-  for (var line in lines.skip(1)) {
-    if (line.trim().isEmpty) continue;
+    final result = await sshService.executeCommand('ls -la "$remotePath"');
+    final List<FileEntity> contents = [];
 
-    final parts = line.split(RegExp(r'\s+'));
-    if (parts.length >= 9) {
-      final permissions = parts[0];
-      final name = parts.sublist(8).join(' ');
+    final lines = result.split('\n');
+    for (var line in lines.skip(1)) {
+      if (line.trim().isEmpty) continue;
 
-      if (name == '.' || name == '..') continue;
+      final parts = line.split(RegExp(r'\s+'));
+      if (parts.length >= 9) {
+        final permissions = parts[0];
+        final name = parts.sublist(8).join(' ');
 
-      contents.add(FileEntity(
-        name: name,
-        isDirectory: permissions.startsWith('d'),
-        size: '0',  
-        permissions: permissions,
-      ));
+        if (name == '.' || name == '..') continue;
+
+        contents.add(FileEntity(
+          name: name,
+          isDirectory: permissions.startsWith('d'),
+          size: '0',  
+          permissions: permissions,
+        ));
+      }
     }
-  }
 
-  final directory = Directory(localPath);
-  if (!directory.existsSync()) {
-    directory.createSync(recursive: true);
-  }
+    final directory = Directory(localPath);
+    if (!directory.existsSync()) {
+      directory.createSync(recursive: true);
+    }
 
-  for (final item in contents) {
-    if (_isCancelled) break;
-    final itemRemotePath = '$remotePath/${item.name}';
-    final itemLocalPath = '$localPath/${item.name}';
+    for (final item in contents) {
+      if (_isCancelled) break;
+      final itemRemotePath = '$remotePath/${item.name}';
+      final itemLocalPath = '$localPath/${item.name}';
 
-    if (item.isDirectory) {
-      await _downloadDirectory(itemRemotePath, itemLocalPath);
-    } else {
-      await widget.sshService!.downloadFile(
-        itemRemotePath, 
-        itemLocalPath,
-        (downloaded, total) {
-          if (mounted) {
-            setState(() {
-              _progress = downloaded / total;
-            });
+      if (item.isDirectory) {
+        await _downloadDirectory(itemRemotePath, itemLocalPath);
+      } else {
+        await sshService.downloadFile(
+          itemRemotePath, 
+          itemLocalPath,
+          (downloaded, total) {
+            if (mounted) {
+              setState(() {
+                _progress = downloaded / total;
+              });
+            }
           }
-        }
-      );
+        );
+      }
     }
   }
-}
 
 
   Future<void> _confirmDeleteSelected() async {
@@ -596,7 +655,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   Future<List<FileEntity>> _searchAllDirectories(String path, String query) async {
     List<FileEntity> results = [];
     try {
-      // Search only from current path
       final searchCommand = 'cd "$path" && find . -iname "*$query*"';
       final result = await widget.sshService!.executeCommand(searchCommand);
       
@@ -608,7 +666,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       for (var file in files) {
         if (file.trim().isEmpty || file == '.') continue;
         
-        // Remove './' from the beginning of the path
         final cleanPath = file.startsWith('./') ? file.substring(2) : file;
         if (cleanPath.isEmpty) continue;
 
@@ -656,7 +713,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       _lastSearchQuery = query;
       
       try {
-        // Search from root if we're at root, otherwise search from current directory
         final searchPath = _currentPath == '/' ? '/' : _currentPath;
         final results = await _searchAllDirectories(searchPath, query);
         
@@ -681,6 +737,15 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    
+    if (_contents.isEmpty && widget.sshService != null && !_isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _loadCurrentDirectory();
+        }
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent, 

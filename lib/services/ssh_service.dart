@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
+import '../main.dart';
+import 'stats_controller.dart';  
 
 class SSHService {
   final String name;
@@ -35,12 +37,22 @@ class SSHService {
       final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
       _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
       
+      try {
+        await BackgroundService.instance.enableBackground();
+      } catch (e) {
+        print('Warning: Background service error: $e');
+        _client?.close();
+        _client = null;
+        throw e;
+      }
+      
       _startConnectionMonitoring();
       _isReconnecting = false;
       _connectionStatusController.add(true);
     } catch (e) {
       _isReconnecting = false;
       _connectionStatusController.add(false);
+      await BackgroundService.instance.disableBackground();
       throw Exception('Failed to connect: $e');
     }
   }
@@ -49,7 +61,8 @@ class SSHService {
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
 
-    _keepAliveTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       if (_client != null && !_isReconnecting) {
         try {
           await _client!.run('echo keepalive');
@@ -60,7 +73,8 @@ class SSHService {
       }
     });
 
-    _connectionMonitor = Timer.periodic(const Duration(seconds: 30), (timer) async {
+
+    _connectionMonitor = Timer.periodic(const Duration(seconds: 15), (timer) async {
       if (_client == null && !_isReconnecting) {
         await _handleReconnection();
       }
@@ -78,7 +92,6 @@ class SSHService {
     if (_isReconnecting) return; 
     _isReconnecting = true;
     _connectionStatusController.add(false);
-
     int retryCount = 0;
     const int maxRetries = 5;
 
@@ -109,8 +122,18 @@ class SSHService {
     return _client != null;
   }
 
-  void disconnect() {
+  void disconnect() async {
     if (_client != null) {
+      StatsController.instance.stopMonitoring(); 
+      _keepAliveTimer?.cancel();
+      _connectionMonitor?.cancel();
+
+      try {
+        await BackgroundService.instance.disableBackground();
+      } catch (e) {
+        print('Warning: Failed to disable background service: $e');
+      }
+      
       _client!.close();
       _client = null;
     }
@@ -290,7 +313,7 @@ class SSHService {
     Future<void> installRequiredPackages() async {
     await executeCommand('''
       sudo apt-get update 
-      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin 
+      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin lsb-release
       sudo systemctl enable sysstat 
       sudo systemctl start sysstat
     ''');

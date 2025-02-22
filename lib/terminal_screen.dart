@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'ssh_service.dart';
+import 'services/ssh_service.dart';
 
 class TerminalScreen extends StatefulWidget {
   final SSHService? sshService;

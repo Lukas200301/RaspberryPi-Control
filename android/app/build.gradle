@@ -58,6 +58,11 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+    
+    lintOptions {
+        disable 'InvalidPackage'
+        disable 'Deprecation'
+    }
 }
 
 flutter {

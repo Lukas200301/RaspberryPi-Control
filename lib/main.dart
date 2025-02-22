@@ -1,25 +1,147 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_background/flutter_background.dart';
-import 'ssh_service.dart';
+import 'package:flutter/services.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'services/ssh_service.dart';
 import 'connection_screen.dart';
 import 'terminal_screen.dart';
 import 'stats_screen.dart';
 import 'file_explorer_screen.dart';
 
+class BackgroundService {
+  static final BackgroundService _instance = BackgroundService._internal();
+  static BackgroundService get instance => _instance;
+  bool _initialized = false;
+  bool _isEnabled = false;
+  final _platform = const MethodChannel('com.example.flutter_application_1/background');
+  BuildContext? _context;
+
+  BackgroundService._internal();
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+    
+    try {
+      const androidConfig = FlutterBackgroundAndroidConfig(
+        notificationTitle: "Raspberry Pi Control",
+        notificationText: "Running in background",
+        notificationImportance: AndroidNotificationImportance.Default,
+        notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
+        enableWifiLock: true,
+      );
+
+      await _platform.invokeMethod('requestNotificationPermissions');
+      
+      final initialized = await FlutterBackground.initialize(androidConfig: androidConfig);
+      if (!initialized) {
+        throw Exception('Failed to initialize FlutterBackground');
+      }
+
+      _initialized = true;
+      
+      if (!await FlutterBackground.hasPermissions) {
+        final intent = AndroidIntent(
+          action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          data: 'package:com.example.flutter_application_1',
+        );
+        await intent.launch();
+      }
+    } catch (e) {
+      print('Failed to initialize background service: $e');
+      _initialized = false;
+      rethrow;
+    }
+  }
+
+  void setContext(BuildContext context) {
+    _context = context;
+  }
+
+  Future<void> _handleDisconnect() async {
+    print("Handling disconnect from notification");
+
+    await disableBackground();
+
+    final state = _context?.findAncestorStateOfType<_BarsScreenState>();
+    if (state != null && state.mounted) {
+      await state._disconnectAndClose(); 
+    }
+  }
+
+
+  static void resetAppState(BuildContext context) {
+    final state = context.findAncestorStateOfType<_BarsScreenState>();
+    if (state != null) {
+      state._logOff(); 
+    }
+  }
+
+  Future<void> enableBackground() async {
+    print("Enabling background service...");
+    
+    if (!_initialized) {
+      await initialize();
+    }
+
+    try {
+      if (await FlutterBackground.hasPermissions) {
+        await FlutterBackground.enableBackgroundExecution();
+        _isEnabled = true;
+        print("Background service enabled");
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        await _platform.invokeMethod('updateNotification', {
+          'title': 'Raspberry Pi Control',
+          'text': 'Connected and running in background'
+        });
+      } else {
+        print("No background permissions");
+        throw Exception('Background permissions not granted');
+      }
+    } catch (e) {
+      print("Error in enableBackground: $e");
+      throw e;
+    }
+  }
+
+  Future<void> disableBackground() async {
+    if (_isEnabled) {
+      _isEnabled = false;
+      try {
+        await _platform.invokeMethod('updateNotification', {
+          'title': '',
+          'text': '',
+          'clear': true
+        });
+        await FlutterBackground.disableBackgroundExecution();
+      } catch (e) {
+        print('Error disabling background service: $e');
+      }
+    }
+  }
+
+  bool get isEnabled => _isEnabled;
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await BackgroundService.instance.initialize();
+  } catch (e) {
+    print('Warning: Background service initialization failed, continuing without background support');
+  }
+
+  const platform = MethodChannel('com.example.flutter_application_1/background');
+  try {
+    await platform.invokeMethod('requestNotificationPermissions');
+  } catch (e) {
+    print('Failed to request notifications permission: $e');
+  }
+
   final prefs = await SharedPreferences.getInstance();
   final isDarkMode = prefs.getBool('isDarkMode') ?? false;
-
-  // Initialize flutter_background
-  const androidConfig = FlutterBackgroundAndroidConfig(
-    notificationTitle: "Raspberry Pi Control",
-    notificationText: "Running in background",
-    notificationImportance: AndroidNotificationImportance.Default,
-    notificationIcon: AndroidResource(name: 'background_icon', defType: 'drawable'),
-  );
-  await FlutterBackground.initialize(androidConfig: androidConfig);
 
   runApp(MyApp(isDarkMode: isDarkMode));
 }
@@ -112,7 +234,16 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startBackgroundExecution();
+    BackgroundService.instance.setContext(context);
+    
+    const platform = MethodChannel('com.example.flutter_application_1/background');
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'onDisconnectRequested' || call.method == 'onDisconnect') {
+        if (mounted) {
+           _logOff();
+        }
+      }
+    });
   }
 
   @override
@@ -121,12 +252,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     sshService?.disconnect();
     _stopBackgroundExecution();
     super.dispose();
-  }
-
-  Future<void> _startBackgroundExecution() async {
-    if (await FlutterBackground.hasPermissions) {
-      await FlutterBackground.enableBackgroundExecution();
-    }
   }
 
   Future<void> _stopBackgroundExecution() async {
@@ -166,22 +291,43 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   }
 
   void _setSSHService(SSHService? service) {
+    print('Setting SSHService: ${service?.name ?? "NULL"}');
     setState(() {
       sshService = service;
       connectionStatus = service != null
           ? 'Connected to ${service.name} (${service.host})'
-          : ''; 
-  });
-}
-
-  void _logOff() {
-    sshService?.disconnect();
-    setState(() {
-      connectionStatus = 'Disconnected from ${sshService?.name} (${sshService?.host})';
-      sshService = null;
-      _selectedIndex = 2;
-      commandOutput = '';
+          : '';
     });
+  }
+
+
+  Future<void> _disconnectAndClose() async {
+    if (mounted) {
+      await BackgroundService.instance.disableBackground();
+      
+      if (_selectedIndex == 0) {
+        setState(() => _selectedIndex = 2);
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+      
+      sshService?.disconnect();
+      SystemNavigator.pop();
+    }
+  }
+
+  void _logOff() async {
+    if (mounted) {
+      await BackgroundService.instance.disableBackground();
+      setState(() => _selectedIndex = 2);
+      await Future.delayed(const Duration(milliseconds: 100));
+      sshService?.disconnect();
+      
+      setState(() {
+        connectionStatus = 'Disconnected';
+        sshService = null;
+        commandOutput = '';
+      });
+    }
   }
 
   void _sendCommand() async {
@@ -246,24 +392,35 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
             ),
         ],
       ),
-      body: _selectedIndex == 0
-      ? StatsScreen(sshService: sshService)
-      : _selectedIndex == 1
-          ? TerminalScreen(
-              sshService: sshService,
-              commandController: _commandController,
-              commandOutput: commandOutput,
-              sendCommand: _sendCommand,
-            )
-          : _selectedIndex == 2
-              ? ConnectionScreen(
-                  setSSHService: _setSSHService,
-                  connectionStatus: connectionStatus,
-                )
-              : FileExplorerScreen(
-                  sshService: sshService,
-                ),
-            bottomNavigationBar: BottomNavigationBar(
+      body: IndexedStack(
+        key: const ValueKey<String>('main_stack'),
+        index: _selectedIndex,
+        children: [
+          sshService != null
+        ? StatsScreen(
+            key: const PageStorageKey('stats_screen'),
+            sshService: sshService,
+          )
+        : const Center(child: Text('Please connect first.')),
+          TerminalScreen(
+            key: const PageStorageKey('terminal_screen'),
+            sshService: sshService,
+            commandController: _commandController,
+            commandOutput: commandOutput,
+            sendCommand: _sendCommand,
+          ),
+          ConnectionScreen(
+            key: const PageStorageKey('connection_screen'),
+            setSSHService: _setSSHService,
+            connectionStatus: connectionStatus,
+          ),
+          FileExplorerScreen(
+            key: const PageStorageKey('file_explorer_screen'),
+            sshService: sshService,
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
