@@ -66,6 +66,7 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - `convert`: For encoding and decoding data
 - `file_picker`: For picking files to upload
 - `fl_chart`: For displaying charts
+- `flutter_background`: For keeping the connection alive in background
 
 ## Development
 
