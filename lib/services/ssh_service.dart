@@ -398,7 +398,6 @@ class SSHService {
                         return value.replaceAll(',', '.');
                     }
 
-                    // First normalize the values, then parse them
                     final values = parts.map((part) => normalizeNumber(part)).toList();
                     final startIndex = 2;
 

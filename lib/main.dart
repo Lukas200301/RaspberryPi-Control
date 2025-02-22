@@ -8,6 +8,7 @@ import 'connection_screen.dart';
 import 'terminal_screen.dart';
 import 'stats_screen.dart';
 import 'file_explorer_screen.dart';
+import 'services/first_launch_notice.dart';
 
 class BackgroundService {
   static final BackgroundService _instance = BackgroundService._internal();
@@ -126,11 +127,7 @@ class BackgroundService {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  final prefs = await SharedPreferences.getInstance();
-  final neverShowAgain = prefs.getBool('neverShowAgain') ?? false;
-  final isDarkMode = prefs.getBool('isDarkMode') ?? false;
-
+  
   try {
     await BackgroundService.instance.initialize();
   } catch (e) {
@@ -144,20 +141,15 @@ void main() async {
     print('Failed to request notifications permission: $e');
   }
 
-   runApp(MyApp(
-    isDarkMode: isDarkMode, 
-    showFirstLaunchMessage: !neverShowAgain
-  ));
+  runApp(const MyApp(isDarkMode: true));
 }
 
 class MyApp extends StatefulWidget {
   final bool isDarkMode;
-  final bool showFirstLaunchMessage;
 
   const MyApp({
-    super.key, 
+    super.key,
     required this.isDarkMode,
-    required this.showFirstLaunchMessage,
   });
 
   @override
@@ -208,101 +200,14 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-       home: Builder(
-        builder: (context) {
-          if (widget.showFirstLaunchMessage) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => AlertDialog(
-                  title: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.amber,
-                        size: 30,
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'IMPORTANT NOTICE',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
-                          border: Border.all(
-                            color: Colors.amber,
-                            width: 1,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'The Raspberry Pi must be set to English or German locale for all features to work correctly.\n\nSome monitoring features may not work properly with other system languages.',
-                          style: TextStyle(
-                            fontSize: 16,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey,
-                    ),
-                    child: const Text(
-                      'SHOW NEXT TIME',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('neverShowAgain', true);
-                      await prefs.setBool('isFirstLaunch', false); 
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: const Text(
-                      'DON\'T SHOW AGAIN',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-              );
-            });
-          }
-          return BarsScreen(
+      home: Stack(
+        children: [
+          BarsScreen(
             isDarkMode: isDarkMode,
             toggleTheme: _toggleTheme,
-          );
-        },
+          ),
+          const FirstLaunchNotice(), 
+        ],
       ),
     );
   }
@@ -400,7 +305,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
           : '';
     });
   }
-
 
   Future<void> _disconnectAndClose() async {
     if (mounted) {

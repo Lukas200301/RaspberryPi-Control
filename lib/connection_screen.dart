@@ -347,7 +347,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
           const Padding(
             padding: EdgeInsets.all(8.0),
             child: Text(
-              'Version 1.2.2',
+              'Version 1.2.3',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 12,
