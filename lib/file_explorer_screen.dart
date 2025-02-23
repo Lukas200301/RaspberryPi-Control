@@ -69,10 +69,34 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(FileExplorerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sshService != widget.sshService) {
+      if (widget.sshService == null) {
+        setState(() {
+          _currentPath = '/';
+          _contents = [];
+          _filteredContents = [];
+        });
+      } else {
+        _loadCurrentDirectory();
+      }
+    }
+  }
+
   Future<void> _loadCurrentDirectory() async {
+    if (_isLoading) return;  // Prevent multiple concurrent loads
+    
     final sshService = widget.sshService;
     if (sshService == null) {
-      setState(() => _errorMessage = 'Not connected');
+      setState(() {
+        _errorMessage = 'Not connected';
+        _currentPath = '/';
+        _contents = [];
+        _filteredContents = [];
+        _isLoading = false;
+      });
       return;
     }
 
@@ -103,18 +127,22 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
         }
       }
 
-      setState(() {
-        _contents = contents;
-        _filteredContents = List.from(contents);
-        _sortContents();
-        _isLoading = false;
-        _errorMessage = '';
-      });
+      if (mounted) {
+        setState(() {
+          _contents = contents;
+          _filteredContents = List.from(contents);
+          _sortContents();
+          _isLoading = false;
+          _errorMessage = '';
+        });
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Error: $e';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error: $e';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -738,14 +766,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   Widget build(BuildContext context) {
     super.build(context);
     
-    if (_contents.isEmpty && widget.sshService != null && !_isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _loadCurrentDirectory();
-        }
-      });
-    }
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent, 

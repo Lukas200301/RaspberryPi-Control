@@ -1,4 +1,4 @@
-package com.example.flutter_application_1
+package com.lukas200301.raspberrypi_control
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat
 import android.os.Bundle
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.flutter_application_1/background"
+    private val CHANNEL = "com.lukas200301.raspberrypi_control"
     private val NOTIFICATION_PERMISSION_CODE = 123
     private lateinit var channel: MethodChannel
 
@@ -118,14 +118,14 @@ class MainActivity: FlutterActivity() {
             )
 
             val builder = NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(R.mipmap.ic_launcher) 
+                .setSmallIcon(com.lukas200301.raspberrypi_control.R.mipmap.ic_launcher) 
                 .setContentTitle(title)
                 .setContentText(text)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setAutoCancel(false)
                 .setOngoing(true)
-                .addAction(R.mipmap.ic_launcher, "Disconnect", pendingIntent) 
+                .addAction(com.lukas200301.raspberrypi_control.R.mipmap.ic_launcher, "Disconnect", pendingIntent) 
 
             notificationManager.notify(1, builder.build())
             println("Notification posted successfully") 

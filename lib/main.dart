@@ -15,7 +15,7 @@ class BackgroundService {
   static BackgroundService get instance => _instance;
   bool _initialized = false;
   bool _isEnabled = false;
-  final _platform = const MethodChannel('com.example.flutter_application_1/background');
+  final _platform = const MethodChannel('com.lukas200301.raspberrypi_control');
   BuildContext? _context;
 
   BackgroundService._internal();
@@ -44,7 +44,7 @@ class BackgroundService {
       if (!await FlutterBackground.hasPermissions) {
         final intent = AndroidIntent(
           action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-          data: 'package:com.example.flutter_application_1',
+          data: 'package:com.lukas200301.raspberrypi_control',
         );
         await intent.launch();
       }
@@ -134,7 +134,7 @@ void main() async {
     print('Warning: Background service initialization failed, continuing without background support');
   }
 
-  const platform = MethodChannel('com.example.flutter_application_1/background');
+  const platform = MethodChannel('com.lukas200301.raspberrypi_control');
   try {
     await platform.invokeMethod('requestNotificationPermissions');
   } catch (e) {
@@ -242,7 +242,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     BackgroundService.instance.setContext(context);
     
-    const platform = MethodChannel('com.example.flutter_application_1/background');
+    const platform = MethodChannel('com.lukas200301.raspberrypi_control');
     platform.setMethodCallHandler((call) async {
       if (call.method == 'onDisconnectRequested' || call.method == 'onDisconnect') {
         if (mounted) {
