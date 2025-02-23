@@ -16,7 +16,6 @@ class BackgroundService {
   bool _initialized = false;
   bool _isEnabled = false;
   final _platform = const MethodChannel('com.lukas200301.raspberrypi_control');
-  BuildContext? _context;
 
   BackgroundService._internal();
 
@@ -52,21 +51,6 @@ class BackgroundService {
       print('Failed to initialize background service: $e');
       _initialized = false;
       rethrow;
-    }
-  }
-
-  void setContext(BuildContext context) {
-    _context = context;
-  }
-
-  Future<void> _handleDisconnect() async {
-    print("Handling disconnect from notification");
-
-    await disableBackground();
-
-    final state = _context?.findAncestorStateOfType<_BarsScreenState>();
-    if (state != null && state.mounted) {
-      await state._disconnectAndClose(); 
     }
   }
 
@@ -240,7 +224,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    BackgroundService.instance.setContext(context);
     
     const platform = MethodChannel('com.lukas200301.raspberrypi_control');
     platform.setMethodCallHandler((call) async {
@@ -304,20 +287,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
           ? 'Connected to ${service.name} (${service.host})'
           : '';
     });
-  }
-
-  Future<void> _disconnectAndClose() async {
-    if (mounted) {
-      await BackgroundService.instance.disableBackground();
-      
-      if (_selectedIndex == 0) {
-        setState(() => _selectedIndex = 2);
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-      
-      sshService?.disconnect();
-      SystemNavigator.pop();
-    }
   }
 
   void _logOff() async {
