@@ -76,9 +76,6 @@ class TransferService {
     }
   }
 
-
-
-
   Future<void> _downloadFile(String remotePath, String localPath, SftpClient sftp, [void Function(String, double)? onProgress]) async {
     final remoteFile = await sftp.open(remotePath);
     final file = File(localPath);
@@ -219,6 +216,59 @@ class TransferService {
     } finally {
       client.close();
     }
+  }
+
+  Future<String> downloadFile(String remotePath, String localPath, String host, int port, String username, String password, [void Function(String, double)? onProgress]) async {
+    final taskId = path.basename(remotePath);
+    
+    final task = TransferTask(
+      id: taskId,
+      filename: path.basename(remotePath),
+      sourcePath: remotePath,
+      destinationPath: localPath,
+      byteSize: 0,  
+      progress: 0,
+      status: TransferStatus.inProgress,
+      type: TransferType.download,
+    );
+    _activeTasks[taskId] = task;
+
+    try {
+      final client = SSHClient(
+        await SSHSocket.connect(host, port),
+        username: username,
+        onPasswordRequest: () => password,
+      );
+
+      try {
+        final sftp = await client.sftp();
+        
+        final parentDir = Directory(path.dirname(localPath));
+        if (!parentDir.existsSync()) {
+          parentDir.createSync(recursive: true);
+        }
+        
+        await _downloadFile(remotePath, localPath, sftp, (filename, progress) {
+          task.progress = progress;
+          _taskController.add(task);
+          if (onProgress != null) {
+            onProgress(filename, progress);
+          }
+        });
+        
+        task.status = TransferStatus.completed;
+        task.progress = 1.0;
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      task.status = TransferStatus.failed;
+      rethrow;
+    } finally {
+      _taskController.add(task);
+    }
+
+    return taskId;
   }
 
   void cancelTask(String taskId) {

@@ -603,13 +603,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         _isDownloading = true;
       });
 
-      int totalSize = 0;
-      for (final item in _selectedItems) {
-        if (!item.isDirectory) {
-          totalSize += int.parse(item.size);
-        }
-      }
-
       for (int i = 0; i < _selectedItems.length; i++) {
         if (_isCancelled) break;
         final item = _selectedItems.elementAt(i);
@@ -622,12 +615,13 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           _destinationPath = localPath;
         });
 
+        _startTimer();
+        final startTime = DateTime.now();
+        
         if (item.isDirectory) {
           await _downloadDirectory(remotePath, localPath);
         } else {
-          _startTimer();
-          final startTime = DateTime.now();
-          await _transferService.downloadFolder(
+          await _transferService.downloadFile(
             remotePath,
             localPath,
             widget.sshService!.host,
@@ -640,13 +634,15 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
                   _progress = progress;
                   final currentTime = DateTime.now();
                   final duration = currentTime.difference(startTime).inSeconds;
-                  _speed = (progress * totalSize) / duration / (1024 * 1024); 
+                  if (duration > 0) {
+                    _speed = (progress * int.parse(item.size)) / duration / (1024 * 1024);
+                  }
                 });
               }
             }
           );
-          _stopTimer();
         }
+        _stopTimer();
         
         setState(() {
           _progress = (i + 1) / _selectedItems.length;
