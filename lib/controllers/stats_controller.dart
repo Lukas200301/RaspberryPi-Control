@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
-import 'ssh_service.dart';
+import '../services/ssh_service.dart';
 
 class StatsController {
   static final StatsController _instance = StatsController._internal();

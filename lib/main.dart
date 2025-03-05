@@ -4,11 +4,11 @@ import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'services/ssh_service.dart';
-import 'connection_screen.dart';
-import 'terminal_screen.dart';
-import 'stats_screen.dart';
-import 'file_explorer_screen.dart';
-import 'services/first_launch_notice.dart';
+import 'pages/connection/connection.dart';
+import 'pages/terminal/terminal.dart';
+import 'pages/stats/stats.dart';
+import 'pages/file_explorer/file_explorer.dart';
+import 'widgets/first_launch_notice.dart';
 
 class BackgroundService {
   static final BackgroundService _instance = BackgroundService._internal();
@@ -215,6 +215,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   int _selectedIndex = 2;
   SSHService? sshService;
   final TextEditingController _commandController = TextEditingController();
+  final GlobalKey<FileExplorerState> _fileExplorerKey = GlobalKey<FileExplorerState>();
   String commandOutput = '';
   String connectionStatus = '';
   bool _isReconnecting = false;
@@ -301,6 +302,8 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
         sshService = null;
         commandOutput = '';
       });
+
+      _fileExplorerKey.currentState?.resetToRoot();
     }
   }
 
@@ -371,25 +374,25 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
         index: _selectedIndex,
         children: [
           sshService != null
-        ? StatsScreen(
+        ? Stats(
             key: const PageStorageKey('stats_screen'),
             sshService: sshService,
           )
         : const Center(child: Text('Please connect first.')),
-          TerminalScreen(
+          Terminal(
             key: const PageStorageKey('terminal_screen'),
             sshService: sshService,
             commandController: _commandController,
             commandOutput: commandOutput,
             sendCommand: _sendCommand,
           ),
-          ConnectionScreen(
+          Connection(
             key: const PageStorageKey('connection_screen'),
             setSSHService: _setSSHService,
             connectionStatus: connectionStatus,
           ),
-          FileExplorerScreen(
-            key: const PageStorageKey('file_explorer_screen'),
+          FileExplorer(
+            key: _fileExplorerKey,
             sshService: sshService,
           ),
         ],

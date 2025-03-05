@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.NotificationManager
 import android.app.NotificationChannel
 import android.os.Build
+import android.os.Environment
 import androidx.core.app.NotificationCompat
 import android.Manifest
 import android.content.pm.PackageManager
@@ -18,11 +19,13 @@ import android.os.Bundle
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.lukas200301.raspberrypi_control"
     private val NOTIFICATION_PERMISSION_CODE = 123
+    private val STORAGE_PERMISSION_CODE = 124
     private lateinit var channel: MethodChannel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestNotificationPermissions()
+        requestStoragePermissions()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -33,6 +36,10 @@ class MainActivity: FlutterActivity() {
             when (call.method) {
                 "requestNotificationPermissions" -> {
                     requestNotificationPermissions()
+                    result.success(null)
+                }
+                "requestStoragePermissions" -> {
+                    requestStoragePermissions()
                     result.success(null)
                 }
                 "updateNotification" -> {
@@ -53,6 +60,20 @@ class MainActivity: FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun requestStoragePermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ),
+                STORAGE_PERMISSION_CODE
+            )
         }
     }
 

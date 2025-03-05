@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'services/ssh_service.dart';
+import '../../services/ssh_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-class ConnectionScreen extends StatefulWidget {
+class Connection extends StatefulWidget {
   final Function(SSHService) setSSHService;
   final String connectionStatus;
 
-  const ConnectionScreen({
+  const Connection({
     super.key,
     required this.setSSHService,
     required this.connectionStatus,
   });
 
   @override
-  _ConnectionScreenState createState() => _ConnectionScreenState();
+  ConnectionState createState() => ConnectionState();
 }
 
-class _ConnectionScreenState extends State<ConnectionScreen> {
+class ConnectionState extends State<Connection> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _hostController = TextEditingController();
   final TextEditingController _portController = TextEditingController(text: '22');
@@ -39,7 +39,7 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
   }
 
   @override
-  void didUpdateWidget(ConnectionScreen oldWidget) {
+  void didUpdateWidget(Connection oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.connectionStatus != widget.connectionStatus) {
       setState(() {

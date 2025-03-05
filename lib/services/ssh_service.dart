@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
 import '../main.dart';
-import 'stats_controller.dart';  
+import '../controllers/stats_controller.dart';  
 
 class SSHService {
   final String name;
@@ -213,86 +211,6 @@ class SSHService {
     return services..sort((a, b) => a['name']!.compareTo(b['name']!));
   }
 
-  Future<void> uploadFile(String localPath, String remotePath, [void Function(int, int)? onProgress]) async {
-    if (_client == null) {
-      await connect();
-    }
-
-    try {
-      final file = File(localPath);
-      final totalBytes = await file.length();
-      int uploadedBytes = 0;
-
-      final sftp = await _client!.sftp();
-      final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.create | SftpFileOpenMode.write);
-      final controller = StreamController<Uint8List>();
-
-      file.openRead().map((chunk) => Uint8List.fromList(chunk)).listen(
-        (chunk) {
-          uploadedBytes += chunk.length;
-          if (onProgress != null) {
-            onProgress(uploadedBytes, totalBytes);
-          }
-          controller.add(chunk);
-        },
-        onDone: () => controller.close(),
-        onError: (error) {
-          controller.addError(error);
-          controller.close();
-        },
-      );
-
-      await remoteFile.write(controller.stream);
-      await remoteFile.close();
-    } catch (e) {
-      if (!_isReconnecting) {
-        await _handleReconnection();
-        return uploadFile(localPath, remotePath, onProgress);
-      }
-      throw Exception('Failed to upload file: $e');
-    }
-  }
-
-  Future<void> downloadFile(String remotePath, String localPath, [void Function(int, int)? onProgress]) async {
-    if (_client == null) {
-      await connect();
-    }
-
-    try {
-      final sftp = await _client!.sftp();
-      final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
-      final file = File(localPath);
-      
-      final stats = await remoteFile.stat();
-      final totalSize = stats.size ?? 0;
-      int downloadedSize = 0;
-
-      final sink = file.openWrite();
-
-      await for (final chunk in remoteFile.read()) { 
-        sink.add(chunk);
-        downloadedSize += chunk.length;
-
-        if (onProgress != null && totalSize > 0) { 
-          onProgress(downloadedSize, totalSize);
-        }
-      }
-
-      await sink.flush();
-      await sink.close();
-      await remoteFile.close();
-    } catch (e) {
-      if (!_isReconnecting) {
-        await _handleReconnection();
-        return downloadFile(remotePath, localPath, onProgress);
-      }
-      throw Exception('Failed to download file: $e');
-    }
-  }
-
-
-
-
   Future<bool> checkRequiredPackages() async {
       try {
         final result = await executeCommand(
@@ -500,9 +418,14 @@ class SSHService {
 
           case 'SYSTEM_UPTIME':
             if (line.isNotEmpty) {
-              final uptimeMatch = RegExp(r'up\s+(.*?),').firstMatch(line);
+              final uptimeMatch = RegExp(r'up\s+(.*?)(,\s+\d+\s+user|\s+user)').firstMatch(line);
               if (uptimeMatch != null) {
                 stats['uptime'] = uptimeMatch.group(1)?.trim() ?? 'Error';
+              } else {
+                final simpleMatch = RegExp(r'up\s+(.*?),').firstMatch(line);
+                if (simpleMatch != null) {
+                  stats['uptime'] = simpleMatch.group(1)?.trim() ?? 'Error';
+                }
               }
             }
             break;

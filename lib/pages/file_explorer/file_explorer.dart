@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
-import 'services/ssh_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path/path.dart' as path;
 import 'dart:io';
+import 'dart:async';
+import '../../services/ssh_service.dart';
+import '../../services/transfer_service.dart';
+import '../../models/transfer_task.dart';
+import '../../widgets/transfer_progress_dialog.dart';
 
-class FileExplorerScreen extends StatefulWidget {
+class FileExplorer extends StatefulWidget {
   final SSHService? sshService;
 
-  const FileExplorerScreen({
+  const FileExplorer({
     super.key,
     required this.sshService,
   });
 
   @override
-  _FileExplorerScreenState createState() => _FileExplorerScreenState();
+  FileExplorerState createState() => FileExplorerState();
 }
 
 enum SortOption {
@@ -25,7 +31,7 @@ enum SortOption {
   sizeLargeSmall,
 }
 
-class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticKeepAliveClientMixin<FileExplorerScreen> {
+class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClientMixin<FileExplorer> {
   String _currentPath = '/';
   List<FileEntity> _contents = [];
   bool _isLoading = false;
@@ -34,7 +40,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   bool _isSelectionMode = false;
   SortOption _sortOption = SortOption.foldersFirst;
   double _progress = 0.0;
-  String _progressMessage = '';
   bool _isUploading = false;
   bool _isDownloading = false;
   bool _isCancelled = false;
@@ -47,6 +52,12 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   List<FileEntity> _filteredContents = [];
   bool _isSearching = false;
   String _lastSearchQuery = '';
+  final TransferService _transferService = TransferService();
+  final List<TransferTask> _activeTasks = [];
+  double _speed = 0.0;
+  int _elapsedTime = 0;
+  int _remainingTime = 0;
+  Timer? _timer;
 
   @override
   bool get wantKeepAlive => true;
@@ -55,48 +66,25 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   void initState() {
     super.initState();
     _searchController.addListener(_filterContents);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.sshService != null && mounted) {
-        _loadCurrentDirectory();
-      }
-    });
+    _transferService.taskStream.listen(_handleTransferUpdate);
+    if (widget.sshService != null && mounted) {
+      _loadCurrentDirectory();
+    }
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _transferService.dispose();
     super.dispose();
   }
 
-  @override
-  void didUpdateWidget(FileExplorerScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.sshService != widget.sshService) {
-      if (widget.sshService == null) {
-        setState(() {
-          _currentPath = '/';
-          _contents = [];
-          _filteredContents = [];
-        });
-      } else {
-        _loadCurrentDirectory();
-      }
-    }
-  }
-
   Future<void> _loadCurrentDirectory() async {
-    if (_isLoading) return;  // Prevent multiple concurrent loads
-    
     final sshService = widget.sshService;
     if (sshService == null) {
-      setState(() {
-        _errorMessage = 'Not connected';
-        _currentPath = '/';
-        _contents = [];
-        _filteredContents = [];
-        _isLoading = false;
-      });
+      setState(() => _errorMessage = 'Not connected');
       return;
     }
 
@@ -127,22 +115,18 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
         }
       }
 
-      if (mounted) {
-        setState(() {
-          _contents = contents;
-          _filteredContents = List.from(contents);
-          _sortContents();
-          _isLoading = false;
-          _errorMessage = '';
-        });
-      }
+      setState(() {
+        _contents = contents;
+        _filteredContents = List.from(contents);
+        _sortContents();
+        _isLoading = false;
+        _errorMessage = '';
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Error: $e';
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _errorMessage = 'Error: $e';
+        _isLoading = false;
+      });
     }
   }
 
@@ -177,6 +161,17 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
         break;
     }
   }
+  
+  void resetToRoot() {
+    setState(() {
+      _currentPath = '/';
+      _contents = [];
+      _filteredContents = [];
+      _selectedItems.clear();
+      _isSelectionMode = false;
+      _errorMessage = '';
+    });
+  }
 
   Future<void> _navigateToDirectory(String dirName) async {
     setState(() {
@@ -193,222 +188,425 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
   }
 
   Future<void> _uploadFile() async {
-    if (widget.sshService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not connected to server')),
-      );
-      return;
-    }
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null) return;
 
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.any);
-    if (result == null || result.files.isEmpty) return;
-    if (!widget.sshService!.isConnected()) {
-      await widget.sshService!.reconnect();
-    }
-
-    setState(() {
-      _isLoading = true;
-      _isUploading = true;
-      _progress = 0.0;  
-      _progressMessage = 'Uploading files...';
-    });
-
-    try {
-      int totalSize = result.files.fold(0, (sum, file) => sum + file.size);
-      int uploadedSize = 0;
-
-      for (int i = 0; i < result.files.length; i++) {
-        if (_isCancelled) break;
-        final file = result.files[i];
-
-        if (file.path != null) {
-          final localPath = file.path!;
-          final fileName = file.name;
-          final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$fileName';
-
+    for (final file in result.files) {
+      if (file.path != null) {
+        // Create variables to track transfer progress
+        StreamController<Map<String, dynamic>>? dialogController;
+        Timer? progressTimer;
+        final startTime = DateTime.now();
+        int lastUpdate = 0;
+        
+        try {
+          final fileSize = await File(file.path!).length();
+          
           setState(() {
-            _currentFileName = fileName;
-            _sourcePath = localPath;
-            _destinationPath = remotePath;
+            _currentFileName = file.name;
+            _sourcePath = file.path!;
+            _destinationPath = '$_currentPath/${file.name}';
+            _progress = 0.0;
+            _speed = 0.0;
+            _elapsedTime = 0;
+            _remainingTime = 0;
+            _isUploading = true;
           });
 
-          if (FileSystemEntity.isDirectorySync(localPath)) {
-            await _uploadDirectory(localPath, remotePath);
-          } else {
-            await widget.sshService!.uploadFile(localPath, remotePath, (sent, total) {
+          // Initialize the dialog controller
+          dialogController = StreamController<Map<String, dynamic>>();
+          
+          // Show dialog before starting upload
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) => StreamBuilder<Map<String, dynamic>>(
+              stream: dialogController!.stream,
+              initialData: {
+                'fileName': file.name,
+                'sourcePath': file.path,
+                'destinationPath': '$_currentPath/${file.name}',
+                'progress': 0.0,
+                'speed': 0.0,
+                'elapsedTime': 0,
+                'remainingTime': 0
+              },
+              builder: (context, snapshot) {
+                final data = snapshot.data!;
+                return TransferProgressDialog(
+                  fileName: _currentFileName,
+                  sourcePath: _sourcePath,
+                  destinationPath: _destinationPath,
+                  progress: data['progress'],
+                  speed: data['speed'],
+                  elapsedTime: data['elapsedTime'],
+                  remainingTime: data['remainingTime'],
+                  type: TransferType.upload,
+                  onCancel: () {
+                    _cancelOperation();
+                    Navigator.of(dialogContext).pop();
+                    if (dialogController != null && !dialogController.isClosed) {
+                      dialogController.close();
+                    }
+                    progressTimer?.cancel();
+                  },
+                );
+              },
+            ),
+          );
+          
+          // Start a separate timer just for updating the UI with progress info
+          progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+            if (!mounted) return;
+            
+            // Calculate elapsed time directly from start time
+            final elapsedSeconds = DateTime.now().difference(startTime).inSeconds;
+            
+            // Calculate remaining time based on progress
+            int remainingSeconds = 0;
+            if (_progress > 0.01) { // Avoid division by very small numbers
+              remainingSeconds = (elapsedSeconds / _progress * (1 - _progress)).round();
+            }
+            
+            // Update dialog with the latest stats
+            if (dialogController != null && !dialogController.isClosed) {
+              dialogController.add({
+                'fileName': file.name,
+                'sourcePath': file.path,
+                'destinationPath': '$_currentPath/${file.name}',
+                'progress': _progress,
+                'speed': _speed,
+                'elapsedTime': elapsedSeconds,
+                'remainingTime': remainingSeconds
+              });
+            }
+            
+            // Only update state if values have changed significantly
+            if (elapsedSeconds != lastUpdate) {
+              setState(() {
+                _elapsedTime = elapsedSeconds;
+                _remainingTime = remainingSeconds;
+              });
+              lastUpdate = elapsedSeconds;
+            }
+          });
+
+          await _transferService.uploadFile(
+            file.path!,
+            '$_currentPath/${file.name}',
+            widget.sshService!.host,
+            widget.sshService!.port,
+            widget.sshService!.username,
+            widget.sshService!.password,
+            (filename, progress) {
               if (mounted) {
+                final bytesTransferred = (progress * fileSize).toInt();
+                // Use the same approach as in folder upload (avoid using .max())
+                final elapsedSeconds = DateTime.now().difference(startTime).inSeconds;
+                // Prevent division by zero
+                final speedMBps = elapsedSeconds > 0
+                    ? bytesTransferred / elapsedSeconds / (1024 * 1024)
+                    : 0.0;
+                
                 setState(() {
-                  uploadedSize = sent;  
-                  _progress = uploadedSize / totalSize; 
-                });
-              }
-            });
-          }
-        }
-      }
-
-      await _loadCurrentDirectory();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload Completed Successfully!')),
-        );
-      }
-
-    } catch (e) {
-      if (e.toString().contains('Not connected')) {
-        await widget.sshService!.connect();
-        await _uploadFile();
-      } else {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'Upload error: $e';
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isUploading = false;  
-          _progress = 0.0;
-          _progressMessage = '';
-          _isCancelled = false;
-          _currentFileName = '';
-          _sourcePath = '';
-          _destinationPath = '';
-        });
-      }
-    }
-  }
-
-  Future<void> _uploadDirectory(String localPath, String remotePath) async {
-    final sshService = widget.sshService;
-    if (sshService == null) return;
-
-    final directory = Directory(localPath);
-    if (!directory.existsSync()) return;
-
-    await sshService.executeCommand('mkdir -p "$remotePath"');
-
-    final List<FileSystemEntity> entities = [];
-    int totalSize = 0;
-
-    try {
-      final lister = directory.list(recursive: true, followLinks: false);
-      await for (final entity in lister) {
-        entities.add(entity);
-        if (entity is File) {
-          totalSize += await entity.length();
-        }
-      }
-
-      int uploadedSize = 0;
-      final String baseLocalPath = directory.path;
-
-      for (final entity in entities) {
-        if (_isCancelled) break;
-
-        String relativePath = entity.path.substring(baseLocalPath.length);
-        if (relativePath.startsWith(Platform.pathSeparator)) {
-          relativePath = relativePath.substring(1);
-        }
-        
-        final String targetRemotePath = '$remotePath/${relativePath.replaceAll(Platform.pathSeparator, '/')}';
-
-        setState(() {
-          _currentFileName = entity.path.split(Platform.pathSeparator).last;
-          _sourcePath = entity.path;
-          _destinationPath = targetRemotePath;
-        });
-
-        if (entity is Directory) {
-          await sshService.executeCommand('mkdir -p "$targetRemotePath"');
-        } else if (entity is File) {
-          await sshService.uploadFile(
-            entity.path,
-            targetRemotePath,
-            (sent, total) {
-              if (mounted) {
-                setState(() {
-                  uploadedSize += sent;
-                  _progress = uploadedSize / totalSize;
+                  _progress = progress;
+                  _speed = speedMBps;
                 });
               }
             },
           );
+
+          await _loadCurrentDirectory();
+          
+          // Show success notification
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${file.name} uploaded successfully')),
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to upload ${file.name}: $e')),
+            );
+          }
+        } finally {
+          // Clean up all resources
+          progressTimer?.cancel();
+          
+          if (dialogController != null && !dialogController.isClosed) {
+            dialogController.close();
+          }
+          
+          if (mounted) {
+            Navigator.of(context).pop();
+            setState(() {
+              _isUploading = false;
+              _progress = 0.0;
+              _speed = 0.0;
+              _elapsedTime = 0;
+              _remainingTime = 0;
+            });
+          }
         }
       }
-    } catch (e) {
-      print('Error during directory upload: $e');
-      rethrow;
+    }
+  }
+
+  Future<void> requestStoragePermission() async {
+    if (await Permission.manageExternalStorage.request().isGranted) {
+      print("✅ Full storage permission granted!");
+    } else {
+      print("❌ Storage permission denied! Requesting again...");
+      openAppSettings(); // Opens app settings if permission is denied
     }
   }
 
   Future<void> _uploadFolder() async {
     if (widget.sshService == null) return;
 
+    await requestStoragePermission();
+
+    final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    if (selectedDirectory == null) {
+      print("❌ No folder selected.");
+      return;
+    }
+
+    // Reset progress tracking values
+    setState(() {
+      _isLoading = true;
+      _isUploading = true;
+      _progress = 0.0;
+      _speed = 0.0;
+      _elapsedTime = 0;
+      _remainingTime = 0;
+    });
+
+    // Create a dialog context controller to update the dialog content
+    final dialogController = StreamController<Map<String, dynamic>>();
+    final folderName = path.basename(selectedDirectory);
+    
+    // Use these variables for time calculations
+    final overallStartTime = DateTime.now();
+    int lastBytesTransferred = 0;
+    
+    // Show dialog with StreamBuilder for real-time updates
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StreamBuilder<Map<String, dynamic>>(
+        stream: dialogController.stream,
+        initialData: {
+          'fileName': folderName,
+          'sourcePath': selectedDirectory,
+          'destinationPath': '$_currentPath/$folderName',
+          'progress': 0.0,
+          'speed': 0.0,
+          'elapsedTime': 0,
+          'remainingTime': 0
+        },
+        builder: (context, snapshot) {
+          final data = snapshot.data!;
+          return TransferProgressDialog(
+            fileName: data['fileName'],
+            sourcePath: data['sourcePath'],
+            destinationPath: data['destinationPath'],
+            progress: data['progress'],
+            speed: data['speed'],
+            elapsedTime: data['elapsedTime'],
+            remainingTime: data['remainingTime'],
+            type: TransferType.upload,
+            onCancel: () {
+              _cancelOperation();
+              Navigator.of(dialogContext).pop();
+              dialogController.close();
+            },
+          );
+        },
+      ),
+    );
+    
+    // Cancel any existing timer
+    _stopTimer();
+    
+    // Create a timer that updates the elapsed and remaining time
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (mounted) {
+        // Calculate the elapsed time from the start of the entire operation
+        final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
+        
+        // Calculate the remaining time based on progress and elapsed time
+        int remainingSeconds = 0;
+        if (_progress > 0.01) { // Avoid division by very small numbers
+          // Time per percent × remaining percent
+          remainingSeconds = (elapsedSeconds / _progress * (1 - _progress)).round();
+        }
+        
+        setState(() {
+          _elapsedTime = elapsedSeconds;
+          _remainingTime = remainingSeconds;
+        });
+        
+        // Update dialog with current stats
+        if (!dialogController.isClosed) {
+          dialogController.add({
+            'fileName': _currentFileName.isEmpty 
+                ? folderName 
+                : _currentFileName,
+            'sourcePath': _sourcePath.isEmpty 
+                ? selectedDirectory 
+                : _sourcePath,
+            'destinationPath': _destinationPath.isEmpty 
+                ? '$_currentPath/$folderName' 
+                : _destinationPath,
+            'progress': _progress,
+            'speed': _speed,
+            'elapsedTime': elapsedSeconds,
+            'remainingTime': remainingSeconds
+          });
+        }
+      }
+    });
+
     try {
-      final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-      if (selectedDirectory == null) return;
+      final directory = Directory(selectedDirectory);
+      if (!directory.existsSync()) {
+        throw Exception("Directory does not exist: $selectedDirectory");
+      }
 
-      setState(() {
-        _isLoading = true;
-        _isUploading = true;
-        _progressMessage = 'Analyzing folder...';
-      });
+      // Get folder name from the path
+      final baseRemotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$folderName';
 
+      print("📂 Creating base folder: $baseRemotePath");
+      await widget.sshService!.executeCommand('mkdir -p "$baseRemotePath"');
+
+      // Get all files and calculate total size
       final entities = await _getAllFilesInDirectory(selectedDirectory);
+      print("✅ Found ${entities.length} items to upload");
+
       final totalSize = await _calculateTotalSize(entities);
       int uploadedSize = 0;
-
-      if (_isCancelled) return;
-
-      final directoryName = selectedDirectory.split(Platform.pathSeparator).last;
-      final baseRemotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$directoryName';
-
-      await widget.sshService!.executeCommand('mkdir -p "$baseRemotePath"');
 
       for (final entity in entities) {
         if (_isCancelled) break;
 
+        // Calculate the relative path from the base directory
         final relativePath = entity.path.substring(selectedDirectory.length);
-        final remoteFilePath = '$baseRemotePath${relativePath.replaceAll(Platform.pathSeparator, '/')}';
+        final remotePath = '$baseRemotePath${relativePath.replaceAll('\\', '/')}';
+        final fileName = path.basename(entity.path);
 
         setState(() {
-          _currentFileName = entity.path.split(Platform.pathSeparator).last;
+          _currentFileName = fileName;
           _sourcePath = entity.path;
-          _destinationPath = remoteFilePath;
+          _destinationPath = remotePath;
         });
+        
+        // Update dialog with current file info
+        if (!dialogController.isClosed) {
+          dialogController.add({
+            'fileName': fileName,
+            'sourcePath': entity.path,
+            'destinationPath': remotePath,
+            'progress': _progress,
+            'speed': _speed,
+            'elapsedTime': _elapsedTime,
+            'remainingTime': _remainingTime
+          });
+        }
 
         if (entity is Directory) {
-          await widget.sshService!.executeCommand('mkdir -p "$remoteFilePath"');
+          print("📁 Creating remote directory: $remotePath");
+          await widget.sshService!.executeCommand('mkdir -p "$remotePath"');
         } else if (entity is File) {
-          await widget.sshService!.uploadFile(
+          print("📄 Uploading file: ${entity.path} -> $remotePath");
+          
+          // Ensure the parent directory exists
+          final parentDir = remotePath.substring(0, remotePath.lastIndexOf('/'));
+          await widget.sshService!.executeCommand('mkdir -p "$parentDir"');
+
+          final fileSize = await entity.length();
+          
+          // Use uploadFile for each file
+          await _transferService.uploadFile(
             entity.path,
-            remoteFilePath,
-            (sent, _) {
+            remotePath,
+            widget.sshService!.host,
+            widget.sshService!.port,
+            widget.sshService!.username,
+            widget.sshService!.password,
+            (filename, fileProgress) {
               if (mounted) {
+                // Calculate progress metrics
+                final currentFileBytes = (fileProgress * fileSize).round();
+                final newTotalUploaded = uploadedSize + currentFileBytes;
+                final currentProgress = totalSize > 0 ? newTotalUploaded / totalSize : 0;
+                
+                // Calculate speed (MB/s) - fix type casting issues
+                final bytesTransferredSinceLastCheck = newTotalUploaded - lastBytesTransferred;
+                final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
+                final speedMBps = elapsedSeconds > 0 
+                    ? (bytesTransferredSinceLastCheck / 500 * 1000 / (1024 * 1024)).toDouble() // Cast to double
+                    : 0.0;
+                
                 setState(() {
-                  uploadedSize += sent;
-                  _progress = uploadedSize / totalSize;
+                  _progress = currentProgress.toDouble(); // Cast to double
+                  _speed = speedMBps;
                 });
+                
+                // Update last transferred bytes for speed calculation
+                lastBytesTransferred = newTotalUploaded;
+                
+                // Update dialog with new progress
+                if (!dialogController.isClosed) {
+                  final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
+                  int remainingSeconds = 0;
+                  if (currentProgress > 0.01) {
+                    remainingSeconds = (elapsedSeconds / currentProgress * (1 - currentProgress)).round();
+                  }
+                  
+                  dialogController.add({
+                    'fileName': fileName,
+                    'sourcePath': entity.path,
+                    'destinationPath': remotePath,
+                    'progress': currentProgress,
+                    'speed': speedMBps,
+                    'elapsedTime': elapsedSeconds,
+                    'remainingTime': remainingSeconds
+                  });
+                }
               }
             },
           );
+          
+          // Add file size to the total processed bytes
+          uploadedSize += fileSize;
         }
       }
 
       await _loadCurrentDirectory();
 
-    } catch (e) {
-      print('Error uploading folder: $e');
+      // Close the dialog when operation completes
+      _stopTimer();
+      if (!dialogController.isClosed) {
+        dialogController.close();
+      }
       if (mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
+          const SnackBar(content: Text('Folder uploaded successfully!')),
+        );
+      }
+    } catch (e) {
+      print("❌ Error during folder upload: $e");
+      
+      // Close the dialog on error too
+      _stopTimer();
+      if (!dialogController.isClosed) {
+        dialogController.close();
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload folder: $e')),
         );
       }
     } finally {
@@ -418,38 +616,18 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
           _isUploading = false;
           _progress = 0.0;
           _isCancelled = false;
+          _currentFileName = '';
+          _sourcePath = '';
+          _destinationPath = '';
         });
       }
     }
   }
 
-  Future<List<FileSystemEntity>> _getAllFilesInDirectory(String path) async {
-    final List<FileSystemEntity> entities = [];
-    final Directory dir = Directory(path);
-    
-    try {
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
-        entities.add(entity);
-      }
-    } catch (e) {
-      print('Error listing directory contents: $e');
-    }
-    
-    return entities;
-  }
-
-  Future<int> _calculateTotalSize(List<FileSystemEntity> entities) async {
-    int total = 0;
-    for (final entity in entities) {
-      if (entity is File) {
-        total += await entity.length();
-      }
-    }
-    return total;
-  }
-
   Future<void> _downloadSelected() async {
     if (widget.sshService == null || _selectedItems.isEmpty) return;
+
+    _showTransferProgress();
 
     try {
       final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
@@ -458,8 +636,15 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       setState(() {
         _isLoading = true;
         _isDownloading = true;
-        _progressMessage = 'Downloading files...';
       });
+
+      // Calculate total size of all selected items
+      int totalSize = 0;
+      for (final item in _selectedItems) {
+        if (!item.isDirectory) {
+          totalSize += int.parse(item.size);
+        }
+      }
 
       for (int i = 0; i < _selectedItems.length; i++) {
         if (_isCancelled) break;
@@ -476,8 +661,29 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
         if (item.isDirectory) {
           await _downloadDirectory(remotePath, localPath);
         } else {
-          await widget.sshService!.downloadFile(remotePath, localPath);
+          _startTimer();
+          final startTime = DateTime.now();
+          await _transferService.downloadFolder(
+            remotePath,
+            localPath,
+            widget.sshService!.host,
+            widget.sshService!.port,
+            widget.sshService!.username,
+            widget.sshService!.password,
+            (filename, progress) {
+              if (mounted) {
+                setState(() {
+                  _progress = progress;
+                  final currentTime = DateTime.now();
+                  final duration = currentTime.difference(startTime).inSeconds;
+                  _speed = (progress * totalSize) / duration / (1024 * 1024); // MB/s
+                });
+              }
+            }
+          );
+          _stopTimer();
         }
+        
         setState(() {
           _progress = (i + 1) / _selectedItems.length;
         });
@@ -511,7 +717,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
           _isLoading = false;
           _isDownloading = false;
           _progress = 0.0;
-          _progressMessage = '';
           _isCancelled = false;
         });
       }
@@ -558,13 +763,17 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       if (item.isDirectory) {
         await _downloadDirectory(itemRemotePath, itemLocalPath);
       } else {
-        await sshService.downloadFile(
-          itemRemotePath, 
+        await _transferService.downloadFolder(
+          itemRemotePath,
           itemLocalPath,
-          (downloaded, total) {
+          widget.sshService!.host,
+          widget.sshService!.port,
+          widget.sshService!.username,
+          widget.sshService!.password,
+          (filename, progress) {
             if (mounted) {
               setState(() {
-                _progress = downloaded / total;
+                _progress = progress;
               });
             }
           }
@@ -607,7 +816,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
 
     setState(() {
       _isLoading = true;
-      _progressMessage = 'Deleting files...';
     });
 
     try {
@@ -644,7 +852,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _progressMessage = '';
         });
       }
     }
@@ -676,7 +883,6 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
       _isUploading = false;
       _isDownloading = false;
       _progress = 0.0;
-      _progressMessage = 'Operation cancelled';
     });
   }
 
@@ -704,7 +910,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
           if (parts.length >= 9) {
             final permissions = parts[0];
             final size = parts[4];
-            final name = fullPath.split('/').last;
+            final name = path.split('/').last;
             
             results.add(FileEntity(
               name: name,
@@ -762,9 +968,169 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
     _sortContents();
   }
 
+  Future<List<FileSystemEntity>> _getAllFilesInDirectory(String path) async {
+    final List<FileSystemEntity> entities = [];
+    try {
+      final directory = Directory(path);
+      if (!directory.existsSync()) {
+        print('❌ Directory does not exist: $path');
+        return entities;
+      }
+
+      // Add directories first to ensure they're created before files
+      final List<Directory> directories = [];
+      final List<File> files = [];
+
+      // List all entries in the directory non-recursively first
+      final List<FileSystemEntity> entries = directory.listSync(followLinks: false);
+      
+      for (var entity in entries) {
+        if (entity is Directory) {
+          directories.add(entity);
+          // Recursively get contents of subdirectories
+          entities.addAll(await _getAllFilesInDirectory(entity.path));
+        } else if (entity is File) {
+          files.add(entity);
+        }
+      }
+
+      // Add directories first, then files
+      entities.addAll(directories);
+      entities.addAll(files);
+
+    } catch (e) {
+      print('❌ Error listing directory contents: $e');
+    }
+    return entities;
+  }
+
+  Future<int> _calculateTotalSize(List<FileSystemEntity> entities) async {
+    int totalSize = 0;
+    try {
+      for (final entity in entities) {
+        if (entity is File) {
+          totalSize += await entity.length();
+        }
+      }
+    } catch (e) {
+      print('❌ Error calculating total size: $e');
+    }
+    return totalSize;
+  }
+
+  void _handleTransferUpdate(TransferTask task) {
+    setState(() {
+      final index = _activeTasks.indexWhere((t) => t.id == task.id);
+      if (index >= 0) {
+        _activeTasks[index] = task;
+      }
+    });
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _elapsedTime = 0;
+    final startTime = DateTime.now();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsedTime = DateTime.now().difference(startTime).inSeconds;
+          if (_progress > 0) {
+            _remainingTime = (_elapsedTime / _progress * (1 - _progress)).toInt();
+          }
+        });
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+  }
+
+  void _showTransferProgress() {
+    if (!mounted || (!_isUploading && !_isDownloading)) return;
+    
+    // This method is now only used for download operations
+    // Upload operations handle their own dialogs directly
+    if (_isDownloading) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TransferProgressDialog(
+          fileName: _currentFileName,
+          sourcePath: _sourcePath,
+          destinationPath: _destinationPath,
+          progress: _progress,
+          speed: _speed,
+          elapsedTime: _elapsedTime,
+          remainingTime: _remainingTime,
+          type: _isUploading ? TransferType.upload : TransferType.download,
+          onCancel: () {
+            _cancelOperation();
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+    }
+  }
+
+  Widget _buildTransferList() {
+    if (_activeTasks.isEmpty) return const SizedBox();
+
+    return Container(
+      height: 200,
+      child: ListView.builder(
+        itemCount: _activeTasks.length,
+        itemBuilder: (context, index) {
+          final task = _activeTasks[index];
+          return ListTile(
+            leading: Icon(_getTransferIcon(task)),
+            title: Text(task.filename),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(value: task.progress),
+                Text('Progress: ${(task.progress * 100).toStringAsFixed(2)}%'),
+                Text('Speed: ${_speed.toStringAsFixed(2)} MB/s'),
+                Text('Elapsed time: $_elapsedTime s'),
+                Text('Remaining time: $_remainingTime s'),
+              ],
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.cancel),
+              onPressed: () => _transferService.cancelTask(task.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _getTransferIcon(TransferTask task) {
+    switch (task.status) {
+      case TransferStatus.completed:
+        return Icons.check_circle;
+      case TransferStatus.failed:
+        return Icons.error;
+      case TransferStatus.cancelled:
+        return Icons.cancel;
+      default:
+        return task.type == TransferType.upload 
+          ? Icons.upload_file 
+          : Icons.download;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    if (_currentPath == '/' && _contents.isEmpty && widget.sshService != null && !_isLoading) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadCurrentDirectory();
+      }
+    });
+  }
     
     return Scaffold(
       appBar: AppBar(
@@ -863,6 +1229,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
         onRefresh: _loadCurrentDirectory,
         child: Column(
           children: [
+            _buildTransferList(),
             if (_showSearchBar)
               Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -896,28 +1263,7 @@ class _FileExplorerScreenState extends State<FileExplorerScreen> with AutomaticK
               ),
             Expanded(
               child: _isLoading && (_isUploading || _isDownloading)
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Center(child: CircularProgressIndicator()),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: 200,
-                        child: LinearProgressIndicator(value: _progress),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(_progressMessage),
-                      const SizedBox(height: 10),
-                      Center(child: Text('File: $_currentFileName')),
-                      Center(child: Text('Source: $_sourcePath', textAlign: TextAlign.center)),
-                      Center(child: Text('Destination: $_destinationPath', textAlign: TextAlign.center)),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _cancelOperation,
-                        child: const Text('Cancel'),
-                      ),
-                    ],
-                  )
+                ? const Center(child: CircularProgressIndicator())  // Simplified loading view
                 : _isLoading || _isSearching
                     ? const Center(child: CircularProgressIndicator())
                     : _errorMessage.isNotEmpty

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'services/ssh_service.dart';
+import '../../services/ssh_service.dart';
 
-class TerminalScreen extends StatefulWidget {
+class Terminal extends StatefulWidget {
   final SSHService? sshService;
   final TextEditingController commandController;
   final String commandOutput;
   final VoidCallback sendCommand;
 
-  const TerminalScreen({
+  const Terminal({
     super.key,
     required this.sshService,
     required this.commandController,
@@ -17,10 +17,10 @@ class TerminalScreen extends StatefulWidget {
   });
 
   @override
-  _TerminalScreenState createState() => _TerminalScreenState();
+  TerminalState createState() => TerminalState();
 }
 
-class _TerminalScreenState extends State<TerminalScreen> {
+class TerminalState extends State<Terminal> {
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   List<String> _commandHistory = [];
