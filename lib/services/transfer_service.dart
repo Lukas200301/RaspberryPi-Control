@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data'; // Added this import for Uint8List
+import 'dart:typed_data'; 
 import 'package:path/path.dart' as path;
 import 'package:dartssh2/dartssh2.dart';
 import '../models/transfer_task.dart';
@@ -13,7 +13,6 @@ class TransferService {
   Stream<TransferTask> get taskStream => _taskController.stream;
   Stream<TransferTask> get taskUpdates => _taskController.stream;
   
-  // Helper methods first so they're declared before use
   Future<List<FileSystemEntity>> _getAllFilesInDirectory(String path) async {
     final List<FileSystemEntity> entities = [];
     final directory = Directory(path);
@@ -34,20 +33,16 @@ class TransferService {
     }
     final fileSize = await file.length();
     int totalBytesWritten = 0;
-    final chunkSize = 32768; // 32KB chunks
+    final chunkSize = 32768; 
     final buffer = Uint8List(chunkSize);
 
-    // Open local file for reading
     final fileHandle = await file.open(mode: FileMode.read);
     try {
       while (true) {
-        // Read a chunk from the local file
         final bytesRead = await fileHandle.readInto(buffer);
         if (bytesRead <= 0) break;
         final bytesToWrite = bytesRead < chunkSize ? buffer.sublist(0, bytesRead) : buffer;
 
-        // For the first chunk, open remote file with truncate mode.
-        // For subsequent chunks, open in append mode.
         final mode = totalBytesWritten == 0
             ? (SftpFileOpenMode.create | SftpFileOpenMode.write | SftpFileOpenMode.truncate)
             : (SftpFileOpenMode.create | SftpFileOpenMode.write | SftpFileOpenMode.append);
@@ -65,7 +60,6 @@ class TransferService {
         }
       }
 
-      // Optional: Verify that the remote file size matches the local file size.
       final remoteFile = await sftp.open(remotePath, mode: SftpFileOpenMode.read);
       try {
         final stats = await remoteFile.stat();
@@ -125,7 +119,6 @@ class TransferService {
         throw Exception("Directory does not exist: $localPath");
       }
 
-      // Create base remote directory
       final baseRemotePath = remotePath.replaceAll('\\', '/');
       await client.run('mkdir -p "$baseRemotePath"');
 
@@ -138,7 +131,6 @@ class TransferService {
         }
       }
 
-      // Upload files after creating all directories
       for (final entity in entities) {
         if (entity is File) {
           final relativePath = entity.path.substring(localPath.length);
@@ -178,13 +170,11 @@ class TransferService {
       final sftp = await client.sftp();
       final result = utf8.decode(await client.run('ls -laR "$remotePath"'));
       
-      // Create local base directory
       final directory = Directory(localPath);
       if (!directory.existsSync()) {
         directory.createSync(recursive: true);
       }
 
-      // Parse ls output and download files
       final sections = result.split('\n\n');
       for (final section in sections) {
         final lines = section.split('\n');

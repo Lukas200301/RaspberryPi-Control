@@ -193,7 +193,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
 
     for (final file in result.files) {
       if (file.path != null) {
-        // Create variables to track transfer progress
         StreamController<Map<String, dynamic>>? dialogController;
         Timer? progressTimer;
         final startTime = DateTime.now();
@@ -213,10 +212,8 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             _isUploading = true;
           });
 
-          // Initialize the dialog controller
           dialogController = StreamController<Map<String, dynamic>>();
           
-          // Show dialog before starting upload
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -255,20 +252,16 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             ),
           );
           
-          // Start a separate timer just for updating the UI with progress info
           progressTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
             if (!mounted) return;
             
-            // Calculate elapsed time directly from start time
             final elapsedSeconds = DateTime.now().difference(startTime).inSeconds;
             
-            // Calculate remaining time based on progress
             int remainingSeconds = 0;
-            if (_progress > 0.01) { // Avoid division by very small numbers
+            if (_progress > 0.01) { 
               remainingSeconds = (elapsedSeconds / _progress * (1 - _progress)).round();
             }
             
-            // Update dialog with the latest stats
             if (dialogController != null && !dialogController.isClosed) {
               dialogController.add({
                 'fileName': file.name,
@@ -281,7 +274,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
               });
             }
             
-            // Only update state if values have changed significantly
             if (elapsedSeconds != lastUpdate) {
               setState(() {
                 _elapsedTime = elapsedSeconds;
@@ -301,9 +293,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             (filename, progress) {
               if (mounted) {
                 final bytesTransferred = (progress * fileSize).toInt();
-                // Use the same approach as in folder upload (avoid using .max())
                 final elapsedSeconds = DateTime.now().difference(startTime).inSeconds;
-                // Prevent division by zero
                 final speedMBps = elapsedSeconds > 0
                     ? bytesTransferred / elapsedSeconds / (1024 * 1024)
                     : 0.0;
@@ -318,7 +308,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
 
           await _loadCurrentDirectory();
           
-          // Show success notification
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('${file.name} uploaded successfully')),
           );
@@ -329,7 +318,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             );
           }
         } finally {
-          // Clean up all resources
           progressTimer?.cancel();
           
           if (dialogController != null && !dialogController.isClosed) {
@@ -356,7 +344,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       print("✅ Full storage permission granted!");
     } else {
       print("❌ Storage permission denied! Requesting again...");
-      openAppSettings(); // Opens app settings if permission is denied
+      openAppSettings();
     }
   }
 
@@ -371,7 +359,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       return;
     }
 
-    // Reset progress tracking values
     setState(() {
       _isLoading = true;
       _isUploading = true;
@@ -381,15 +368,12 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       _remainingTime = 0;
     });
 
-    // Create a dialog context controller to update the dialog content
     final dialogController = StreamController<Map<String, dynamic>>();
     final folderName = path.basename(selectedDirectory);
     
-    // Use these variables for time calculations
     final overallStartTime = DateTime.now();
     int lastBytesTransferred = 0;
     
-    // Show dialog with StreamBuilder for real-time updates
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -425,19 +409,14 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       ),
     );
     
-    // Cancel any existing timer
     _stopTimer();
     
-    // Create a timer that updates the elapsed and remaining time
     _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (mounted) {
-        // Calculate the elapsed time from the start of the entire operation
         final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
         
-        // Calculate the remaining time based on progress and elapsed time
         int remainingSeconds = 0;
-        if (_progress > 0.01) { // Avoid division by very small numbers
-          // Time per percent × remaining percent
+        if (_progress > 0.01) { 
           remainingSeconds = (elapsedSeconds / _progress * (1 - _progress)).round();
         }
         
@@ -446,7 +425,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           _remainingTime = remainingSeconds;
         });
         
-        // Update dialog with current stats
         if (!dialogController.isClosed) {
           dialogController.add({
             'fileName': _currentFileName.isEmpty 
@@ -473,13 +451,11 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         throw Exception("Directory does not exist: $selectedDirectory");
       }
 
-      // Get folder name from the path
       final baseRemotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$folderName';
 
       print("📂 Creating base folder: $baseRemotePath");
       await widget.sshService!.executeCommand('mkdir -p "$baseRemotePath"');
 
-      // Get all files and calculate total size
       final entities = await _getAllFilesInDirectory(selectedDirectory);
       print("✅ Found ${entities.length} items to upload");
 
@@ -489,7 +465,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       for (final entity in entities) {
         if (_isCancelled) break;
 
-        // Calculate the relative path from the base directory
         final relativePath = entity.path.substring(selectedDirectory.length);
         final remotePath = '$baseRemotePath${relativePath.replaceAll('\\', '/')}';
         final fileName = path.basename(entity.path);
@@ -500,7 +475,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           _destinationPath = remotePath;
         });
         
-        // Update dialog with current file info
         if (!dialogController.isClosed) {
           dialogController.add({
             'fileName': fileName,
@@ -519,13 +493,11 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         } else if (entity is File) {
           print("📄 Uploading file: ${entity.path} -> $remotePath");
           
-          // Ensure the parent directory exists
           final parentDir = remotePath.substring(0, remotePath.lastIndexOf('/'));
           await widget.sshService!.executeCommand('mkdir -p "$parentDir"');
 
           final fileSize = await entity.length();
           
-          // Use uploadFile for each file
           await _transferService.uploadFile(
             entity.path,
             remotePath,
@@ -535,27 +507,23 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             widget.sshService!.password,
             (filename, fileProgress) {
               if (mounted) {
-                // Calculate progress metrics
                 final currentFileBytes = (fileProgress * fileSize).round();
                 final newTotalUploaded = uploadedSize + currentFileBytes;
                 final currentProgress = totalSize > 0 ? newTotalUploaded / totalSize : 0;
                 
-                // Calculate speed (MB/s) - fix type casting issues
                 final bytesTransferredSinceLastCheck = newTotalUploaded - lastBytesTransferred;
                 final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
                 final speedMBps = elapsedSeconds > 0 
-                    ? (bytesTransferredSinceLastCheck / 500 * 1000 / (1024 * 1024)).toDouble() // Cast to double
+                    ? (bytesTransferredSinceLastCheck / 500 * 1000 / (1024 * 1024)).toDouble() 
                     : 0.0;
                 
                 setState(() {
-                  _progress = currentProgress.toDouble(); // Cast to double
+                  _progress = currentProgress.toDouble(); 
                   _speed = speedMBps;
                 });
                 
-                // Update last transferred bytes for speed calculation
                 lastBytesTransferred = newTotalUploaded;
                 
-                // Update dialog with new progress
                 if (!dialogController.isClosed) {
                   final elapsedSeconds = DateTime.now().difference(overallStartTime).inSeconds;
                   int remainingSeconds = 0;
@@ -577,14 +545,12 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             },
           );
           
-          // Add file size to the total processed bytes
           uploadedSize += fileSize;
         }
       }
 
       await _loadCurrentDirectory();
 
-      // Close the dialog when operation completes
       _stopTimer();
       if (!dialogController.isClosed) {
         dialogController.close();
@@ -598,7 +564,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
     } catch (e) {
       print("❌ Error during folder upload: $e");
       
-      // Close the dialog on error too
       _stopTimer();
       if (!dialogController.isClosed) {
         dialogController.close();
@@ -638,7 +603,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         _isDownloading = true;
       });
 
-      // Calculate total size of all selected items
       int totalSize = 0;
       for (final item in _selectedItems) {
         if (!item.isDirectory) {
@@ -676,7 +640,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
                   _progress = progress;
                   final currentTime = DateTime.now();
                   final duration = currentTime.difference(startTime).inSeconds;
-                  _speed = (progress * totalSize) / duration / (1024 * 1024); // MB/s
+                  _speed = (progress * totalSize) / duration / (1024 * 1024); 
                 });
               }
             }
@@ -977,24 +941,20 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         return entities;
       }
 
-      // Add directories first to ensure they're created before files
       final List<Directory> directories = [];
       final List<File> files = [];
 
-      // List all entries in the directory non-recursively first
       final List<FileSystemEntity> entries = directory.listSync(followLinks: false);
       
       for (var entity in entries) {
         if (entity is Directory) {
           directories.add(entity);
-          // Recursively get contents of subdirectories
           entities.addAll(await _getAllFilesInDirectory(entity.path));
         } else if (entity is File) {
           files.add(entity);
         }
       }
 
-      // Add directories first, then files
       entities.addAll(directories);
       entities.addAll(files);
 
@@ -1050,8 +1010,6 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
   void _showTransferProgress() {
     if (!mounted || (!_isUploading && !_isDownloading)) return;
     
-    // This method is now only used for download operations
-    // Upload operations handle their own dialogs directly
     if (_isDownloading) {
       showDialog(
         context: context,
@@ -1263,7 +1221,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
               ),
             Expanded(
               child: _isLoading && (_isUploading || _isDownloading)
-                ? const Center(child: CircularProgressIndicator())  // Simplified loading view
+                ? const Center(child: CircularProgressIndicator())  
                 : _isLoading || _isSearching
                     ? const Center(child: CircularProgressIndicator())
                     : _errorMessage.isNotEmpty
