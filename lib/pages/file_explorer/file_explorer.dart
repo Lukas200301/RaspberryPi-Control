@@ -592,84 +592,242 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
   Future<void> _downloadSelected() async {
     if (widget.sshService == null || _selectedItems.isEmpty) return;
 
-    _showTransferProgress();
-
     try {
       final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
       if (selectedDirectory == null) return;
 
+      int totalDownloadSize = 0;
+      for (final item in _selectedItems) {
+        if (!item.isDirectory) {
+          totalDownloadSize += int.parse(item.size);
+        }
+      }
+
       setState(() {
         _isLoading = true;
         _isDownloading = true;
+        _progress = 0.0;
+        _speed = 0.0;
+        _elapsedTime = 0;
+        _remainingTime = 0;
       });
 
-      for (int i = 0; i < _selectedItems.length; i++) {
-        if (_isCancelled) break;
-        final item = _selectedItems.elementAt(i);
-        final localPath = '$selectedDirectory${Platform.pathSeparator}${item.name}';
-        final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}${item.name}';
+      final dialogController = StreamController<Map<String, dynamic>>();
+      final startTime = DateTime.now();
 
-        setState(() {
-          _currentFileName = item.name;
-          _sourcePath = remotePath;
-          _destinationPath = localPath;
-        });
+      int completedBytesTotal = 0; 
+      int currentFileBytes = 0;    
+      int lastBytesTransferred = 0; 
+      DateTime lastUpdateTime = DateTime.now();
 
-        _startTimer();
-        final startTime = DateTime.now();
-        
-        if (item.isDirectory) {
-          await _downloadDirectory(remotePath, localPath);
-        } else {
-          await _transferService.downloadFile(
-            remotePath,
-            localPath,
-            widget.sshService!.host,
-            widget.sshService!.port,
-            widget.sshService!.username,
-            widget.sshService!.password,
-            (filename, progress) {
-              if (mounted) {
-                setState(() {
-                  _progress = progress;
-                  final currentTime = DateTime.now();
-                  final duration = currentTime.difference(startTime).inSeconds;
-                  if (duration > 0) {
-                    _speed = (progress * int.parse(item.size)) / duration / (1024 * 1024);
-                  }
-                });
-              }
-            }
-          );
-        }
-        _stopTimer();
-        
-        setState(() {
-          _progress = (i + 1) / _selectedItems.length;
-        });
-      }
-
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Downloaded ${_selectedItems.length} item(s)')),
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StreamBuilder<Map<String, dynamic>>(
+          stream: dialogController.stream,
+          initialData: {
+            'fileName': _selectedItems.length > 1
+                ? '${_selectedItems.length} items'
+                : _selectedItems.first.name,
+            'sourcePath': _currentPath,
+            'destinationPath': selectedDirectory,
+            'progress': 0.0,
+            'speed': 0.0,
+            'elapsedTime': 0,
+            'remainingTime': 0
+          },
+          builder: (context, snapshot) {
+            final data = snapshot.data!;
+            return TransferProgressDialog(
+              fileName: data['fileName'],
+              sourcePath: data['sourcePath'],
+              destinationPath: data['destinationPath'],
+              progress: data['progress'],
+              speed: data['speed'],
+              elapsedTime: data['elapsedTime'],
+              remainingTime: data['remainingTime'],
+              type: TransferType.download,
+              onCancel: () {
+                _cancelOperation();
+                Navigator.of(dialogContext).pop();
+                if (!dialogController.isClosed) {
+                  dialogController.close();
+                }
+              },
+            );
+          },
+        ),
       );
 
-      setState(() {
-        _isSelectionMode = false;
-        _selectedItems.clear();
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        if (!mounted) return;
+
+        final now = DateTime.now();
+        final elapsedSeconds = now.difference(startTime).inSeconds;
+        final timeSinceLastUpdate = now.difference(lastUpdateTime).inMilliseconds / 1000.0;
+        
+        if (timeSinceLastUpdate > 0) {
+          final totalBytesDownloaded = completedBytesTotal + currentFileBytes;
+          
+          final bytesSinceLastUpdate = totalBytesDownloaded - lastBytesTransferred;
+          final currentSpeed = bytesSinceLastUpdate / timeSinceLastUpdate / (1024 * 1024);
+          
+          if (bytesSinceLastUpdate > 0) {
+            setState(() {
+              _speed = currentSpeed;
+              lastBytesTransferred = totalBytesDownloaded;
+              lastUpdateTime = now;
+            });
+          }
+          
+          int remainingSeconds = 0;
+          if (_progress > 0.01 && _speed > 0) {
+            final bytesRemaining = totalDownloadSize - totalBytesDownloaded;
+            remainingSeconds = (bytesRemaining / (_speed * 1024 * 1024)).round();
+          }
+
+          setState(() {
+            _elapsedTime = elapsedSeconds;
+            _remainingTime = remainingSeconds;
+          });
+        }
+
+        if (!dialogController.isClosed) {
+          dialogController.add({
+            'fileName': _currentFileName,
+            'sourcePath': _sourcePath,
+            'destinationPath': _destinationPath,
+            'progress': _progress,
+            'speed': _speed,
+            'elapsedTime': _elapsedTime,
+            'remainingTime': _remainingTime
+          });
+        }
       });
-    } catch (e) {
-      if (e.toString().contains('Not connected')) {
-        await widget.sshService!.connect();
-        await _downloadSelected();
-      } else {
+
+      try {
+        final nonDirItems = _selectedItems.where((item) => !item.isDirectory).toList();
+        int completedFiles = 0;
+        
+        for (int i = 0; i < _selectedItems.length; i++) {
+          if (_isCancelled) break;
+          
+          final item = _selectedItems.elementAt(i);
+          final localPath = '$selectedDirectory${Platform.pathSeparator}${item.name}';
+          final remotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}${item.name}';
+
+          setState(() {
+            _currentFileName = item.name;
+            _sourcePath = remotePath;
+            _destinationPath = localPath;
+          });
+          
+          if (!dialogController.isClosed) {
+            dialogController.add({
+              'fileName': item.name,
+              'sourcePath': remotePath,
+              'destinationPath': localPath,
+              'progress': _progress,
+              'speed': _speed,
+              'elapsedTime': _elapsedTime,
+              'remainingTime': _remainingTime
+            });
+          }
+
+          if (item.isDirectory) {
+            await _downloadDirectory(remotePath, localPath);
+          } else {
+            final fileSize = int.parse(item.size);
+            currentFileBytes = 0; 
+            
+            await _transferService.downloadFile(
+              remotePath,
+              localPath,
+              widget.sshService!.host,
+              widget.sshService!.port,
+              widget.sshService!.username,
+              widget.sshService!.password,
+              (filename, fileProgress) {
+                if (mounted) {
+                  currentFileBytes = (fileProgress * fileSize).round();
+                  
+                  final totalCurrentBytes = completedBytesTotal + currentFileBytes;
+                  final overallProgress = totalDownloadSize > 0 
+                      ? totalCurrentBytes / totalDownloadSize 
+                      : (completedFiles + fileProgress) / nonDirItems.length;
+                  
+                  setState(() {
+                    _progress = overallProgress;
+                  });
+                  
+                  if (!dialogController.isClosed) {
+                    dialogController.add({
+                      'fileName': item.name,
+                      'sourcePath': remotePath,
+                      'destinationPath': localPath,
+                      'progress': overallProgress,
+                      'speed': _speed,
+                      'elapsedTime': _elapsedTime,
+                      'remainingTime': _remainingTime
+                    });
+                  }
+                }
+              }
+            );
+            
+            completedFiles++;
+            completedBytesTotal += fileSize;
+            currentFileBytes = 0;
+            
+            final overallProgress = totalDownloadSize > 0 
+                ? completedBytesTotal / totalDownloadSize 
+                : completedFiles / nonDirItems.length;
+            
+            setState(() {
+              _progress = overallProgress;
+            });
+            
+            if (!dialogController.isClosed) {
+              dialogController.add({
+                'fileName': item.name,
+                'sourcePath': remotePath,
+                'destinationPath': localPath,
+                'progress': overallProgress,
+                'speed': _speed,
+                'elapsedTime': _elapsedTime,
+                'remainingTime': _remainingTime
+              });
+            }
+          }
+        }
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Downloaded item(s)')),
+        );
+
+        setState(() {
+          _isSelectionMode = false;
+          _selectedItems.clear();
+        });
+      } catch (e) {
+        print('❌ Download error: $e');
         if (!mounted) return;
         
         setState(() => _errorMessage = 'Download error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to download: $e')),
         );
+      } finally {
+        _timer?.cancel();
+        if (!dialogController.isClosed) {
+          dialogController.close();
+        }
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
       }
     } finally {
       if (mounted) {
@@ -677,7 +835,11 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           _isLoading = false;
           _isDownloading = false;
           _progress = 0.0;
+          _speed = 0.0;
           _isCancelled = false;
+          _currentFileName = '';
+          _sourcePath = '';
+          _destinationPath = '';
         });
       }
     }
@@ -697,6 +859,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       final parts = line.split(RegExp(r'\s+'));
       if (parts.length >= 9) {
         final permissions = parts[0];
+        final size = parts[4];
         final name = parts.sublist(8).join(' ');
 
         if (name == '.' || name == '..') continue;
@@ -704,7 +867,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         contents.add(FileEntity(
           name: name,
           isDirectory: permissions.startsWith('d'),
-          size: '0',  
+          size: size,  
           permissions: permissions,
         ));
       }
@@ -720,28 +883,27 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       final itemRemotePath = '$remotePath/${item.name}';
       final itemLocalPath = '$localPath/${item.name}';
 
+      setState(() {
+        _currentFileName = item.name;
+        _sourcePath = itemRemotePath;
+        _destinationPath = itemLocalPath;
+      });
+
       if (item.isDirectory) {
         await _downloadDirectory(itemRemotePath, itemLocalPath);
       } else {
-        await _transferService.downloadFolder(
+        await _transferService.downloadFile(
           itemRemotePath,
           itemLocalPath,
           widget.sshService!.host,
           widget.sshService!.port,
           widget.sshService!.username,
           widget.sshService!.password,
-          (filename, progress) {
-            if (mounted) {
-              setState(() {
-                _progress = progress;
-              });
-            }
-          }
+          (filename, progress) { /* Directory file progress handled by parent */ }
         );
       }
     }
   }
-
 
   Future<void> _confirmDeleteSelected() async {
     if (_selectedItems.isEmpty) return;
@@ -983,49 +1145,8 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
     });
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _elapsedTime = 0;
-    final startTime = DateTime.now();
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsedTime = DateTime.now().difference(startTime).inSeconds;
-          if (_progress > 0) {
-            _remainingTime = (_elapsedTime / _progress * (1 - _progress)).toInt();
-          }
-        });
-      }
-    });
-  }
-
   void _stopTimer() {
     _timer?.cancel();
-  }
-
-  void _showTransferProgress() {
-    if (!mounted || (!_isUploading && !_isDownloading)) return;
-    
-    if (_isDownloading) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => TransferProgressDialog(
-          fileName: _currentFileName,
-          sourcePath: _sourcePath,
-          destinationPath: _destinationPath,
-          progress: _progress,
-          speed: _speed,
-          elapsedTime: _elapsedTime,
-          remainingTime: _remainingTime,
-          type: _isUploading ? TransferType.upload : TransferType.download,
-          onCancel: () {
-            _cancelOperation();
-            Navigator.of(context).pop();
-          },
-        ),
-      );
-    }
   }
 
   Widget _buildTransferList() {
