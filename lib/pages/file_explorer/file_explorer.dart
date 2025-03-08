@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:path/path.dart' as path;
 import 'dart:io';
 import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/ssh_service.dart';
 import '../../services/transfer_service.dart';
 import '../../models/transfer_task.dart';
@@ -91,7 +92,12 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
     setState(() => _isLoading = true);
 
     try {
-      final result = await sshService.executeCommand('ls -la "$_currentPath"');
+      final prefs = await SharedPreferences.getInstance();
+      final showHidden = prefs.getBool('showHiddenFiles') ?? false;
+      
+      final lsCommand = showHidden ? 'ls -la "$_currentPath"' : 'ls -l "$_currentPath"';
+      
+      final result = await sshService.executeCommand(lsCommand);
       final List<FileEntity> contents = [];
       
       final lines = result.split('\n');
@@ -105,6 +111,8 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           final name = parts.sublist(8).join(' ');
           
           if (name == '.' || name == '..') continue;
+          
+          if (!showHidden && name.startsWith('.')) continue;
           
           contents.add(FileEntity(
             name: name,
@@ -163,6 +171,7 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
   }
   
   void resetToRoot() {
+    print("Resetting file explorer to root directory");
     setState(() {
       _currentPath = '/';
       _contents = [];
@@ -170,7 +179,18 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       _selectedItems.clear();
       _isSelectionMode = false;
       _errorMessage = '';
+      _showSearchBar = false;
+      _searchController.clear();
+      _lastSearchQuery = '';
     });
+    
+  }
+  
+  Future<void> loadRootDirectory() async {
+    if (mounted && widget.sshService != null && widget.sshService!.isConnected()) {
+      setState(() => _currentPath = '/');
+      await _loadCurrentDirectory();
+    }
   }
 
   Future<void> _navigateToDirectory(String dirName) async {
@@ -191,20 +211,69 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
     final result = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (result == null) return;
 
+    final prefs = await SharedPreferences.getInstance();
+    final confirmOverwrite = prefs.getBool('confirmBeforeOverwrite') ?? true;
+    
+    bool anyFilesUploaded = false;
+
     for (final file in result.files) {
       if (file.path != null) {
         StreamController<Map<String, dynamic>>? dialogController;
         Timer? progressTimer;
         final startTime = DateTime.now();
         int lastUpdate = 0;
+        bool shouldUpload = true;
         
         try {
+          final remoteFilePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}${file.name}';
+          
+          if (confirmOverwrite) {
+            try {
+              final checkResult = await widget.sshService!.executeCommand('[ -f "$remoteFilePath" ] && echo "exists" || echo "not exists"');
+              final fileExists = checkResult.trim() == "exists";
+              
+              print('Remote file check: $remoteFilePath - Exists: $fileExists');
+              
+              if (fileExists) {
+                final shouldOverwrite = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: const Text('File already exists on server'),
+                    content: Text('The file "${file.name}" already exists on the server.\nDo you want to replace it?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Skip'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Replace'),
+                      ),
+                    ],
+                  ),
+                );
+                
+                if (shouldOverwrite != true) {
+                  print('Skipping upload of file: ${file.name}');
+                  shouldUpload = false;
+                  continue;
+                }
+              }
+            } catch (e) {
+              print('Error checking file existence: $e');
+            }
+          }
+          
+          if (!shouldUpload) continue;
+          anyFilesUploaded = true;
+          
           final fileSize = await File(file.path!).length();
           
           setState(() {
             _currentFileName = file.name;
             _sourcePath = file.path!;
-            _destinationPath = '$_currentPath/${file.name}';
+            _destinationPath = remoteFilePath;
             _progress = 0.0;
             _speed = 0.0;
             _elapsedTime = 0;
@@ -318,6 +387,8 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             );
           }
         } finally {
+          if (!shouldUpload) continue;
+          
           progressTimer?.cancel();
           
           if (dialogController != null && !dialogController.isClosed) {
@@ -325,7 +396,9 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           }
           
           if (mounted) {
-            Navigator.of(context).pop();
+            if (anyFilesUploaded) {
+              Navigator.of(context).pop();
+            }
             setState(() {
               _isUploading = false;
               _progress = 0.0;
@@ -336,6 +409,16 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           }
         }
       }
+    }
+    
+    if (!anyFilesUploaded) {
+      setState(() {
+        _isUploading = false;
+        _progress = 0.0;
+        _speed = 0.0;
+        _elapsedTime = 0;
+        _remainingTime = 0;
+      });
     }
   }
 
@@ -451,6 +534,9 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
         throw Exception("Directory does not exist: $selectedDirectory");
       }
 
+      final prefs = await SharedPreferences.getInstance();
+      final confirmOverwrite = prefs.getBool('confirmBeforeOverwrite') ?? true;
+
       final baseRemotePath = '$_currentPath${_currentPath.endsWith('/') ? '' : '/'}$folderName';
 
       print("📂 Creating base folder: $baseRemotePath");
@@ -458,6 +544,9 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
 
       final entities = await _getAllFilesInDirectory(selectedDirectory);
       print("✅ Found ${entities.length} items to upload");
+      
+      bool allFilesSkipped = true;
+      bool anyFilesProcessed = false;
 
       final totalSize = await _calculateTotalSize(entities);
       int uploadedSize = 0;
@@ -475,23 +564,53 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           _destinationPath = remotePath;
         });
         
-        if (!dialogController.isClosed) {
-          dialogController.add({
-            'fileName': fileName,
-            'sourcePath': entity.path,
-            'destinationPath': remotePath,
-            'progress': _progress,
-            'speed': _speed,
-            'elapsedTime': _elapsedTime,
-            'remainingTime': _remainingTime
-          });
-        }
 
         if (entity is Directory) {
           print("📁 Creating remote directory: $remotePath");
           await widget.sshService!.executeCommand('mkdir -p "$remotePath"');
         } else if (entity is File) {
           print("📄 Uploading file: ${entity.path} -> $remotePath");
+          
+          bool shouldUpload = true;
+          if (confirmOverwrite) {
+            try {
+              final checkResult = await widget.sshService!.executeCommand('[ -f "$remotePath" ] && echo "exists" || echo "not exists"');
+              final fileExists = checkResult.trim() == "exists";
+              
+              if (fileExists) {
+                final shouldOverwrite = await showDialog<bool>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: const Text('File already exists on server'),
+                    content: Text('The file "$fileName" already exists on the server.\nDo you want to replace it?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Skip'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Replace'),
+                      ),
+                    ],
+                  ),
+                );
+                
+                if (shouldOverwrite != true) {
+                  print('Skipping upload of file: $fileName');
+                  shouldUpload = false;
+                  continue;
+                }
+              }
+            } catch (e) {
+              print('Error checking file existence: $e');
+            }
+          }
+          
+          if (!shouldUpload) continue;
+          anyFilesProcessed = true;
+          allFilesSkipped = false;
           
           final parentDir = remotePath.substring(0, remotePath.lastIndexOf('/'));
           await widget.sshService!.executeCommand('mkdir -p "$parentDir"');
@@ -546,6 +665,9 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
           );
           
           uploadedSize += fileSize;
+        } else {
+          anyFilesProcessed = true;
+          allFilesSkipped = false;
         }
       }
 
@@ -555,11 +677,21 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       if (!dialogController.isClosed) {
         dialogController.close();
       }
+      
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Folder uploaded successfully!')),
-        );
+        if (anyFilesProcessed) {
+          Navigator.of(context).pop();
+        }
+        
+        if (!allFilesSkipped) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Folder uploaded successfully!')),
+          );
+        } else if (anyFilesProcessed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All files were skipped during upload')),
+          );
+        }
       }
     } catch (e) {
       print("❌ Error during folder upload: $e");
@@ -593,8 +725,18 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
     if (widget.sshService == null || _selectedItems.isEmpty) return;
 
     try {
-      final String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-      if (selectedDirectory == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      final confirmOverwrite = prefs.getBool('confirmBeforeOverwrite') ?? true;
+      final defaultDir = prefs.getString('defaultDownloadDirectory') ?? '';
+      
+      String? selectedDirectory;
+      
+      if (defaultDir.isNotEmpty && await Directory(defaultDir).exists()) {
+        selectedDirectory = defaultDir;
+      } else {
+        selectedDirectory = await FilePicker.platform.getDirectoryPath();
+        if (selectedDirectory == null) return;
+      }
 
       int totalDownloadSize = 0;
       for (final item in _selectedItems) {
@@ -723,6 +865,42 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
             _destinationPath = localPath;
           });
           
+          final localFile = File(localPath);
+          final fileExists = await localFile.exists();
+          print('Checking if file exists: ${localFile.path} - Exists: $fileExists');
+          
+          if (confirmOverwrite && fileExists) {
+            print('File exists and confirmOverwrite is $confirmOverwrite - showing dialog');
+            
+            final shouldOverwrite = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false, 
+              builder: (context) => AlertDialog(
+                title: const Text('File already exists'),
+                content: Text('The file "${item.name}" already exists.\nDo you want to replace it?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Skip'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Replace'),
+                  ),
+                ],
+              ),
+            );
+            
+            print('Dialog result: $shouldOverwrite');
+            
+            if (shouldOverwrite != true) {
+              print('Skipping file: ${item.name}');
+              continue;
+            } else {
+              print('Will replace file: ${item.name}');
+            }
+          }
+
           if (!dialogController.isClosed) {
             dialogController.add({
               'fileName': item.name,
@@ -892,6 +1070,37 @@ class FileExplorerState extends State<FileExplorer> with AutomaticKeepAliveClien
       if (item.isDirectory) {
         await _downloadDirectory(itemRemotePath, itemLocalPath);
       } else {
+        final prefs = await SharedPreferences.getInstance();
+        final confirmOverwrite = prefs.getBool('confirmBeforeOverwrite') ?? true;
+        
+        final localFile = File(itemLocalPath);
+        final fileExists = await localFile.exists();
+        
+        if (confirmOverwrite && fileExists) {
+          final shouldOverwrite = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('File already exists'),
+              content: Text('The file "${item.name}" already exists.\nDo you want to replace it?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Skip'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Replace'),
+                ),
+              ],
+            ),
+          );
+          
+          if (shouldOverwrite != true) {
+            continue;
+          }
+        }
+        
         await _transferService.downloadFile(
           itemRemotePath,
           itemLocalPath,

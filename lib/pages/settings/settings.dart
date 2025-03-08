@@ -1,0 +1,814 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../services/update_service.dart'; 
+import 'dart:io'; 
+
+class Settings extends StatefulWidget {
+  final bool isDarkMode;
+  final VoidCallback toggleTheme;
+  final Function? logOut;
+
+  const Settings({
+    Key? key,
+    required this.isDarkMode,
+    required this.toggleTheme,
+    this.logOut,
+  }) : super(key: key);
+
+  @override
+  State<Settings> createState() => _SettingsState();
+}
+
+class _SettingsState extends State<Settings> {
+  String _appVersion = '';
+  int _connectionTimeout = 30; 
+  bool _keepScreenOn = true;
+  String _sshKeepAliveInterval = '60'; 
+  bool _sshCompression = false;
+  String _terminalFontSize = '14';
+  bool _autoReconnect = true;
+  int _autoReconnectAttempts = 3;
+  String _defaultDownloadDirectory = '';
+  bool _confirmBeforeOverwrite = true;
+  int _securityTimeout = 0; 
+  bool _showHiddenFiles = false;
+  int _connectionRetryDelay = 5;
+  bool _isCheckingForUpdates = false;
+  Map<String, dynamic>? _updateInfo;
+  bool _isDownloadingUpdate = false;
+  double _downloadProgress = 0.0;
+  String _defaultPort = '22';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+    _getAppVersion();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
+      _keepScreenOn = prefs.getBool('keepScreenOn') ?? true;
+      _sshKeepAliveInterval = prefs.getString('sshKeepAliveInterval') ?? '60';
+      _sshCompression = prefs.getBool('sshCompression') ?? false;
+      _terminalFontSize = prefs.getString('terminalFontSize') ?? '14';
+      _autoReconnect = prefs.getBool('autoReconnect') ?? true;
+      _autoReconnectAttempts = prefs.getInt('autoReconnectAttempts') ?? 3;
+      _defaultDownloadDirectory = prefs.getString('defaultDownloadDirectory') ?? '';
+      _confirmBeforeOverwrite = prefs.getBool('confirmBeforeOverwrite') ?? true;
+      _securityTimeout = prefs.getInt('securityTimeout') ?? 0;
+      _showHiddenFiles = prefs.getBool('showHiddenFiles') ?? false;
+      _connectionRetryDelay = prefs.getInt('connectionRetryDelay') ?? 5;
+      _defaultPort = prefs.getString('defaultPort') ?? '22';
+    });
+  }
+
+  Future<void> _getAppVersion() async {
+    try {
+      final PackageInfo info = await PackageInfo.fromPlatform();
+      String version = info.version;
+      if (version.contains("+")) {
+        version = version.split("+")[0];
+      }
+      setState(() {
+        _appVersion = version;
+      });
+    } catch (e) {
+      setState(() {
+        _appVersion = 'Error loading version';
+      });
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('connectionTimeout', _connectionTimeout);
+    await prefs.setBool('keepScreenOn', _keepScreenOn);
+    await prefs.setString('sshKeepAliveInterval', _sshKeepAliveInterval);
+    await prefs.setBool('sshCompression', _sshCompression);
+    await prefs.setString('terminalFontSize', _terminalFontSize);
+    
+    await prefs.setBool('autoReconnect', _autoReconnect);
+    await prefs.setInt('autoReconnectAttempts', _autoReconnectAttempts);
+    await prefs.setString('defaultDownloadDirectory', _defaultDownloadDirectory);
+    await prefs.setBool('confirmBeforeOverwrite', _confirmBeforeOverwrite);
+    await prefs.setInt('securityTimeout', _securityTimeout);
+    await prefs.setBool('showHiddenFiles', _showHiddenFiles);
+    
+    await prefs.setInt('connectionRetryDelay', _connectionRetryDelay);
+    await prefs.setString('defaultPort', _defaultPort);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Settings saved successfully'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _pickDefaultDirectory() async {
+    PermissionStatus status = await Permission.storage.request();
+    if (Platform.isAndroid && await Permission.manageExternalStorage.isGranted == false) {
+      status = await Permission.manageExternalStorage.request();
+    }
+    
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Storage permission is required to set a default download directory'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      
+      if (selectedDirectory == null) {
+        return;
+      }
+      
+      final directory = Directory(selectedDirectory);
+      if (!directory.existsSync()) {
+        throw Exception('Selected directory does not exist');
+      }
+      
+      try {
+        final testFile = File('${directory.path}/testwrite.tmp');
+        await testFile.writeAsString('test');
+        await testFile.delete();
+      } catch (e) {
+        throw Exception('Cannot write to the selected directory. Please select a different location.');
+      }
+      
+      setState(() {
+        _defaultDownloadDirectory = selectedDirectory;
+      });
+      
+      await _saveSettings();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Default download directory set to: $selectedDirectory'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error setting download directory: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _clearAppData() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear App Data'),
+        content: const Text(
+          'This will remove all saved connections and settings. This action cannot be undone. Are you sure?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              
+              if (widget.logOut != null) {
+                widget.logOut!();
+              }
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('All app data has been cleared'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Clear All Data'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchGitHub() async {
+    final Uri url = Uri.parse('https://github.com/Lukas200301/RaspberryPi-Control');
+    if (!await launchUrl(url)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open GitHub repository')),
+        );
+      }
+    }
+  }
+
+  Future<bool> _requestWakeLockPermission() async {
+    if (await Permission.ignoreBatteryOptimizations.isGranted) {
+      return true;
+    }
+    
+    PermissionStatus status = await Permission.ignoreBatteryOptimizations.request();
+    return status.isGranted;
+  }
+
+  void _clearDefaultDirectory() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Default Directory'),
+        content: const Text('Are you sure you want to clear the default download directory?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() {
+                _defaultDownloadDirectory = '';
+              });
+              await _saveSettings();
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Default download directory cleared'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkForUpdates() async {
+    if (_isCheckingForUpdates) return;
+    
+    setState(() {
+      _isCheckingForUpdates = true;
+      _updateInfo = null;
+    });
+    
+    try {
+      final updateInfo = await UpdateService.checkForUpdates();
+      setState(() {
+        _updateInfo = updateInfo;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to check for updates: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingForUpdates = false;
+        });
+      }
+    }
+  }
+  
+  Future<void> _downloadAndInstallUpdate() async {
+    if (_updateInfo == null || _updateInfo!['downloadUrl'] == null) {
+      _openReleasePage();
+      return;
+    }
+    
+    final downloadUrl = _updateInfo!['downloadUrl'] as String;
+    
+    setState(() {
+      _isDownloadingUpdate = true;
+      _downloadProgress = 0.0;
+    });
+    
+    await UpdateService.downloadAndInstallUpdate(
+      downloadUrl,
+      (progress) {
+        setState(() {
+          _downloadProgress = progress;
+        });
+      },
+      () {
+        if (mounted) {
+          setState(() {
+            _isDownloadingUpdate = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to download or install update'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          
+          _openReleasePage();
+        }
+      },
+      () {
+        if (mounted) {
+          setState(() {
+            _isDownloadingUpdate = false;
+          });
+        }
+      },
+    );
+  }
+  
+  void _openReleasePage() async {
+    if (_updateInfo == null || _updateInfo!['releaseUrl'] == null) return;
+    
+    final url = Uri.parse(_updateInfo!['releaseUrl'] as String);
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open release page'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildSectionHeader('Appearance'),
+          SwitchListTile(
+            secondary: const Icon(Icons.dark_mode),
+            title: const Text('Dark Mode'),
+            subtitle: const Text('Toggle between light and dark theme'),
+            value: widget.isDarkMode,
+            onChanged: (value) => widget.toggleTheme(),
+          ),
+
+          const SizedBox(height: 16),
+          
+          _buildSectionHeader('Terminal Settings'),
+          ListTile(
+            leading: const Icon(Icons.text_fields),
+            title: const Text('Terminal Font Size'),
+            subtitle: const Text('Adjust text size for better readability in terminal'),
+            trailing: SizedBox(
+              width: 70,
+              child: TextFormField(
+                initialValue: _terminalFontSize,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onChanged: (value) {
+                  setState(() {
+                    _terminalFontSize = value;
+                  });
+                  _saveSettings();
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          
+          _buildSectionHeader('Connection Settings'),
+          ListTile(
+            leading: const Icon(Icons.numbers),
+            title: const Text('Default SSH Port'),
+            subtitle: const Text('Default port used when adding new connections'),
+            trailing: SizedBox(
+              width: 70,
+              child: TextFormField(
+                initialValue: _defaultPort,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onChanged: (value) {
+                  setState(() {
+                    _defaultPort = value.isEmpty ? '22' : value;
+                  });
+                  _saveSettings();
+                },
+              ),
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.stay_current_portrait),
+            title: const Text('Keep Screen On'),
+            subtitle: const Text('Prevent device from sleeping during active connections'),
+            value: _keepScreenOn,
+            onChanged: (value) async {
+              if (value) {
+                bool hasPermission = await _requestWakeLockPermission();
+                if (!hasPermission) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Permission denied. Screen may turn off during connection.'),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+                setState(() {
+                  _keepScreenOn = hasPermission;
+                });
+              } else {
+                setState(() {
+                  _keepScreenOn = false;
+                });
+              }
+              _saveSettings();
+            },
+          ),
+          
+          SwitchListTile(
+            secondary: const Icon(Icons.sync),
+            title: const Text('Auto-Reconnect'),
+            subtitle: const Text('Automatically retry connection when disconnected'),
+            value: _autoReconnect,
+            onChanged: (value) {
+              setState(() {
+                _autoReconnect = value;
+              });
+              _saveSettings();
+            },
+          ),
+          
+          if (_autoReconnect) ...[
+            ListTile(
+              leading: const Icon(Icons.replay),
+              title: const Text('Reconnect Attempts'),
+              subtitle: const Text('Maximum number of times to try reconnecting'),
+              trailing: DropdownButton<int>(
+                value: _autoReconnectAttempts,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _autoReconnectAttempts = value;
+                    });
+                    _saveSettings();
+                  }
+                },
+                items: [1, 2, 3, 5, 10].map((attempts) {
+                  return DropdownMenuItem<int>(
+                    value: attempts,
+                    child: Text('$attempts'),
+                  );
+                }).toList(),
+              ),
+            ),
+            
+            ListTile(
+              leading: const Icon(Icons.timelapse),
+              title: const Text('Connection Retry Delay'),
+              subtitle: const Text('Time to wait between reconnection attempts'),
+              trailing: DropdownButton<int>(
+                value: _connectionRetryDelay,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _connectionRetryDelay = value;
+                    });
+                    _saveSettings();
+                  }
+                },
+                items: [2, 5, 10, 15, 30].map((delay) {
+                  return DropdownMenuItem<int>(
+                    value: delay,
+                    child: Text('$delay sec'),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+          
+          ListTile(
+            leading: const Icon(Icons.timer),
+            title: const Text('Connection Timeout'),
+            subtitle: const Text('Maximum time allowed for SSH connection to establish'),
+            trailing: DropdownButton<int>(
+              value: _connectionTimeout,
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _connectionTimeout = value;
+                  });
+                  _saveSettings();
+                }
+              },
+              items: [10, 20, 30, 45, 60, 90, 120].map((timeout) {
+                return DropdownMenuItem<int>(
+                  value: timeout,
+                  child: Text('$timeout sec'),
+                );
+              }).toList(),
+            ),
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.timer_outlined),
+            title: const Text('SSH Keep-Alive Interval'),
+            subtitle: const Text('Prevent connection drops by sending periodic signals'),
+            trailing: SizedBox(
+              width: 70,
+              child: TextFormField(
+                initialValue: _sshKeepAliveInterval,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                  border: OutlineInputBorder(),
+                  suffixText: 's',
+                ),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                onChanged: (value) {
+                  _sshKeepAliveInterval = value;
+                },
+                onEditingComplete: _saveSettings,
+              ),
+            ),
+          ),
+                
+          ListTile(
+            leading: const Icon(Icons.timer_off),
+            title: const Text('Security Timeout'),
+            subtitle: const Text('Automatically disconnect after inactivity'),
+            trailing: DropdownButton<int>(
+              value: _securityTimeout,
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _securityTimeout = value;
+                  });
+                  _saveSettings();
+                }
+              },
+              items: [0, 5, 10, 15, 30, 60].map((timeout) {
+                return DropdownMenuItem<int>(
+                  value: timeout,
+                  child: Text(timeout == 0 ? 'Disabled' : '$timeout min'),
+                );
+              }).toList(),
+            ),
+          ),
+          
+          SwitchListTile(
+            secondary: const Icon(Icons.compress),
+            title: const Text('SSH Compression'),
+            subtitle: const Text('Save data usage on slow networks (may reduce performance)'),
+            value: _sshCompression,
+            onChanged: (value) {
+              setState(() {
+                _sshCompression = value;
+              });
+              _saveSettings();
+            },
+          ),
+
+          const SizedBox(height: 16),
+          _buildSectionHeader('File Explorer Settings'),
+          
+          SwitchListTile(
+            secondary: const Icon(Icons.visibility),
+            title: const Text('Show Hidden Files'),
+            subtitle: const Text('Display files starting with a dot (.)'),
+            value: _showHiddenFiles,
+            onChanged: (value) {
+              setState(() {
+                _showHiddenFiles = value;
+              });
+              _saveSettings();
+            },
+          ),
+          
+          SwitchListTile(
+            secondary: const Icon(Icons.warning),
+            title: const Text('Confirm File Overwrite'),
+            subtitle: const Text('Ask before replacing existing files'),
+            value: _confirmBeforeOverwrite,
+            onChanged: (value) {
+              setState(() {
+                _confirmBeforeOverwrite = value;
+              });
+              _saveSettings();
+            },
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.folder),
+            title: const Text('Default Download Directory'),
+            subtitle: Text(_defaultDownloadDirectory.isEmpty 
+                ? 'Not set (will ask each time)' 
+                : _defaultDownloadDirectory),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_defaultDownloadDirectory.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _clearDefaultDirectory,
+                    tooltip: 'Clear default directory',
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  onPressed: _pickDefaultDirectory,
+                  tooltip: 'Select default directory',
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+          
+          _buildSectionHeader('Data Management'),
+          ListTile(
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text('Clear App Data'),
+            subtitle: const Text('Reset all settings and delete saved connections (cannot be undone)'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: _clearAppData,
+          ),
+          
+          const SizedBox(height: 16),
+          _buildSectionHeader('About'),
+          
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'App Version',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _appVersion,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _isCheckingForUpdates
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton.icon(
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Check for Updates'),
+                              onPressed: _checkForUpdates,
+                            ),
+                    ],
+                  ),
+                  
+                  if (_updateInfo != null) ...[
+                    const SizedBox(height: 16),
+                    if (_updateInfo!['updateAvailable'] == true) ...[
+                      Text(
+                        'New version available: ${_updateInfo!['latestVersion']}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_updateInfo!['releaseNotes'] != null)
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _updateInfo!['releaseNotes'],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+                      if (_isDownloadingUpdate) ...[
+                        LinearProgressIndicator(value: _downloadProgress),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Downloading... ${(_downloadProgress * 100).toStringAsFixed(1)}%',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.file_download),
+                              label: const Text('Download & Install'),
+                              onPressed: _downloadAndInstallUpdate,
+                            ),
+                            TextButton.icon(
+                              icon: const Icon(Icons.open_in_new),
+                              label: const Text('Open Release Page'),
+                              onPressed: _openReleasePage,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ] else ...[
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.green),
+                          const SizedBox(width: 8),
+                          Text(
+                            'You are using the latest version ($_appVersion).',
+                            style: const TextStyle(color: Colors.green),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          ),
+          
+          ListTile(
+            leading: const Icon(Icons.code),
+            title: const Text('GitHub Repository'),
+            subtitle: const Text('Report issues, view source code, suggest features or contribute code'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: _launchGitHub,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 8, top: 16),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+}

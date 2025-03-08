@@ -3,12 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
 import 'services/ssh_service.dart';
 import 'pages/connection/connection.dart';
 import 'pages/terminal/terminal.dart';
 import 'pages/stats/stats.dart';
 import 'pages/file_explorer/file_explorer.dart';
 import 'widgets/first_launch_notice.dart';
+import 'pages/settings/settings.dart';
 
 class BackgroundService {
   static final BackgroundService _instance = BackgroundService._internal();
@@ -221,6 +224,9 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   bool _isReconnecting = false;
   bool _wasConnectedBeforePause = false;
 
+  Timer? _securityTimeoutTimer;
+  DateTime _lastActivityTime = DateTime.now();
+  
   @override
   void initState() {
     super.initState();
@@ -238,6 +244,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _stopSecurityTimeoutMonitoring();
     WidgetsBinding.instance.removeObserver(this);
     sshService?.disconnect();
     _stopBackgroundExecution();
@@ -246,6 +253,37 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   Future<void> _stopBackgroundExecution() async {
     await FlutterBackground.disableBackgroundExecution();
+  }
+
+  void _resetActivityTimer() {
+    _lastActivityTime = DateTime.now();
+  }
+  
+  void _startSecurityTimeoutMonitoring() async {
+    _stopSecurityTimeoutMonitoring();
+    
+    final prefs = await SharedPreferences.getInstance();
+    final securityTimeout = prefs.getInt('securityTimeout') ?? 0;
+    
+    if (securityTimeout <= 0) return; 
+    
+    _securityTimeoutTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (sshService != null && sshService!.isConnected()) {
+        final idleMinutes = DateTime.now().difference(_lastActivityTime).inMinutes;
+        if (idleMinutes >= securityTimeout) {
+          print('Security timeout reached ($securityTimeout min). Logging off.');
+          _logOff();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Disconnected due to $securityTimeout minutes of inactivity')),
+          );
+        }
+      }
+    });
+  }
+  
+  void _stopSecurityTimeoutMonitoring() {
+    _securityTimeoutTimer?.cancel();
+    _securityTimeoutTimer = null;
   }
 
   @override
@@ -269,31 +307,111 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   }
 
   void _onItemTapped(int index) {
-    if (sshService != null || index == 2) {
-      setState(() {
-        _selectedIndex = index;
-      });
-    } else {
+    // Allow navigation to Connections (2) or Settings (4) without a connection
+    // Restrict access to Stats (0), Terminal (1), and File Explorer (3) when not connected
+    if (sshService == null && index != 2 && index != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please connect first')),
       );
+      setState(() {
+        _selectedIndex = 2;
+      });
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
     }
+  }
+
+  Future<void> _applyScreenWakeLock(bool keepOn) async {
+    if (keepOn) {
+      if (await Permission.ignoreBatteryOptimizations.isGranted) {
+        try {
+          await SystemChannels.platform.invokeMethod('SystemChrome.setEnabledSystemUIMode', [SystemUiMode.immersiveSticky]);
+          await SystemChannels.platform.invokeMethod('HapticFeedback.vibrate');
+          print('Screen wake lock applied');
+        } catch (e) {
+          print('Error applying screen wake lock: $e');
+        }
+      } else {
+        print('Battery optimization permission not granted, screen may turn off');
+      }
+    } else {
+      try {
+        await SystemChannels.platform.invokeMethod('SystemChrome.restoreSystemUIOverlays');
+      } catch (e) {
+        print('Error resetting screen wake lock: $e');
+      }
+    }
+  }
+
+  Future<void> _loadAndApplySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    final connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
+    SSHService.defaultConnectionTimeout = connectionTimeout;
+    
+    final keepScreenOn = prefs.getBool('keepScreenOn') ?? true;
+    if (sshService != null && sshService!.isConnected()) {
+      await _applyScreenWakeLock(keepScreenOn);
+    }
+    
+    final keepAliveInterval = prefs.getString('sshKeepAliveInterval') ?? '60';
+    if (sshService != null) {
+      sshService!.setKeepAliveInterval(int.tryParse(keepAliveInterval) ?? 60);
+    }
+    
+    _startSecurityTimeoutMonitoring();
   }
 
   void _setSSHService(SSHService? service) {
     print('Setting SSHService: ${service?.name ?? "NULL"}');
+    
+    final bool wasConnected = sshService != null;
+    final bool willBeConnected = service != null;
+    
+    if (service == null && sshService != null) {
+      print("Disconnected: Clearing SSH service reference");
+      _applyScreenWakeLock(false); 
+      sshService?.disconnect();
+    }
+    
     setState(() {
       sshService = service;
       connectionStatus = service != null
           ? 'Connected to ${service.name} (${service.host})'
-          : '';
+          : 'Disconnected';
     });
+    
+    if (wasConnected && !willBeConnected) {
+      print("Disconnected: Enforcing navigation to Connections tab");
+      setState(() {
+        _selectedIndex = 2;
+      });
+    }
+    
+    if (service != null) {
+      _resetActivityTimer(); 
+      _loadAndApplySettings();
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _fileExplorerKey.currentState != null) {
+          _fileExplorerKey.currentState!.loadRootDirectory();
+        }
+      });
+    } else {
+      _stopSecurityTimeoutMonitoring(); 
+    }
   }
 
   void _logOff() async {
     if (mounted) {
       await BackgroundService.instance.disableBackground();
+      
+      _fileExplorerKey.currentState?.resetToRoot();
+      
       setState(() => _selectedIndex = 2);
+      
       await Future.delayed(const Duration(milliseconds: 100));
       sshService?.disconnect();
       
@@ -301,9 +419,17 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
         connectionStatus = 'Disconnected';
         sshService = null;
         commandOutput = '';
+        
+        _enforceNavigationRestrictions();
       });
+    }
+  }
 
-      _fileExplorerKey.currentState?.resetToRoot();
+  void _enforceNavigationRestrictions() {
+    if (sshService == null && _selectedIndex != 2 && _selectedIndex != 4) {
+      setState(() {
+        _selectedIndex = 2; 
+      });
     }
   }
 
@@ -330,72 +456,87 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    _resetActivityTimer();
+    
     if (_isReconnecting) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Raspberry Pi Control'),
-          actions: [
-            IconButton(
-              icon: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
-              onPressed: widget.toggleTheme,
+        body: SafeArea(
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Reconnecting to server...'),
+              ],
             ),
-          ],
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Reconnecting to server...'),
-            ],
           ),
         ),
       );
     }
 
+    final bool isReallyConnected = sshService?.isConnected() ?? false;
+    
+    if (!isReallyConnected && (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 3)) {
+      print("Not connected but on restricted page - enforcing navigation to Connections tab");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedIndex = 2; 
+          });
+        }
+      });
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Raspberry Pi Control'),
-        actions: [
-          IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
-            onPressed: widget.toggleTheme,
-          ),
-          if (sshService != null)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _logOff,
+      body: SafeArea(
+        child: IndexedStack(
+          key: const ValueKey<String>('main_stack'),
+          index: _selectedIndex,
+          children: [
+            sshService != null
+              ? Stats(
+                  key: const PageStorageKey('stats_screen'),
+                  sshService: sshService,
+                )
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Please connect first.'),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _onItemTapped(2),  
+                        icon: const Icon(Icons.connect_without_contact),
+                        label: const Text('Go to Connections'),
+                      ),
+                    ],
+                  ),
+                ),
+            Terminal(
+              key: const PageStorageKey('terminal_screen'),
+              sshService: sshService,
+              commandController: _commandController,
+              commandOutput: commandOutput,
+              sendCommand: _sendCommand,
             ),
-        ],
-      ),
-      body: IndexedStack(
-        key: const ValueKey<String>('main_stack'),
-        index: _selectedIndex,
-        children: [
-          sshService != null
-        ? Stats(
-            key: const PageStorageKey('stats_screen'),
-            sshService: sshService,
-          )
-        : const Center(child: Text('Please connect first.')),
-          Terminal(
-            key: const PageStorageKey('terminal_screen'),
-            sshService: sshService,
-            commandController: _commandController,
-            commandOutput: commandOutput,
-            sendCommand: _sendCommand,
-          ),
-          Connection(
-            key: const PageStorageKey('connection_screen'),
-            setSSHService: _setSSHService,
-            connectionStatus: connectionStatus,
-          ),
-          FileExplorer(
-            key: _fileExplorerKey,
-            sshService: sshService,
-          ),
-        ],
+            Connection(
+              key: const PageStorageKey('connection_screen'),
+              setSSHService: _setSSHService,
+              connectionStatus: connectionStatus,
+            ),
+            FileExplorer(
+              key: _fileExplorerKey,
+              sshService: sshService,
+            ),
+            Settings(
+              key: const PageStorageKey('settings_screen'),
+              isDarkMode: widget.isDarkMode,
+              toggleTheme: widget.toggleTheme,
+              logOut: _logOff,
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
@@ -414,6 +555,10 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
           BottomNavigationBarItem(
             icon: Icon(Icons.file_copy),
             label: 'File Explorer',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../controllers/stats_controller.dart';  
 
@@ -14,6 +15,10 @@ class SSHService {
   bool _isReconnecting = false;
   Timer? _keepAliveTimer;
   Timer? _connectionMonitor;
+  int _keepAliveInterval = 60;
+  static int defaultConnectionTimeout = 30;
+  bool _compression = false;
+  int _connectionRetryDelay = 5; 
   final _connectionStatusController = StreamController<bool>.broadcast();
   Stream<bool> get connectionStatus => _connectionStatusController.stream;
   bool get isReconnecting => _isReconnecting;
@@ -26,15 +31,30 @@ class SSHService {
     required this.password,
   });
 
+  Future<void> _loadSSHSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    _keepAliveInterval = int.tryParse(prefs.getString('sshKeepAliveInterval') ?? '60') ?? 60;
+    _compression = prefs.getBool('sshCompression') ?? false;
+    _connectionRetryDelay = prefs.getInt('connectionRetryDelay') ?? 5;
+  }
+
   Future<void> connect() async {
     if (_client != null) return;
+
+    await _loadSSHSettings();
+    
     try {
       if (_isReconnecting) return;
       _isReconnecting = true;
       
       final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
-      _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
       
+      _client = SSHClient(
+        socket, 
+        username: username, 
+        onPasswordRequest: () => password,
+      );
+            
       try {
         await BackgroundService.instance.enableBackground();
       } catch (e) {
@@ -47,6 +67,17 @@ class SSHService {
       _startConnectionMonitoring();
       _isReconnecting = false;
       _connectionStatusController.add(true);
+      
+      if (_compression) {
+        try {
+          await _client!.run('compress yes');
+        } catch (e) {
+          print('Warning: Could not enable SSH compression: $e');
+        }
+      }
+      
+      _setupKeepAlive();
+      
     } catch (e) {
       _isReconnecting = false;
       _connectionStatusController.add(false);
@@ -90,24 +121,40 @@ class SSHService {
     if (_isReconnecting) return; 
     _isReconnecting = true;
     _connectionStatusController.add(false);
+    
+    final prefs = await SharedPreferences.getInstance();
+    final autoReconnect = prefs.getBool('autoReconnect') ?? true;
+    final maxRetries = prefs.getInt('autoReconnectAttempts') ?? 3;
+    
+    if (!autoReconnect) {
+      print('Auto-reconnect disabled in settings');
+      _isReconnecting = false;
+      return;
+    }
+    
     int retryCount = 0;
-    const int maxRetries = 5;
 
     while (retryCount < maxRetries) {
       try {
         _client?.close();
         _client = null;
         final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
-        _client = SSHClient(socket, username: username, onPasswordRequest: () => password);
-
+        
+        _client = SSHClient(
+          socket, 
+          username: username, 
+          onPasswordRequest: () => password
+        );
+        
         _isReconnecting = false;
         _connectionStatusController.add(true);
         print("Reconnection successful.");
+        
         return;
       } catch (e) {
         retryCount++;
         print('Reconnection attempt $retryCount failed: $e');
-        await Future.delayed(const Duration(seconds: 5));
+        await Future.delayed(Duration(seconds: _connectionRetryDelay)); 
       }
     }
 
@@ -132,7 +179,7 @@ class SSHService {
         print('Warning: Failed to disable background service: $e');
       }
       
-      _client!.close();
+      _client?.close();
       _client = null;
     }
   }
@@ -450,5 +497,30 @@ class SSHService {
     _connectionStatusController.close();
     _client?.close();
     _client = null;
+  }
+
+  void setKeepAliveInterval(int seconds) {
+    _keepAliveInterval = seconds;
+    if (_keepAliveTimer != null) {
+      _keepAliveTimer!.cancel();
+      _setupKeepAlive();
+    }
+  }
+
+  void _setupKeepAlive() {
+    if (_client == null || _keepAliveInterval <= 0) {
+      return;
+    }
+    
+    _keepAliveTimer?.cancel();
+    _keepAliveTimer = Timer.periodic(Duration(seconds: _keepAliveInterval), (_) {
+      if (_client != null && _client!.isClosed == false) {
+        try {
+          _client!.run('echo');
+        } catch (e) {
+          print('Keep-alive failed: $e');
+        }
+      }
+    });
   }
 }

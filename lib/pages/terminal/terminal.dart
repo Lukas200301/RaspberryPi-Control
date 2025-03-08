@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/ssh_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Terminal extends StatefulWidget {
   final SSHService? sshService;
@@ -25,10 +26,44 @@ class TerminalState extends State<Terminal> {
   final ScrollController _scrollController = ScrollController();
   List<String> _commandHistory = [];
   int _historyIndex = -1;
+  double _fontSize = 14.0;
+  final int _maxHistorySize = 50; 
 
   @override
   void initState() {
     super.initState();
+    _loadTerminalSettings();
+    _setupSettingsListener();
+  }
+
+  void _setupSettingsListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForSettingsChanges();
+    });
+  }
+
+  Future<void> _checkForSettingsChanges() async {
+    if (!mounted) return;
+    
+    await _loadTerminalSettings();
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _checkForSettingsChanges();
+      }
+    });
+  }
+
+  Future<void> _loadTerminalSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final newFontSize = double.tryParse(prefs.getString('terminalFontSize') ?? '14') ?? 14.0;
+    
+    
+    if (newFontSize != _fontSize) {
+      setState(() {
+        _fontSize = newFontSize;
+      });
+    }
   }
 
   @override
@@ -43,6 +78,9 @@ class TerminalState extends State<Terminal> {
     if (command.isNotEmpty) {
       if (_commandHistory.isEmpty || _commandHistory.last != command) {
         _commandHistory.add(command);
+        if (_commandHistory.length > _maxHistorySize) {
+          _commandHistory = _commandHistory.sublist(_commandHistory.length - _maxHistorySize);
+        }
       }
       _historyIndex = _commandHistory.length;
       widget.sendCommand();
@@ -101,7 +139,7 @@ class TerminalState extends State<Terminal> {
                 widget.commandOutput,
                 style: TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 14,
+                  fontSize: _fontSize, 
                   color: isDarkMode ? Colors.white : Colors.black,
                 ),
               ),
