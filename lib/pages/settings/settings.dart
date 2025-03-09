@@ -12,6 +12,21 @@ class Settings extends StatefulWidget {
   final VoidCallback toggleTheme;
   final Function? logOut;
 
+  static final GlobalKey updateSectionKey = GlobalKey();
+  static final ScrollController scrollController = ScrollController();
+
+  static void scrollToUpdates() {
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      final double targetPosition = 3000; 
+      
+      scrollController.animateTo(
+        targetPosition,
+        duration: const Duration(seconds: 1),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   const Settings({
     Key? key,
     required this.isDarkMode,
@@ -42,12 +57,19 @@ class _SettingsState extends State<Settings> {
   bool _isDownloadingUpdate = false;
   double _downloadProgress = 0.0;
   String _defaultPort = '22';
+  bool _highlightUpdateSection = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _getAppVersion();
+    _checkForUpdates();
+  }
+  
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -331,9 +353,27 @@ class _SettingsState extends State<Settings> {
     
     try {
       final updateInfo = await UpdateService.checkForUpdates();
-      setState(() {
-        _updateInfo = updateInfo;
-      });
+      
+      if (mounted) {
+        setState(() {
+          _updateInfo = updateInfo;
+          if (updateInfo['updateAvailable'] == true) {
+            _highlightUpdateSection = true;
+            
+            Future.delayed(const Duration(seconds: 10), () {
+              if (mounted) {
+                setState(() {
+                  _highlightUpdateSection = false;
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      if (updateInfo['updateAvailable'] == true) {
+        Settings.scrollToUpdates();
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -491,6 +531,7 @@ class _SettingsState extends State<Settings> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListView(
+        controller: Settings.scrollController, 
         padding: const EdgeInsets.all(16),
         children: [
           _buildSectionHeader('Appearance'),
@@ -795,116 +836,139 @@ class _SettingsState extends State<Settings> {
           const SizedBox(height: 16),
           _buildSectionHeader('About'),
           
-          Card(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'App Version',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _appVersion,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _isCheckingForUpdates
-                          ? const CircularProgressIndicator()
-                          : ElevatedButton.icon(
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Check for Updates'),
-                              onPressed: _checkForUpdates,
-                            ),
-                    ],
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 800),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: _highlightUpdateSection ? [
+                BoxShadow(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                )
+              ] : [],
+            ),
+            padding: _highlightUpdateSection ? const EdgeInsets.all(4) : EdgeInsets.zero,
+            child: Card(
+              key: Settings.updateSectionKey,
+              shape: _highlightUpdateSection ? 
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
                   ),
-                  
-                  if (_updateInfo != null) ...[
-                    const SizedBox(height: 16),
-                    if (_updateInfo!['updateAvailable'] == true) ...[
-                      Text(
-                        'New version available: ${_updateInfo!['latestVersion']}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_updateInfo!['releaseNotes'] != null)
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
+                ) : null,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'App Version',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _appVersion,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            _cleanMarkdown(_updateInfo!['releaseNotes']),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[800],
+                        ),
+                        _isCheckingForUpdates
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton.icon(
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Check for Updates'),
+                                onPressed: _checkForUpdates,
+                              ),
+                      ],
+                    ),
+                    
+                    if (_updateInfo != null) ...[
+                      const SizedBox(height: 16),
+                      if (_updateInfo!['updateAvailable'] == true) ...[
+                        Text(
+                          'New version available: ${_updateInfo!['latestVersion']}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_updateInfo!['releaseNotes'] != null)
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _cleanMarkdown(_updateInfo!['releaseNotes']),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[800],
+                              ),
                             ),
                           ),
-                        ),
-                      const SizedBox(height: 16),
-                      if (_isDownloadingUpdate) ...[
-                        LinearProgressIndicator(value: _downloadProgress),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Downloading... ${(_downloadProgress * 100).toStringAsFixed(1)}%',
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                        const SizedBox(height: 16),
+                        if (_isDownloadingUpdate) ...[
+                          LinearProgressIndicator(value: _downloadProgress),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Downloading... ${(_downloadProgress * 100).toStringAsFixed(1)}%',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ] else ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.file_download),
+                                  label: const Text('Download & Install'),
+                                  onPressed: _downloadAndInstallUpdate,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextButton.icon(
+                                  icon: const Icon(Icons.open_in_new),
+                                  label: const Text('Open Release Page'),
+                                  onPressed: _openReleasePage,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ] else ...[
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.file_download),
-                                label: const Text('Download & Install'),
-                                onPressed: _downloadAndInstallUpdate,
-                              ),
-                            ),
+                            const Icon(Icons.check_circle, color: Colors.green),
                             const SizedBox(width: 8),
-                            Expanded(
-                              child: TextButton.icon(
-                                icon: const Icon(Icons.open_in_new),
-                                label: const Text('Open Release Page'),
-                                onPressed: _openReleasePage,
-                              ),
+                            Text(
+                              'You are using the latest version ($_appVersion).',
+                              style: const TextStyle(color: Colors.green),
                             ),
                           ],
                         ),
                       ],
-                    ] else ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.green),
-                          const SizedBox(width: 8),
-                          Text(
-                            'You are using the latest version ($_appVersion).',
-                            style: const TextStyle(color: Colors.green),
-                          ),
-                        ],
-                      ),
                     ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

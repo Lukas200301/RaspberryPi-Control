@@ -11,6 +11,7 @@ import 'pages/terminal/terminal.dart';
 import 'pages/stats/stats.dart';
 import 'pages/file_explorer/file_explorer.dart';
 import 'widgets/first_launch_notice.dart';
+import 'widgets/update_notice.dart';
 import 'pages/settings/settings.dart';
 
 class BackgroundService {
@@ -145,6 +146,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late bool isDarkMode;
+  final GlobalKey<_BarsScreenState> _barsScreenKey = GlobalKey<_BarsScreenState>();
 
   @override
   void initState() {
@@ -190,10 +192,18 @@ class _MyAppState extends State<MyApp> {
       home: Stack(
         children: [
           BarsScreen(
+            key: _barsScreenKey,
             isDarkMode: isDarkMode,
             toggleTheme: _toggleTheme,
           ),
-          const FirstLaunchNotice(), 
+          const FirstLaunchNotice(),
+          UpdateNotice(
+            onNavigateToTab: (index) {
+              if (_barsScreenKey.currentState != null) {
+                _barsScreenKey.currentState!._onItemTapped(index);
+              }
+            },
+          ),
         ],
       ),
     );
