@@ -10,7 +10,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:android_intent_plus/android_intent.dart';
 
 class UpdateService {
-  static const String _githubApiUrl = 'https://api.github.com/repos/Lukas200301/RaspberryPi-Control/releases/latest';
+  static const String _githubAllReleasesUrl = 'https://api.github.com/repos/Lukas200301/RaspberryPi-Control/releases';
   static const String _githubReleaseUrl = 'https://github.com/Lukas200301/RaspberryPi-Control/releases/latest';
   
   static Future<Map<String, dynamic>> checkForUpdates() async {
@@ -24,7 +24,7 @@ class UpdateService {
       }
       
       final response = await http.get(
-        Uri.parse(_githubApiUrl),
+        Uri.parse(_githubAllReleasesUrl),
         headers: {'Accept': 'application/vnd.github.v3+json'},
       );
       
@@ -32,18 +32,56 @@ class UpdateService {
         throw Exception('Failed to check for updates: ${response.statusCode}');
       }
       
-      final data = json.decode(response.body);
+      final List<dynamic> releases = json.decode(response.body);
       
-      String latestVersion = data['tag_name'] as String;
+      if (releases.isEmpty) {
+        throw Exception('No releases found');
+      }
+      
+      final latestRelease = releases.first;
+      
+      String latestVersion = latestRelease['tag_name'] as String;
       if (latestVersion.startsWith('v')) {
         latestVersion = latestVersion.substring(1);
       }
       
       final bool updateAvailable = _isNewerVersion(latestVersion, cleanCurrentVersion);
       
+      List<Map<String, dynamic>> newerReleases = [];
+      for (var release in releases) {
+        String releaseVersion = release['tag_name'] as String;
+        if (releaseVersion.startsWith('v')) {
+          releaseVersion = releaseVersion.substring(1);
+        }
+        
+        if (_isNewerVersion(releaseVersion, cleanCurrentVersion)) {
+          newerReleases.add({
+            'version': releaseVersion,
+            'notes': release['body'] as String? ?? 'No release notes available',
+            'date': release['published_at'] as String? ?? '',
+          });
+        }
+      }
+      
+      newerReleases.sort((a, b) => _compareVersions(b['version'] as String, a['version'] as String));
+      
+      final StringBuffer combinedNotes = StringBuffer();
+      for (var release in newerReleases) {
+        combinedNotes.writeln('## Version ${release['version']}');
+        if (release['date'].isNotEmpty) {
+          try {
+            final DateTime releaseDate = DateTime.parse(release['date']);
+            combinedNotes.writeln('_Released: ${releaseDate.toIso8601String().split('T')[0]}_\n');
+          } catch (e) {
+          }
+        }
+        combinedNotes.writeln('${release['notes']}\n');
+        combinedNotes.writeln('---\n');
+      }
+      
       String? downloadUrl;
-      if (data['assets'] != null && (data['assets'] as List).isNotEmpty) {
-        for (var asset in data['assets']) {
+      if (latestRelease['assets'] != null && (latestRelease['assets'] as List).isNotEmpty) {
+        for (var asset in latestRelease['assets']) {
           if (asset['name'].toString().toLowerCase().endsWith('.apk')) {
             downloadUrl = asset['browser_download_url'] as String?;
             break;
@@ -55,9 +93,10 @@ class UpdateService {
         'currentVersion': cleanCurrentVersion,
         'latestVersion': latestVersion,
         'updateAvailable': updateAvailable,
-        'releaseNotes': data['body'] as String? ?? 'No release notes available',
+        'releaseNotes': combinedNotes.toString().trim(),
         'downloadUrl': downloadUrl,
-        'releaseUrl': data['html_url'] as String? ?? _githubReleaseUrl,
+        'releaseUrl': latestRelease['html_url'] as String? ?? _githubReleaseUrl,
+        'newerReleases': newerReleases,
       };
     } catch (e) {
       print('Error checking for updates: $e');
@@ -68,26 +107,23 @@ class UpdateService {
     }
   }
   
-  static bool _isNewerVersion(String latestVersion, String currentVersion) {
-    final List<int> latest = latestVersion
-        .split('.')
-        .map((part) => int.tryParse(part) ?? 0)
-        .toList();
+  static int _compareVersions(String version1, String version2) {
+    final List<int> v1 = version1.split('.').map((part) => int.tryParse(part) ?? 0).toList();
+    final List<int> v2 = version2.split('.').map((part) => int.tryParse(part) ?? 0).toList();
     
-    final List<int> current = currentVersion
-        .split('.')
-        .map((part) => int.tryParse(part) ?? 0)
-        .toList();
+    while (v1.length < v2.length) v1.add(0);
+    while (v2.length < v1.length) v2.add(0);
     
-    while (latest.length < current.length) latest.add(0);
-    while (current.length < latest.length) current.add(0);
-    
-    for (int i = 0; i < latest.length; i++) {
-      if (latest[i] > current[i]) return true;
-      if (latest[i] < current[i]) return false;
+    for (int i = 0; i < v1.length; i++) {
+      if (v1[i] > v2[i]) return 1;
+      if (v1[i] < v2[i]) return -1;
     }
     
-    return false;
+    return 0;
+  }
+  
+  static bool _isNewerVersion(String latestVersion, String currentVersion) {
+    return _compareVersions(latestVersion, currentVersion) > 0;
   }
   
   static Future<bool> _requestStoragePermission() async {

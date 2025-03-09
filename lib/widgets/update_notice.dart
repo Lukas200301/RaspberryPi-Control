@@ -170,10 +170,19 @@ class _UpdateNoticeState extends State<UpdateNotice> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text('Patch Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+                
+                if (_updateInfo!.containsKey('newerReleases')) ...[
+                  Text(
+                    'Updates since your version (${(_updateInfo!['newerReleases'] as List).length}):',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ] else ...[
+                  Text('Patch Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+                
                 const SizedBox(height: 4),
                 Container(
-                  height: 120,
+                  height: 180, 
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
@@ -198,6 +207,7 @@ class _UpdateNoticeState extends State<UpdateNotice> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
+                  _dismissUpdate(); 
                   
                   if (widget.onNavigateToTab != null) {
                     widget.onNavigateToTab!(4); 

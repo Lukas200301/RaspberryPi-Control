@@ -908,6 +908,17 @@ class _SettingsState extends State<Settings> {
                             color: Colors.green,
                           ),
                         ),
+                        
+                        if (_updateInfo!.containsKey('newerReleases') && (_updateInfo!['newerReleases'] as List).length > 1) ...[
+                          Text(
+                            'Contains ${(_updateInfo!['newerReleases'] as List).length} updates since your version',
+                            style: TextStyle(
+                              color: Colors.grey[800],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                        
                         const SizedBox(height: 8),
                         if (_updateInfo!['releaseNotes'] != null)
                           Container(
