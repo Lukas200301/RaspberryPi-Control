@@ -220,13 +220,61 @@ class _SettingsState extends State<Settings> {
 
   Future<void> _launchGitHub() async {
     final Uri url = Uri.parse('https://github.com/Lukas200301/RaspberryPi-Control');
-    if (!await launchUrl(url)) {
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not open GitHub repository');
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open GitHub repository')),
+          SnackBar(
+            content: Text('Could not open GitHub repository: $e'),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     }
+  }
+
+  String _cleanMarkdown(String markdown) {
+    String text = markdown;
+    
+    text = text.replaceAllMapped(RegExp(r'#{1,6}\s+(.+?)$', multiLine: true), (match) {
+      return '\n${match.group(1)}\n';
+    });
+    
+    text = text.replaceAllMapped(RegExp(r'^(\s*[-*+]|\s*\d+\.)\s+(.+?)$', multiLine: true), (match) {
+      return '• ${match.group(2)}\n';
+    });
+    
+    text = text.replaceAllMapped(RegExp(r'\*\*(.+?)\*\*'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAllMapped(RegExp(r'__(.+?)__'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAllMapped(RegExp(r'\*(.+?)\*'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAllMapped(RegExp(r'_(.+?)_'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAllMapped(RegExp(r'\[([^\]]+)\]\([^\)]+\)'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAllMapped(RegExp(r'```(?:\w+)?\n(.*?)```', dotAll: true), (match) {
+      return '\n${match.group(1)}\n';
+    });
+    text = text.replaceAllMapped(RegExp(r'`([^`]+)`'), (match) {
+      return match.group(1) ?? '';
+    });
+    text = text.replaceAll(RegExp(r'^(---|\*\*\*|___)$', multiLine: true), '\n—————\n');
+    text = text.replaceAllMapped(RegExp(r'^>\s+(.+?)$', multiLine: true), (match) {
+      return '″${match.group(1)}″\n';
+    });
+    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
+    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return text.trim();
   }
 
   Future<bool> _requestWakeLockPermission() async {
@@ -306,6 +354,12 @@ class _SettingsState extends State<Settings> {
   
   Future<void> _downloadAndInstallUpdate() async {
     if (_updateInfo == null || _updateInfo!['downloadUrl'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No download URL available. Opening release page instead.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       _openReleasePage();
       return;
     }
@@ -324,20 +378,75 @@ class _SettingsState extends State<Settings> {
           _downloadProgress = progress;
         });
       },
-      () {
+      (error) {
         if (mounted) {
           setState(() {
             _isDownloadingUpdate = false;
           });
           
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to download or install update'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          
-          _openReleasePage();
+          if (error.contains('permanently denied') || 
+              error.contains('Install unknown apps')) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Permission Required'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(error),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'To enable installation:\n'
+                      '1. Tap "Open Settings"\n'
+                      '2. Tap "Install unknown apps"\n'
+                      '3. Find "Raspberry Pi Control"\n'
+                      '4. Toggle "Allow from this source"',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'After enabling the permission, you\'ll need to download the update again.',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final success = await UpdateService.openInstallPackageSettings();
+                      if (!success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not open settings. Please enable "Install unknown apps" manually.'),
+                            duration: Duration(seconds: 5),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Open Settings'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to download or install update: $error'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+                action: SnackBarAction(
+                  label: 'Release Page',
+                  onPressed: _openReleasePage,
+                ),
+              ),
+            );
+          }
         }
       },
       () {
@@ -345,6 +454,12 @@ class _SettingsState extends State<Settings> {
           setState(() {
             _isDownloadingUpdate = false;
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Update download completed. Installation started.'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       },
     );
@@ -353,16 +468,19 @@ class _SettingsState extends State<Settings> {
   void _openReleasePage() async {
     if (_updateInfo == null || _updateInfo!['releaseUrl'] == null) return;
     
-    final url = Uri.parse(_updateInfo!['releaseUrl'] as String);
-    
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      final url = Uri.parse(_updateInfo!['releaseUrl'] as String);
+      
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch URL: ${url.toString()}');
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open release page'),
+          SnackBar(
+            content: Text('Could not open release page: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -736,7 +854,7 @@ class _SettingsState extends State<Settings> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            _updateInfo!['releaseNotes'],
+                            _cleanMarkdown(_updateInfo!['releaseNotes']),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[800],
@@ -755,15 +873,20 @@ class _SettingsState extends State<Settings> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.file_download),
-                              label: const Text('Download & Install'),
-                              onPressed: _downloadAndInstallUpdate,
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.file_download),
+                                label: const Text('Download & Install'),
+                                onPressed: _downloadAndInstallUpdate,
+                              ),
                             ),
-                            TextButton.icon(
-                              icon: const Icon(Icons.open_in_new),
-                              label: const Text('Open Release Page'),
-                              onPressed: _openReleasePage,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextButton.icon(
+                                icon: const Icon(Icons.open_in_new),
+                                label: const Text('Open Release Page'),
+                                onPressed: _openReleasePage,
+                              ),
                             ),
                           ],
                         ),

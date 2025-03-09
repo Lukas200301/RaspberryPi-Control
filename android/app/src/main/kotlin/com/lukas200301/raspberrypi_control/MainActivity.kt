@@ -15,6 +15,10 @@ import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.os.Bundle
+import androidx.core.content.FileProvider
+import android.util.Log
+import java.io.File
+import android.net.Uri
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.lukas200301.raspberrypi_control"
@@ -57,6 +61,22 @@ class MainActivity: FlutterActivity() {
                     getSystemService(NotificationManager::class.java).cancel(1)
                     channel.invokeMethod("onDisconnect", null)
                     result.success(null)
+                }
+                "installApk" -> {
+                    try {
+                        val filePath = call.argument<String>("filePath")
+                        if (filePath != null) {
+                            Log.d("APK_INSTALL", "Installing APK from: $filePath")
+                            val success = installApk(filePath)
+                            result.success(success)
+                        } else {
+                            Log.e("APK_INSTALL", "No file path provided")
+                            result.error("INVALID_PATH", "No file path provided", null)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("APK_INSTALL", "Error installing APK: ${e.message}", e)
+                        result.error("INSTALLATION_ERROR", e.message, e.toString())
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -152,6 +172,41 @@ class MainActivity: FlutterActivity() {
             println("Notification posted successfully") 
         } catch (e: Exception) {
             println("Error showing notification: $e") 
+        }
+    }
+
+    private fun installApk(filePath: String): Boolean {
+        return try {
+            Log.d("APK_INSTALL", "Starting APK installation from: $filePath")
+            
+            val file = File(filePath)
+            if (!file.exists()) {
+                Log.e("APK_INSTALL", "APK file does not exist at path: $filePath")
+                return false
+            }
+            
+            Log.d("APK_INSTALL", "APK file exists, size: ${file.length()} bytes")
+            
+            val apkUri = FileProvider.getUriForFile(
+                this,
+                "${applicationContext.packageName}.fileprovider",
+                file
+            )
+            Log.d("APK_INSTALL", "Generated URI: $apkUri")
+            
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            startActivity(intent)
+            
+            Log.d("APK_INSTALL", "APK installation intent launched")
+            true
+        } catch (e: Exception) {
+            Log.e("APK_INSTALL", "Error installing APK: ${e.message}", e)
+            false
         }
     }
 
