@@ -15,91 +15,98 @@ class NetworkChartWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inRate = networkInHistory.isEmpty ? 0.0 : networkInHistory.last.y;
+    final outRate = networkOutHistory.isEmpty ? 0.0 : networkOutHistory.last.y;
+    
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Network Traffic',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'IN: ${networkInHistory.isEmpty ? "0" : networkInHistory.last.y.toStringAsFixed(2)} KB/s',
-                  style: const TextStyle(
+                const Text(
+                  'Network Traffic',
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue,
                   ),
                 ),
-                Text(
-                  'OUT: ${networkOutHistory.isEmpty ? "0" : networkOutHistory.last.y.toStringAsFixed(2)} KB/s',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 150,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(show: true),
-                  titlesData: FlTitlesData(show: false),
-                  borderData: FlBorderData(show: true),
-                  minX: networkInHistory.isEmpty ? 0 : networkInHistory.first.x,
-                  maxX: networkInHistory.isEmpty ? timeIndex : networkInHistory.last.x,
-                  minY: 0,
-                  maxY: _calculateMaxY(),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: networkInHistory,
-                      isCurved: true,
-                      colors: [Colors.blue],
-                      barWidth: 2,
-                      dotData: FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        colors: [Colors.blue.withOpacity(0.1), Colors.blue.withOpacity(0)],
-                      ),
-                    ),
-                    LineChartBarData(
-                      spots: networkOutHistory,
-                      isCurved: true,
-                      colors: [Colors.green],
-                      barWidth: 2,
-                      dotData: FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        colors: [Colors.green.withOpacity(0.1), Colors.green.withOpacity(0)],
-                      ),
-                    ),
+                Row(
+                  children: [
+                    _buildNetworkChip('↓ ${inRate.toStringAsFixed(2)} KB/s', Colors.blue),
+                    const SizedBox(width: 8),
+                    _buildNetworkChip('↑ ${outRate.toStringAsFixed(2)} KB/s', Colors.green),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                _buildLegendItem('Download', Colors.blue),
-                _buildLegendItem('Upload', Colors.green),
               ],
             ),
-          ],
-        ),
+          ),
+          
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Divider(height: 1),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 150,
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: true),
+                      titlesData: FlTitlesData(show: false),
+                      borderData: FlBorderData(show: true),
+                      minX: networkInHistory.isEmpty ? 0 : networkInHistory.first.x,
+                      maxX: networkInHistory.isEmpty ? timeIndex : networkInHistory.last.x,
+                      minY: 0,
+                      maxY: _calculateMaxY(),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: networkInHistory,
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 2,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withOpacity(0.1),
+                          ),
+                        ),
+                        LineChartBarData(
+                          spots: networkOutHistory,
+                          isCurved: true,
+                          color: Colors.green,
+                          barWidth: 2,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.green.withOpacity(0.1),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    _buildLegendItem('Download', Colors.blue),
+                    _buildLegendItem('Upload', Colors.green),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -126,11 +133,35 @@ class NetworkChartWidget extends StatelessWidget {
         Container(
           width: 12,
           height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildNetworkChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
           color: color,
         ),
-        const SizedBox(width: 4),
-        Text(label),
-      ],
+      ),
     );
   }
 }

@@ -350,30 +350,88 @@ class StatsState extends State<Stats> {
 
   @override
   Widget build(BuildContext context) {
+    // First check if we even have an SSH service and it's actually connected
+    if (widget.sshService == null || !widget.sshService!.isConnected()) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.signal_wifi_off, size: 48, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Not connected to a server', style: TextStyle(fontSize: 16)),
+            SizedBox(height: 8),
+            Text('Please connect to a Raspberry Pi first',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Then check if we're loading
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading system information...'),
+          ],
+        ),
       );
     }
 
+    // Check if we're installing packages
     if (isInstallingPackages) {
-      return const Center(
-        child: Text(
-          'Installing required packages, please wait...',
-          style: TextStyle(fontSize: 16),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            const Text(
+              'Installing required packages...',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This may take a few minutes',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
         ),
       );
     }
 
-    if (!packagesInstalled) {
-      return const Center(
-        child: Text(
-          'Install required packages to enable monitoring',
-          style: TextStyle(fontSize: 16),
+    // Check if packages need to be installed, but only if we're connected
+    if (!packagesInstalled && widget.sshService != null && widget.sshService!.isConnected()) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.install_desktop, size: 48, color: Colors.amber),
+            const SizedBox(height: 16),
+            const Text(
+              'Additional packages required',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'System monitoring requires additional packages.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _checkRequiredPackages,
+              child: const Text('Install Required Packages'),
+            ),
+          ],
         ),
       );
     }
 
+    // Normal view with stats data
     return RefreshIndicator(
       onRefresh: _fetchStats,
       child: SingleChildScrollView(

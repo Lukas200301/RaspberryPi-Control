@@ -40,67 +40,151 @@ class SystemInfoWidget extends StatelessWidget {
     }
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'System Information',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Table(
-              border: TableBorder.all(
-                color: Colors.grey,
-                width: 1,
-                style: BorderStyle.solid,
-              ),
-              columnWidths: const {
-                0: FlexColumnWidth(1),
-                1: FlexColumnWidth(2),
-              },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildTableRow('Hostname', systemInfo['hostname']?.toString() ?? 'N/A'),
-                _buildTableRow('Operating System', systemInfo['os']?.toString().replaceAll('Description:', '').trim() ?? 'N/A'),
-                _buildTableRow('IP Address', systemInfo['ip_address']?.toString() ?? 'N/A'),
-                _buildTableRow('Uptime', formatUptime(systemInfo['uptime']?.toString() ?? '')),
-                _buildTableRow('CPU Model', systemInfo['cpu_model']?.toString() ?? 'N/A'),
-                _buildTableRow('Total Disk Space', systemInfo['total_disk_space']?.toString() ?? 'N/A'),
+                const Text(
+                  'System Information',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                _buildChip(
+                  text: systemInfo['os']?.toString().contains('Debian') ?? false ? 'Debian' : 'Linux',
+                  icon: Icons.computer,
+                  color: Colors.blue,
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+          
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Divider(height: 1),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                _buildInfoRow(
+                  icon: Icons.computer,
+                  label: 'Hostname',
+                  value: systemInfo['hostname']?.toString() ?? 'N/A',
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.tune,
+                  label: 'Operating System',
+                  value: systemInfo['os']?.toString().replaceAll('Description:', '').trim() ?? 'N/A',
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.router,
+                  label: 'IP Address',
+                  value: systemInfo['ip_address']?.toString() ?? 'N/A',
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.timer_outlined,
+                  label: 'Uptime',
+                  value: formatUptime(systemInfo['uptime']?.toString() ?? ''),
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.memory,
+                  label: 'CPU Model',
+                  value: systemInfo['cpu_model']?.toString() ?? 'N/A',
+                ),
+                const SizedBox(height: 12),
+                _buildInfoRow(
+                  icon: Icons.storage,
+                  label: 'Total Disk Space',
+                  value: systemInfo['total_disk_space']?.toString() ?? 'N/A',
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  TableRow _buildTableRow(String label, String value) {
-    return TableRow(
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Icon(icon, color: Colors.blue, size: 20),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 14),
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.visible,
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildChip({
+    required String text,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

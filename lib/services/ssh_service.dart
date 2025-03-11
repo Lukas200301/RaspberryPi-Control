@@ -90,22 +90,26 @@ class SSHService {
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
 
-
-    _keepAliveTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    // More aggressive connection monitoring - check every 2 seconds
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       if (_client != null && !_isReconnecting) {
         try {
-          await _client!.run('echo keepalive');
+          // Use a smaller timeout to quickly detect connection issues
+          await _client!.run('echo keepalive').timeout(
+            const Duration(seconds: 1),
+            onTimeout: () => throw TimeoutException('Connection keepalive timed out'),
+          );
         } catch (e) {
           print('Keepalive failed: $e');
-          await _handleReconnection();
+          _connectionStatusController.add(false); // Broadcast connection loss immediately
         }
       }
     });
 
-
-    _connectionMonitor = Timer.periodic(const Duration(seconds: 15), (timer) async {
+    // Monitor for null client (already disconnected case)
+    _connectionMonitor = Timer.periodic(const Duration(seconds: 10), (timer) async {
       if (_client == null && !_isReconnecting) {
-        await _handleReconnection();
+        _connectionStatusController.add(false);
       }
     });
   }
@@ -164,7 +168,12 @@ class SSHService {
 
 
   bool isConnected() {
-    return _client != null;
+    try {
+      return _client != null && !_client!.isClosed;
+    } catch (e) {
+      _connectionStatusController.add(false);
+      return false;
+    }
   }
 
   void disconnect() async {
@@ -185,13 +194,48 @@ class SSHService {
   }
 
   Future<void> reconnect() async {
-    if (!isConnected()) {
-      _isReconnecting = true;
-      try {
-        await connect();
-      } finally {
-        _isReconnecting = false;
-      }
+    if (_isReconnecting) return;
+    
+    _isReconnecting = true;
+    
+    try {
+      // Close any existing connection
+      _client?.close();
+      _client = null;
+      
+      // Get connection timeout from settings
+      final prefs = await SharedPreferences.getInstance();
+      final connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
+      
+      // Create new connection with timeout
+      final socket = await SSHSocket.connect(
+        host, 
+        port, 
+        timeout: Duration(seconds: connectionTimeout)
+      );
+      
+      _client = SSHClient(
+        socket, 
+        username: username, 
+        onPasswordRequest: () => password,
+      );
+      
+      // Setup connection monitoring and keepalive
+      _startConnectionMonitoring();
+      _setupKeepAlive();
+      
+      // Signal successful connection
+      _connectionStatusController.add(true);
+      return;
+      
+    } catch (e) {
+      _client?.close();
+      _client = null;
+      _connectionStatusController.add(false);
+      print('SSH reconnection failed: $e');
+      throw e; // Rethrow to let caller handle
+    } finally {
+      _isReconnecting = false;
     }
   }
 
