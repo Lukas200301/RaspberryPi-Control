@@ -11,6 +11,13 @@ import 'widgets/charts/cpu_chart.dart';
 import 'widgets/charts/memory_chart.dart';
 import 'widgets/charts/temperature_chart.dart';
 import 'widgets/charts/network_chart.dart';
+import 'widgets/charts/hardware_monitor_chart.dart';
+import 'widgets/process_monitor_widget.dart';
+import 'widgets/network_ping_widget.dart';
+import 'widgets/system_logs_widget.dart';
+import 'widgets/boot_performance_widget.dart';
+import 'widgets/disk_io_widget.dart';
+import 'widgets/security_status_widget.dart';
 
 class Stats extends StatefulWidget {
   final SSHService? sshService;
@@ -67,13 +74,35 @@ class StatsState extends State<Stats> {
     'uptime': '',
   };
 
+  bool _isConnected = true;
+  StreamSubscription? _connectionSubscription;
+
   @override
   void initState() {
     super.initState();
     _initializePrefs();
+    
     if (widget.sshService != null) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _connectionSubscription = widget.sshService!.connectionStatus.listen((connected) {
+            if (mounted) {
+              setState(() {
+                _isConnected = connected;
+                if (connected && !isLoading) {
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    if (mounted) _fetchStats();
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      
       _checkRequiredPackages();
     }
+    
     _searchController.addListener(_filterServices);
     _startInitialFetch();
   }
@@ -83,6 +112,7 @@ class StatsState extends State<Stats> {
     _monitoringTimer?.cancel();
     _searchFocusNode.dispose();
     _searchController.dispose();
+    _connectionSubscription?.cancel();
     super.dispose();
   }
 
@@ -121,38 +151,73 @@ class StatsState extends State<Stats> {
       print("Error: SSHService is null. Monitoring cannot start.");
       return;
     }
-    StatsController.instance.startMonitoring(widget.sshService!);
-    StatsController.instance.statsStream.listen((stats) {
+    
+    try {
+      StatsController.instance.startMonitoring(widget.sshService!);
+      StatsController.instance.statsStream.listen((stats) {
+        if (mounted) {
+          setState(() {
+            currentStats = stats;
+            timeIndex = StatsController.instance.timeIndex;
+            cpuHistory.clear();
+            cpuHistory.addAll(StatsController.instance.cpuHistory);
+            memoryHistory.clear();
+            memoryHistory.addAll(StatsController.instance.memoryHistory);
+            cpuTempHistory.clear();
+            cpuTempHistory.addAll(StatsController.instance.cpuTempHistory);
+            gpuTempHistory.clear();
+            gpuTempHistory.addAll(StatsController.instance.gpuTempHistory);
+            networkInHistory.clear();
+            networkInHistory.addAll(StatsController.instance.networkInHistory);
+            networkOutHistory.clear();
+            networkOutHistory.addAll(StatsController.instance.networkOutHistory);
+            cpuUserHistory.clear();
+            cpuUserHistory.addAll(StatsController.instance.cpuUserHistory);
+            cpuSystemHistory.clear();
+            cpuSystemHistory.addAll(StatsController.instance.cpuSystemHistory);
+            cpuNiceHistory.clear();
+            cpuNiceHistory.addAll(StatsController.instance.cpuNiceHistory);
+            cpuIoWaitHistory.clear();
+            cpuIoWaitHistory.addAll(StatsController.instance.cpuIoWaitHistory);
+            cpuIrqHistory.clear();
+            cpuIrqHistory.addAll(StatsController.instance.cpuIrqHistory);
+            isLoading = false;
+          });
+        }
+      }, onError: (error) {
+        print("Stats stream error: $error");
+      });
+    } catch (e) {
+      print("Failed to start monitoring: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start system monitoring: $e')),
+      );
+    }
+  }
+
+  Future<void> _manualReconnect() async {
+    if (widget.sshService == null) return;
+    
+    setState(() { 
+      isLoading = true; 
+    });
+    
+    try {
+      await widget.sshService!.reconnect();
+      await Future.delayed(const Duration(seconds: 1));
+      await _fetchStats();
+      _startMonitoring();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to reconnect: $e')),
+      );
+    } finally {
       if (mounted) {
-        setState(() {
-          currentStats = stats;
-          timeIndex = StatsController.instance.timeIndex;
-          cpuHistory.clear();
-          cpuHistory.addAll(StatsController.instance.cpuHistory);
-          memoryHistory.clear();
-          memoryHistory.addAll(StatsController.instance.memoryHistory);
-          cpuTempHistory.clear();
-          cpuTempHistory.addAll(StatsController.instance.cpuTempHistory);
-          gpuTempHistory.clear();
-          gpuTempHistory.addAll(StatsController.instance.gpuTempHistory);
-          networkInHistory.clear();
-          networkInHistory.addAll(StatsController.instance.networkInHistory);
-          networkOutHistory.clear();
-          networkOutHistory.addAll(StatsController.instance.networkOutHistory);
-          cpuUserHistory.clear();
-          cpuUserHistory.addAll(StatsController.instance.cpuUserHistory);
-          cpuSystemHistory.clear();
-          cpuSystemHistory.addAll(StatsController.instance.cpuSystemHistory);
-          cpuNiceHistory.clear();
-          cpuNiceHistory.addAll(StatsController.instance.cpuNiceHistory);
-          cpuIoWaitHistory.clear();
-          cpuIoWaitHistory.addAll(StatsController.instance.cpuIoWaitHistory);
-          cpuIrqHistory.clear();
-          cpuIrqHistory.addAll(StatsController.instance.cpuIrqHistory);
-          isLoading = false;
+        setState(() { 
+          isLoading = false; 
         });
       }
-    });
+    }
   }
 
   Future<void> _initializePrefs() async {
@@ -276,10 +341,15 @@ class StatsState extends State<Stats> {
 
   Future<void> _startInitialFetch() async {
     if (widget.sshService != null) {
-      await Future.delayed(const Duration(milliseconds: 500)); 
-      await _fetchServices();
-      _filterServices(); 
-      _sortServices();  
+      await Future.delayed(const Duration(milliseconds: 800)); 
+      
+      try {
+        await _fetchServices();
+        _filterServices(); 
+        _sortServices(); 
+      } catch (e) {
+        print("Initial fetch failed: $e - will retry later");
+      }
     }
   }
 
@@ -350,88 +420,57 @@ class StatsState extends State<Stats> {
 
   @override
   Widget build(BuildContext context) {
-    // First check if we even have an SSH service and it's actually connected
-    if (widget.sshService == null || !widget.sshService!.isConnected()) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.signal_wifi_off, size: 48, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Not connected to a server', style: TextStyle(fontSize: 16)),
-            SizedBox(height: 8),
-            Text('Please connect to a Raspberry Pi first',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Then check if we're loading
     if (isLoading) {
       return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading system information...'),
-          ],
-        ),
+        child: CircularProgressIndicator(),
       );
     }
 
-    // Check if we're installing packages
     if (isInstallingPackages) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            const Text(
-              'Installing required packages...',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This may take a few minutes',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
+      return const Center(
+        child: Text(
+          'Installing required packages, please wait...',
+          style: TextStyle(fontSize: 16),
         ),
       );
     }
 
-    // Check if packages need to be installed, but only if we're connected
-    if (!packagesInstalled && widget.sshService != null && widget.sshService!.isConnected()) {
+    if (!packagesInstalled) {
+      return const Center(
+        child: Text(
+          'Install required packages to enable monitoring',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    if (!_isConnected) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.install_desktop, size: 48, color: Colors.amber),
+            const Icon(Icons.sync_problem, size: 48, color: Colors.orange),
             const SizedBox(height: 16),
             const Text(
-              'Additional packages required',
+              'Connection lost',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              'System monitoring requires additional packages.',
-              style: TextStyle(fontSize: 16),
+              'Attempting to reconnect...',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _checkRequiredPackages,
-              child: const Text('Install Required Packages'),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _manualReconnect,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reconnect Now'),
             ),
           ],
         ),
       );
     }
 
-    // Normal view with stats data
     return RefreshIndicator(
       onRefresh: _fetchStats,
       child: SingleChildScrollView(
@@ -441,6 +480,10 @@ class StatsState extends State<Stats> {
           children: [
             const SizedBox(height: 16),
             SystemInfoWidget(systemInfo: currentStats),
+            const SizedBox(height: 16),
+            BootPerformanceWidget(systemInfo: currentStats),
+            const SizedBox(height: 16),
+            SecurityStatusWidget(securityInfo: currentStats['security_info'] ?? {}),
             const SizedBox(height: 16),
             ServiceControlWidget(
               services: services,
@@ -465,6 +508,26 @@ class StatsState extends State<Stats> {
               getServiceLogs: _getServiceLogs,
             ),
             const SizedBox(height: 16),
+            HardwareMonitorChart(
+              cpuFreqHistory: StatsController.instance.cpuFreqHistory,
+              wifiSignalHistory: StatsController.instance.wifiSignalHistory,
+              timeIndex: timeIndex,
+              currentFreq: currentStats['cpu_frequency'] ?? 0.0,
+              coreVoltage: currentStats['core_voltage'] ?? 0.0,
+              throttlingStatus: currentStats['throttling_status'] as Map<String, bool>?,
+            ),
+            const SizedBox(height: 16),
+            ProcessMonitorWidget(
+              processes: currentStats['top_processes'] ?? [],
+            ),
+            const SizedBox(height: 16),
+            DiskIOWidget(
+              ioStats: currentStats['disk_io'] ?? {},
+              readHistory: StatsController.instance.diskReadHistory,
+              writeHistory: StatsController.instance.diskWriteHistory,
+              timeIndex: timeIndex,
+            ),
+            const SizedBox(height: 16),
             DiskUsageWidget(disks: currentStats['disks'] ?? []),
             const SizedBox(height: 16),
             CpuChartWidget(
@@ -483,6 +546,12 @@ class StatsState extends State<Stats> {
               timeIndex: timeIndex,
             ),
             const SizedBox(height: 16),
+            NetworkPingWidget(
+              pingHistory: StatsController.instance.pingLatencyHistory,
+              timeIndex: timeIndex,
+              currentLatency: currentStats['ping_latency'] ?? 0.0,
+            ),
+            const SizedBox(height: 16),
             TemperatureChartWidget(
               cpuTempHistory: cpuTempHistory,
               gpuTempHistory: gpuTempHistory,
@@ -493,6 +562,10 @@ class StatsState extends State<Stats> {
               networkInHistory: networkInHistory,
               networkOutHistory: networkOutHistory,
               timeIndex: timeIndex,
+            ),
+            const SizedBox(height: 16),
+            SystemLogsWidget(
+              logs: currentStats['system_logs'] ?? [],
             ),
           ],
         ),

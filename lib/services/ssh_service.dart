@@ -22,6 +22,10 @@ class SSHService {
   final _connectionStatusController = StreamController<bool>.broadcast();
   Stream<bool> get connectionStatus => _connectionStatusController.stream;
   bool get isReconnecting => _isReconnecting;
+  bool _connectionLost = false;
+  int _consecutiveFailures = 0;
+  static const int MAX_CONSECUTIVE_FAILURES = 3;
+  final _reconnectionLock = Object(); 
 
   SSHService({
     required this.name,
@@ -90,26 +94,36 @@ class SSHService {
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
 
-    // More aggressive connection monitoring - check every 2 seconds
-    _keepAliveTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _keepAliveTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       if (_client != null && !_isReconnecting) {
         try {
-          // Use a smaller timeout to quickly detect connection issues
-          await _client!.run('echo keepalive').timeout(
-            const Duration(seconds: 1),
-            onTimeout: () => throw TimeoutException('Connection keepalive timed out'),
-          );
+          await _client!.run('echo keepalive');
+          _consecutiveFailures = 0;
+          
+          if (_connectionLost) {
+            _connectionLost = false;
+            _connectionStatusController.add(true);
+            print("Connection restored via keepalive check");
+          }
         } catch (e) {
           print('Keepalive failed: $e');
-          _connectionStatusController.add(false); // Broadcast connection loss immediately
+          _consecutiveFailures++;
+          
+          if (_consecutiveFailures >= MAX_CONSECUTIVE_FAILURES && !_isReconnecting) {
+            _connectionLost = true;
+            _connectionStatusController.add(false);
+            Future.microtask(() => _handleReconnection());
+          }
         }
       }
     });
 
-    // Monitor for null client (already disconnected case)
-    _connectionMonitor = Timer.periodic(const Duration(seconds: 10), (timer) async {
+    _connectionMonitor = Timer.periodic(const Duration(seconds: 30), (timer) async {
       if (_client == null && !_isReconnecting) {
+        print("Connection monitor detected null client. Attempting reconnection...");
+        _connectionLost = true;
         _connectionStatusController.add(false);
+        Future.microtask(() => _handleReconnection());
       }
     });
   }
@@ -121,64 +135,90 @@ class SSHService {
     }
   }
 
-  Future<void> _handleReconnection() async {
-    if (_isReconnecting) return; 
-    _isReconnecting = true;
-    _connectionStatusController.add(false);
-    
-    final prefs = await SharedPreferences.getInstance();
-    final autoReconnect = prefs.getBool('autoReconnect') ?? true;
-    final maxRetries = prefs.getInt('autoReconnectAttempts') ?? 3;
-    
-    if (!autoReconnect) {
-      print('Auto-reconnect disabled in settings');
-      _isReconnecting = false;
-      return;
+  Future<T> synchronized<T>(Object lock, Future<T> Function() callback) async {
+    if (_isReconnecting) {
+      throw Exception('Connection operation in progress');
     }
-    
-    int retryCount = 0;
-
-    while (retryCount < maxRetries) {
-      try {
-        _client?.close();
-        _client = null;
-        final socket = await SSHSocket.connect(host, port, timeout: const Duration(seconds: 10));
-        
-        _client = SSHClient(
-          socket, 
-          username: username, 
-          onPasswordRequest: () => password
-        );
-        
-        _isReconnecting = false;
-        _connectionStatusController.add(true);
-        print("Reconnection successful.");
-        
-        return;
-      } catch (e) {
-        retryCount++;
-        print('Reconnection attempt $retryCount failed: $e');
-        await Future.delayed(Duration(seconds: _connectionRetryDelay)); 
-      }
-    }
-
-    _isReconnecting = false;
-    print('Reconnection failed after $maxRetries attempts.');
+    return callback();
   }
 
+  Future<void> _handleReconnection() async {
+    await synchronized(
+      _reconnectionLock,
+      () async {
+        if (_isReconnecting) {
+          print("Reconnection already in progress, skipping duplicate attempt");
+          return;
+        }
+        
+        _isReconnecting = true;
+        print("Starting reconnection process...");
+        
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final autoReconnect = prefs.getBool('autoReconnect') ?? true;
+          
+          if (!autoReconnect) {
+            print('Auto-reconnect disabled in settings');
+            _isReconnecting = false;
+            return;
+          }
+          
+          int retryCount = 0;
+          const int maxReconnectAttempts = 3; 
+          
+          while (retryCount < maxReconnectAttempts) {
+            try {
+              _client?.close();
+              _client = null;
+              
+              print("Reconnection attempt ${retryCount + 1}...");
+              final socket = await SSHSocket.connect(
+                host, 
+                port,
+                timeout: const Duration(seconds: 5), 
+              );
+              
+              _client = SSHClient(
+                socket, 
+                username: username, 
+                onPasswordRequest: () => password
+              );
+              
+              await _client!.run('echo test');
+              
+              _isReconnecting = false;
+              _connectionLost = false;
+              _consecutiveFailures = 0;
+              _connectionStatusController.add(true);
+              print("Reconnection successful");
+              
+              return;
+            } catch (e) {
+              retryCount++;
+              print('Reconnection attempt $retryCount failed: $e');
+              
+              final delay = _connectionRetryDelay;
+              await Future.delayed(Duration(seconds: delay)); 
+            }
+          }
+          
+          print('Reconnection failed after $maxReconnectAttempts attempts');
+        } finally {
+          _isReconnecting = false;
+        }
+      }
+    );
+  }
 
   bool isConnected() {
-    try {
-      return _client != null && !_client!.isClosed;
-    } catch (e) {
-      _connectionStatusController.add(false);
-      return false;
-    }
+    return _client != null;
   }
 
   void disconnect() async {
     if (_client != null) {
-      StatsController.instance.stopMonitoring(); 
+      StatsController.instance.stopStatsMonitoring(); 
+      
       _keepAliveTimer?.cancel();
       _connectionMonitor?.cancel();
 
@@ -194,64 +234,46 @@ class SSHService {
   }
 
   Future<void> reconnect() async {
-    if (_isReconnecting) return;
-    
-    _isReconnecting = true;
-    
-    try {
-      // Close any existing connection
-      _client?.close();
-      _client = null;
-      
-      // Get connection timeout from settings
-      final prefs = await SharedPreferences.getInstance();
-      final connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
-      
-      // Create new connection with timeout
-      final socket = await SSHSocket.connect(
-        host, 
-        port, 
-        timeout: Duration(seconds: connectionTimeout)
-      );
-      
-      _client = SSHClient(
-        socket, 
-        username: username, 
-        onPasswordRequest: () => password,
-      );
-      
-      // Setup connection monitoring and keepalive
-      _startConnectionMonitoring();
-      _setupKeepAlive();
-      
-      // Signal successful connection
-      _connectionStatusController.add(true);
-      return;
-      
-    } catch (e) {
-      _client?.close();
-      _client = null;
-      _connectionStatusController.add(false);
-      print('SSH reconnection failed: $e');
-      throw e; // Rethrow to let caller handle
-    } finally {
-      _isReconnecting = false;
+    if (!isConnected()) {
+      _isReconnecting = true;
+      try {
+        await connect();
+      } finally {
+        _isReconnecting = false;
+      }
     }
   }
 
   Future<String> executeCommand(String command) async {
     if (_client == null) {
-      await connect();
+      print("No SSH client available. Attempting to connect...");
+      try {
+        await connect();
+      } catch (e) {
+        print("Connection attempt failed: $e");
+        throw Exception('Failed to establish SSH connection: $e');
+      }
     }
 
     try {
       final result = await _client!.run(command);
       return utf8.decode(result);
     } catch (e) {
-      if (!_isReconnecting) {
-        await _handleReconnection();
-        return executeCommand(command); 
+      print("Command execution failed: $e");
+      
+      if (e.toString().contains('closed') || 
+          e.toString().contains('not connected') ||
+          e.toString().contains('socket')) {
+        
+        print("Network error detected in command execution");
+        if (!_isReconnecting) {
+          _connectionLost = true;
+          _connectionStatusController.add(false);
+          
+          throw Exception('Connection lost: $e');
+        }
       }
+      
       throw Exception('Failed to execute command: $e');
     }
   }
@@ -303,26 +325,27 @@ class SSHService {
   }
 
   Future<bool> checkRequiredPackages() async {
-      try {
-        final result = await executeCommand(
-        'dpkg -l | grep -E "htop|iotop|sysstat|ifstat|nmon|libraspberrypi-bin|lsb-release"'
-        );
-        return result.contains('htop') &&
-              result.contains('iotop') &&
-              result.contains('sysstat') &&
-              result.contains('ifstat') &&
-              result.contains('nmon') &&
-              result.contains('lsb-release') &&
-              result.contains('libraspberrypi-bin');
-      } catch (e) {
-        return false;
-      }
+    try {
+      final result = await executeCommand(
+      'dpkg -l | grep -E "htop|iotop|sysstat|ifstat|nmon|libraspberrypi-bin|lsb-release|lynis"'
+      );
+      return result.contains('htop') &&
+            result.contains('iotop') &&
+            result.contains('sysstat') &&
+            result.contains('ifstat') &&
+            result.contains('nmon') &&
+            result.contains('lsb-release') &&
+            result.contains('libraspberrypi-bin') &&
+            result.contains('lynis');
+    } catch (e) {
+      return false;
     }
+  }
 
-    Future<void> installRequiredPackages() async {
+  Future<void> installRequiredPackages() async {
     await executeCommand('''
       sudo apt-get update 
-      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin lsb-release
+      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin lsb-release lynis
       sudo systemctl enable sysstat 
       sudo systemctl start sysstat
     ''');
@@ -339,25 +362,81 @@ class SSHService {
         hostname -I &&
         echo "===OS_INFO===" &&
         lsb_release -d &&
+        echo "===KERNEL_INFO===" &&
+        uname -r &&
+        echo "===BOOT_INFO===" &&
+        who -b &&
+        systemd-analyze 2>/dev/null || echo "N/A" &&
         echo "===CPU_MODEL===" &&
         lscpu | grep 'Model name' &&
         echo "===CPU_USAGE===" &&
         mpstat 1 1 &&
+        echo "===CPU_FREQ===" &&
+        cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq 2>/dev/null || echo "N/A" &&
         echo "===CPU_TEMP===" &&
         cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null || echo "N/A" &&
         echo "===GPU_TEMP===" &&
         vcgencmd measure_temp 2>/dev/null || echo "N/A" &&
+        echo "===VOLTAGE===" &&
+        vcgencmd measure_volts 2>/dev/null || echo "N/A" &&
+        echo "===THROTTLING===" &&
+        vcgencmd get_throttled 2>/dev/null || echo "N/A" &&
         echo "===MEM_INFO===" &&
         free -m &&
         echo "===DISK_INFO===" &&
         df -h --total &&
+        echo "===DISK_IO===" &&
+        iostat -d -k 1 1 2>/dev/null || echo "N/A" &&
+        echo "===TOP_PROCESSES===" &&
+        ps aux --sort=-%cpu | head -6 &&
         echo "===NETWORK_INFO===" &&
         ifstat -T 1 1 | tail -n 1 &&
+        echo "===PING_STATS===" &&
+        ping -c 1 -W 1 8.8.8.8 2>/dev/null || echo "N/A" &&
+        echo "===WIFI_INFO===" &&
+        iwconfig wlan0 2>/dev/null || echo "N/A" &&
         echo "===SYSTEM_UPTIME===" &&
-        uptime
+        uptime &&
+        echo "===SECURITY_INFO===" &&
+        sudo lynis audit system --no-colors --quiet || echo "LYNIS_NOT_AVAILABLE" &&
+        echo "===LYNIS_REPORT===" &&
+        sudo cat /var/log/lynis.log 2>/dev/null || cat /tmp/lynis-report.dat 2>/dev/null || echo "REPORT_NOT_AVAILABLE" &&
+        echo "===OPEN_PORTS===" &&
+        netstat -tuln 2>/dev/null | grep "LISTEN" | awk '{print \$4}' | awk -F: '{print \$NF}' | sort -n | uniq || echo "N/A" &&
+        echo "===SYSTEM_LOGS===" &&
+        journalctl -p 3 --no-pager -n 5 2>/dev/null || echo "N/A"
       ''');
+      
       final sections = result.split('\n');
       String currentSection = '';
+      
+      stats['boot_stats'] = {
+        'last_boot': 'Unknown',
+        'boot_time': 'N/A',
+        'kernel_time': 'N/A',
+        'systemd_time': 'N/A'
+      };
+      
+      stats['disk_io'] = {
+        'read_bytes_per_sec': 0.0,
+        'write_bytes_per_sec': 0.0,
+        'iops_read': 0,
+        'iops_write': 0,
+        'total_read': 'N/A',
+        'total_write': 'N/A'
+      };
+      
+      stats['security_info'] = {
+        'warnings': [],
+        'suggestions': [],
+        'open_ports': [],
+        'hardening_index': 0,
+        'vulnerable_packages': 0,
+        'updates_available': 0,
+        'security_updates': 0,
+        'firewall_status': 'Unknown',
+        'failed_logins': 0
+      };
 
       for (var line in sections) {
         line = line.trim();
@@ -441,10 +520,33 @@ class SSHService {
             }
             break;
 
+          case 'CPU_FREQ':
+            if (line.isNotEmpty && line != "N/A") {
+              final freq = double.tryParse(line)?.toDouble() ?? 0.0;
+              stats['cpu_frequency'] = freq / 1000.0; 
+            }
+            break;
+
           case 'GPU_TEMP':
             if (line.contains('temp=')) {
               final temp = line.split('=')[1].replaceAll("'C", "");
               stats['gpu_temperature'] = double.tryParse(temp) ?? 0.0;
+            }
+            break;
+
+          case 'VOLTAGE':
+            if (line.contains('volt=')) {
+              final voltage = line.split('=')[1].replaceAll("V", "");
+              stats['core_voltage'] = double.tryParse(voltage) ?? 0.0;
+            }
+            break;
+
+          case 'THROTTLING':
+            if (line.contains('throttled=')) {
+              final throttleHex = line.split('=')[1];
+              final throttleValue = int.tryParse(throttleHex, radix: 16) ?? 0;
+              stats['throttling'] = throttleValue != 0;
+              stats['throttling_status'] = _decodeThrottlingStatus(throttleValue);
             }
             break;
 
@@ -497,12 +599,60 @@ class SSHService {
             }
             break;
 
+          case 'TOP_PROCESSES':
+            if (stats['top_processes'] == null) {
+              stats['top_processes'] = [];
+            }
+            if (line.isNotEmpty && !line.startsWith('USER')) {
+              final parts = line.split(RegExp(r'\s+'));
+              if (parts.length >= 11) {
+                (stats['top_processes'] as List).add({
+                  'user': parts[0],
+                  'pid': parts[1],
+                  'cpu': double.tryParse(parts[2]) ?? 0.0,
+                  'memory': double.tryParse(parts[3]) ?? 0.0,
+                  'command': parts.sublist(10).join(' '),
+                });
+              }
+            }
+            break;
+
           case 'NETWORK_INFO':
             if (line.isNotEmpty && !line.contains('KB/s')) {
               final netParts = line.trim().split(RegExp(r'\s+'));
               if (netParts.length >= 2) {
                 stats['network_in'] = double.tryParse(netParts[0]) ?? 0.0;
                 stats['network_out'] = double.tryParse(netParts[1]) ?? 0.0;
+              }
+            }
+            break;
+
+          case 'PING_STATS':
+            if (line.contains('time=')) {
+              final timeMatch = RegExp(r'time=(\d+\.?\d*) ms').firstMatch(line);
+              if (timeMatch != null) {
+                stats['ping_latency'] = double.tryParse(timeMatch.group(1) ?? '0') ?? 0.0;
+              }
+            }
+            break;
+
+          case 'WIFI_INFO':
+            if (line.contains('Signal level')) {
+              final signalMatch = RegExp(r'Signal level=(-\d+) dBm').firstMatch(line);
+              if (signalMatch != null) {
+                final signalDbm = int.tryParse(signalMatch.group(1) ?? '0') ?? 0;
+                stats['wifi_signal_dbm'] = signalDbm;
+                stats['wifi_signal_percent'] = _calculateWifiStrength(signalDbm);
+              }
+            } else if (line.contains('ESSID')) {
+              final essidMatch = RegExp(r'ESSID:"(.*?)"').firstMatch(line);
+              if (essidMatch != null) {
+                stats['wifi_ssid'] = essidMatch.group(1);
+              }
+            } else if (line.contains('Bit Rate')) {
+              final bitrateMatch = RegExp(r'Bit Rate=(\d+\.?\d*) (\w+/s)').firstMatch(line);
+              if (bitrateMatch != null) {
+                stats['wifi_bitrate'] = '${bitrateMatch.group(1)} ${bitrateMatch.group(2)}';
               }
             }
             break;
@@ -520,6 +670,15 @@ class SSHService {
               }
             }
             break;
+
+          case 'SYSTEM_LOGS':
+            if (stats['system_logs'] == null) {
+              stats['system_logs'] = [];
+            }
+            if (line.isNotEmpty && !line.contains('N/A')) {
+              (stats['system_logs'] as List).add(line);
+            }
+            break;
         }
       }
     } catch (e) {
@@ -533,6 +692,33 @@ class SSHService {
     }
 
     return stats;
+  }
+  
+  int _calculateWifiStrength(int dbm) {
+    if (dbm >= -50) {
+      return 100;
+    } else if (dbm >= -60) {
+      return 90;
+    } else if (dbm >= -70) {
+      return 70;
+    } else if (dbm >= -80) {
+      return 50;
+    } else if (dbm >= -90) {
+      return 30;
+    } else {
+      return 10;
+    }
+  }
+  
+  Map<String, bool> _decodeThrottlingStatus(int throttleValue) {
+    return {
+      'under_voltage': (throttleValue & 0x1) != 0,
+      'freq_capped': (throttleValue & 0x2) != 0,
+      'throttled': (throttleValue & 0x4) != 0,
+      'under_voltage_occurred': (throttleValue & 0x10000) != 0,
+      'freq_capped_occurred': (throttleValue & 0x20000) != 0,
+      'throttled_occurred': (throttleValue & 0x40000) != 0,
+    };
   }
 
   void dispose() {
@@ -560,11 +746,25 @@ class SSHService {
     _keepAliveTimer = Timer.periodic(Duration(seconds: _keepAliveInterval), (_) {
       if (_client != null && _client!.isClosed == false) {
         try {
-          _client!.run('echo');
+          _client!.run('echo').then((_) {
+            _consecutiveFailures = 0;
+          }).catchError((e) {
+            print('Keep-alive failed: $e');
+            _consecutiveFailures++;
+            
+            if (_consecutiveFailures >= MAX_CONSECUTIVE_FAILURES && !_connectionLost) {
+              _connectionLost = true;
+              _handleReconnection();
+            }
+          });
         } catch (e) {
-          print('Keep-alive failed: $e');
+          print('Keep-alive setup error: $e');
         }
       }
     });
   }
+}
+
+bool matchesPattern(String text, RegExp pattern) {
+  return pattern.hasMatch(text);
 }

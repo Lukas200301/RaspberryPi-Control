@@ -233,17 +233,10 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   String connectionStatus = '';
   bool _isReconnecting = false;
   bool _wasConnectedBeforePause = false;
-  int _reconnectionAttempts = 0;
-  int _maxReconnectionAttempts = 3;
-  int _reconnectionDelay = 5;
-  Timer? _reconnectionTimer;
-  String _disconnectionReason = '';
-
+  bool _appJustResumed = false;  
+  
   Timer? _securityTimeoutTimer;
   DateTime _lastActivityTime = DateTime.now();
-  Timer? _countdownTimer;
-  int _remainingSeconds = 0;
-  StreamSubscription? _connectionStatusSubscription;
   
   @override
   void initState() {
@@ -262,9 +255,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _connectionStatusSubscription?.cancel();
     _stopSecurityTimeoutMonitoring();
-    _cancelReconnection();
     WidgetsBinding.instance.removeObserver(this);
     sshService?.disconnect();
     _stopBackgroundExecution();
@@ -273,151 +264,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   Future<void> _stopBackgroundExecution() async {
     await FlutterBackground.disableBackgroundExecution();
-  }
-
-  void _cancelReconnection() {
-    _reconnectionTimer?.cancel();
-    _reconnectionTimer = null;
-    _countdownTimer?.cancel();
-    _countdownTimer = null;
-    _isReconnecting = false;
-    _disconnectionReason = '';
-  }
-
-  Future<void> _attemptReconnection() async {
-    _cancelReconnection();
-    
-    final prefs = await SharedPreferences.getInstance();
-    _maxReconnectionAttempts = prefs.getInt('autoReconnectAttempts') ?? 3;
-    _reconnectionDelay = prefs.getInt('connectionRetryDelay') ?? 5;
-    final autoReconnect = prefs.getBool('autoReconnect') ?? true;
-    
-    // If auto-reconnect is disabled or no service to reconnect to
-    if (!autoReconnect || sshService == null) {
-      if (mounted) {
-        _disconnect();
-        setState(() {
-          _selectedIndex = 2; // Go to connection tab immediately
-        });
-      }
-      return;
-    }
-    
-    setState(() {
-      _isReconnecting = true;
-      _reconnectionAttempts = 0; // Reset counter
-      _remainingSeconds = _reconnectionDelay;
-    });
-    
-    // Start the countdown timer for the first reconnection attempt
-    _startReconnectionTimer();
-  }
-  
-  void _startReconnectionTimer() {
-    _countdownTimer?.cancel();
-    
-    _countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (mounted && _remainingSeconds > 0) {
-        setState(() {
-          _remainingSeconds--;
-        });
-        
-        if (_remainingSeconds == 0 && _isReconnecting) {
-          timer.cancel();
-          _executeReconnection();
-        }
-      }
-    });
-  }
-  
-  Future<void> _executeReconnection() async {
-    if (!mounted || sshService == null) return;
-    
-    // Increment attempt counter before checking if we've exceeded maximum attempts
-    setState(() {
-      _reconnectionAttempts++;
-    });
-    
-    // Check if we've reached or exceeded the maximum number of attempts
-    if (_reconnectionAttempts > _maxReconnectionAttempts) {
-      _giveUpReconnection();
-      return;
-    }
-    
-    try {
-      await sshService!.reconnect().timeout(
-        Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('Connection timed out'),
-      );
-      
-      if (mounted) {
-        setState(() {
-          _isReconnecting = false;
-          connectionStatus = 'Connected to ${sshService!.name} (${sshService!.host})';
-        });
-        
-        // Make sure the connection page gets updated with the new connection status
-        _setSSHService(sshService);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully reconnected!'),
-            backgroundColor: Colors.green,
-          )
-        );
-      }
-    } catch (e) {
-      print("Reconnection attempt $_reconnectionAttempts failed: $e");
-      
-      if (mounted) {
-        setState(() {
-          _disconnectionReason = e.toString();
-        });
-        
-        // Check if we've reached the maximum attempts
-        if (_reconnectionAttempts >= _maxReconnectionAttempts) {
-          _disconnect();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to reconnect after $_maxReconnectionAttempts attempts'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            )
-          );
-        } else {
-          // Schedule next attempt
-          setState(() {
-            _remainingSeconds = _reconnectionDelay;
-          });
-          _startReconnectionTimer();
-        }
-      }
-    }
-  }
-  
-  void _giveUpReconnection() {
-    // Force background service to disable immediately and clear notification
-    BackgroundService.instance.disableBackground().then((_) {
-      // Clean up any reconnection timers
-      _cancelReconnection();
-
-      if (sshService != null) {
-        sshService!.disconnect();
-        setState(() {
-          sshService = null;
-          connectionStatus = 'Disconnected';
-          _selectedIndex = 2;
-        });
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to reconnect after $_maxReconnectionAttempts attempts'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        )
-      );
-    });
   }
 
   void _resetActivityTimer() {
@@ -455,16 +301,49 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _wasConnectedBeforePause = sshService?.isConnected() ?? false;
+      _appJustResumed = false;
     } else if (state == AppLifecycleState.resumed) {
-      if (_wasConnectedBeforePause && sshService != null) {
-        if (!sshService!.isConnected()) {
-          _attemptReconnection();
+      _appJustResumed = true;
+      
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          setState(() {
+            _appJustResumed = false;
+          });
         }
+      });
+      
+      if (_wasConnectedBeforePause && sshService != null) {
+        print("App resumed: Attempting reconnection");
+        setState(() => _isReconnecting = true);
+        
+        sshService!.reconnect().then((_) {
+          if (mounted) {
+            print("Reconnection successful");
+            setState(() {
+              _isReconnecting = false;
+              
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (mounted) {
+                  setState(() {
+                  });
+                }
+              });
+            });
+          }
+        }).catchError((e) {
+          print("Reconnection failed: $e");
+          if (mounted) {
+            setState(() => _isReconnecting = false);
+          }
+        });
       }
     }
   }
 
   void _onItemTapped(int index) {
+    // Allow navigation to Connections (2) or Settings (4) without a connection
+    // Restrict access to Stats (0), Terminal (1), and File Explorer (3) when not connected
     if (sshService == null && index != 2 && index != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please connect first')),
@@ -523,8 +402,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void _setSSHService(SSHService? service) {
     print('Setting SSHService: ${service?.name ?? "NULL"}');
     
-    _connectionStatusSubscription?.cancel();
-    
     final bool wasConnected = sshService != null;
     final bool willBeConnected = service != null;
     
@@ -552,22 +429,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
       _resetActivityTimer(); 
       _loadAndApplySettings();
       
-      // Listen for connection status changes - make this more responsive
-      _connectionStatusSubscription = service.connectionStatus.listen((isConnected) {
-        if (!isConnected && mounted) {
-          // React immediately to connection loss
-          print("Connection lost detected via stream - starting reconnection immediately");
-          
-          // Only start reconnection if we're not already trying to reconnect
-          if (!_isReconnecting) {
-            setState(() {
-              _disconnectionReason = "Connection lost";
-            });
-            _attemptReconnection();
-          }
-        }
-      });
-      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _fileExplorerKey.currentState != null) {
           _fileExplorerKey.currentState!.loadRootDirectory();
@@ -580,7 +441,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   void _logOff() async {
     if (mounted) {
-      _cancelReconnection();
       await BackgroundService.instance.disableBackground();
       
       _fileExplorerKey.currentState?.resetToRoot();
@@ -600,35 +460,13 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _disconnect() {
-    _cancelReconnection();
-    
-    // Force background service to disable immediately and clear notification
-    BackgroundService.instance.disableBackground().then((_) {
-      if (sshService != null) {
-        sshService!.disconnect();
-        setState(() {
-          sshService = null;
-          connectionStatus = 'Disconnected';
-          _selectedIndex = 2; // Go to connections tab
-        });
-      }
-    }).catchError((e) {
-      print('Error disabling background service: $e');
-      // Even if background service fails, still disconnect
-      if (sshService != null) {
-        sshService!.disconnect();
-        setState(() {
-          sshService = null;
-          connectionStatus = 'Disconnected';
-          _selectedIndex = 2;
-        });
-      }
-    });
-  }
-
   void _enforceNavigationRestrictions() {
-    if (sshService == null && _selectedIndex != 2 && _selectedIndex != 4) {
+    if (!_isReconnecting && 
+        !_appJustResumed && 
+        sshService == null && 
+        _selectedIndex != 2 && 
+        _selectedIndex != 4) {
+      print("Enforcing navigation restrictions: redirecting to Connections tab");
       setState(() {
         _selectedIndex = 2; 
       });
@@ -660,30 +498,37 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     _resetActivityTimer();
     
-    // Force reconnection UI immediately when connection is lost
-    final bool isReallyConnected = sshService?.isConnected() ?? false;
-    if (sshService != null && !isReallyConnected) {
-      // Instead of waiting for next frame, immediately set up reconnection state
-      if (!_isReconnecting) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && !_isReconnecting) {
-            setState(() {
-              _isReconnecting = true;
-              _reconnectionAttempts = 0;
-              _disconnectionReason = "Connection lost";
-              _remainingSeconds = _reconnectionDelay;
-            });
-            _startReconnectionTimer();
-          }
-        });
-        
-        // Return reconnection UI immediately
-        return _buildReconnectionUI();
-      }
-    }
-    
     if (_isReconnecting) {
-      return _buildReconnectionUI();
+      return Scaffold(
+        body: SafeArea(
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Reconnecting to server...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final bool isReconnectionInProgress = _isReconnecting || _appJustResumed;
+    final bool isReallyConnected = sshService?.isConnected() ?? false;
+    
+    if (!isReconnectionInProgress && 
+        !isReallyConnected && 
+        (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 3)) {
+      print("Not connected but on restricted page - enforcing navigation to Connections tab");
+      Future.microtask(() {
+        if (mounted) {
+          setState(() {
+            _selectedIndex = 2; 
+          });
+        }
+      });
     }
 
     return Scaffold(
@@ -765,182 +610,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
-      ),
-    );
-  }
-
-  Widget _buildReconnectionUI() {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Connection icon
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.wifi_off_rounded,
-                    size: 48,
-                    color: colorScheme.primary,
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Status text
-                Text(
-                  'Connection Lost',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Show connection details if we have them
-                if (sshService != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      '${sshService!.name} (${sshService!.host})',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                
-                // Show disconnection reason if available
-                if (_disconnectionReason.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12, bottom: 24),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Text(
-                        _disconnectionReason,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                
-                const SizedBox(height: 32),
-                
-                // Progress indicator
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: _maxReconnectionAttempts > 0 ? 
-                        _reconnectionAttempts / _maxReconnectionAttempts : 0,
-                      backgroundColor: colorScheme.surfaceVariant,
-                      strokeWidth: 6,
-                    ),
-                    Text(
-                      '$_reconnectionAttempts/$_maxReconnectionAttempts',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Attempt text and timer
-                Text(
-                  'Reconnection Attempt $_reconnectionAttempts of $_maxReconnectionAttempts',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                
-                const SizedBox(height: 8),
-                
-                // Timer display
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 24),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Next attempt in $_remainingSeconds seconds',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: colorScheme.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 32),
-                
-                // Action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        _countdownTimer?.cancel();
-                        _executeReconnection();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again Now'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        // Improved disconnect flow
-                        _disconnect();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Connection closed'),
-                            backgroundColor: Colors.blue,
-                          )
-                        );
-                      },
-                      icon: const Icon(Icons.close),
-                      label: const Text('Disconnect'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
