@@ -391,8 +391,10 @@ class SSHService {
         uptime &&
         echo "===OPEN_PORTS===" &&
         netstat -tuln 2>/dev/null | grep "LISTEN" | awk '{print \$4}' | awk -F: '{print \$NF}' | sort -n | uniq || echo "N/A" &&
+        echo "===ACTIVE_CONNECTIONS===" &&
+        netstat -tn 2>/dev/null | grep -v "LISTEN" || ss -tn 2>/dev/null | grep -v "LISTEN" || echo "N/A" &&
         echo "===SYSTEM_LOGS===" &&
-        journalctl -p 0..3 --no-pager -n 50 2>/dev/null || echo "N/A"
+        journalctl -p 0..3 --no-pager -n 50 --no-hostname 2>/dev/null || echo "N/A"
       ''');
       
       final sections = result.split('\n');
@@ -627,6 +629,42 @@ class SSHService {
                 if (simpleMatch != null) {
                   stats['uptime'] = simpleMatch.group(1)?.trim() ?? 'Error';
                 }
+              }
+            }
+            break;
+
+          case 'ACTIVE_CONNECTIONS':
+            if (stats['active_connections'] == null) {
+              stats['active_connections'] = [];
+            }
+            if (line.isNotEmpty && 
+                !line.contains('N/A') && 
+                !line.startsWith('Active') && 
+                !line.startsWith('Proto')) {
+              final parts = line.split(RegExp(r'\s+'));
+              if (parts.length >= 5) {
+                final protocol = parts[0];
+                final localAddress = parts[3];
+                final remoteAddress = parts[4];
+                final state = parts.length > 5 ? parts[5] : "";
+                
+                final localParts = localAddress.split(':');
+                final remoteParts = remoteAddress.split(':');
+                
+                final localIp = localParts.length > 1 ? localParts.sublist(0, localParts.length - 1).join(':') : localParts[0];
+                final localPort = localParts.length > 1 ? localParts.last : '';
+                
+                final remoteIp = remoteParts.length > 1 ? remoteParts.sublist(0, remoteParts.length - 1).join(':') : remoteParts[0];
+                final remotePort = remoteParts.length > 1 ? remoteParts.last : '';
+                
+                (stats['active_connections'] as List).add({
+                  'protocol': protocol,
+                  'local_ip': localIp,
+                  'local_port': localPort,
+                  'remote_ip': remoteIp,
+                  'remote_port': remotePort,
+                  'state': state,
+                });
               }
             }
             break;

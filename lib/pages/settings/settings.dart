@@ -1254,6 +1254,7 @@ class DashboardWidgetInfo {
       DashboardWidgetInfo(id: 'hardware_monitor', name: 'Hardware Monitor', icon: Icons.memory),
       DashboardWidgetInfo(id: 'system_processes', name: 'Processes', icon: Icons.view_list),
       DashboardWidgetInfo(id: 'disk_usage', name: 'Disk Usage', icon: Icons.storage),
+      DashboardWidgetInfo(id: 'active_connections', name: 'Network Connections', icon: Icons.device_hub),
       DashboardWidgetInfo(id: 'cpu_chart', name: 'CPU Chart', icon: Icons.speed),
       DashboardWidgetInfo(id: 'memory_chart', name: 'Memory Chart', icon: Icons.sd_card),
       DashboardWidgetInfo(id: 'network_ping', name: 'Network Ping', icon: Icons.network_ping),

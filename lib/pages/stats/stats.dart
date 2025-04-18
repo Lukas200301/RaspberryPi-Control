@@ -15,6 +15,7 @@ import 'widgets/charts/hardware_monitor_chart.dart';
 import 'widgets/system_processes_widget.dart'; 
 import 'widgets/network_ping_widget.dart';
 import 'widgets/system_logs_widget.dart';
+import 'widgets/active_connections_widget.dart';
 import '../settings/settings.dart';  
 
 class Stats extends StatefulWidget {
@@ -611,6 +612,9 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
         processes: currentStats['processes'] ?? [],
       ),
       'disk_usage': () => DiskUsageWidget(disks: currentStats['disks'] ?? []),
+      'active_connections': () => ActiveConnectionsWidget(
+        connections: currentStats['active_connections'] ?? [],
+      ),
       'cpu_chart': () => CpuChartWidget(
         cpuHistory: cpuHistory,
         cpuUserHistory: cpuUserHistory,

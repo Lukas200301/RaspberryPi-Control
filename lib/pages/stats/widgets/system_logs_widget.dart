@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:math' as math;
 
 class SystemLogsWidget extends StatefulWidget {
   final List<dynamic> logs;
@@ -448,12 +449,18 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
   }
 
   void _navigateToAllLogs() {
+    final maxLogs = 500;
+    final logsToShow = widget.logs.length > maxLogs 
+        ? widget.logs.sublist(0, maxLogs) 
+        : widget.logs;
+        
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AllLogsPage(
-          logs: widget.logs,
+          logs: logsToShow,
           initialSortOption: _selectedFilter,
+          totalLogsCount: widget.logs.length,
         ),
       ),
     );
@@ -564,11 +571,13 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
 class AllLogsPage extends StatefulWidget {
   final List<dynamic> logs;
   final String initialSortOption;
+  final int totalLogsCount;
 
   const AllLogsPage({
     Key? key,
     required this.logs,
     this.initialSortOption = 'All',
+    this.totalLogsCount = 0,
   }) : super(key: key);
 
   @override
@@ -582,19 +591,90 @@ class _AllLogsPageState extends State<AllLogsPage> {
   List<dynamic> _filteredLogs = [];
   final Map<String, LogSeverity> _severityCache = {};
   Timer? _searchDebounce;
+  bool _isFiltering = false;
 
   @override
   void initState() {
     super.initState();
     _selectedFilter = widget.initialSortOption;
-    _updateFilteredLogs();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.logs.length > 500) {
+        setState(() {
+          _isFiltering = false;
+        });
+        _updateFilteredLogs();
+      } else {
+        _preProcessLogsSimply();
+      }
+    });
+  }
+  
+  void _preProcessLogsSimply() {
+    if (widget.logs.length > 500) {
+      setState(() {
+        _isFiltering = false;
+      });
+      _updateFilteredLogs();
+      return;
+    }
+    
+    setState(() {
+      _isFiltering = true;
+    });
+    
+    Timer(const Duration(milliseconds: 100), () {
+      final maxLogsToProcess = math.min(200, widget.logs.length);
+      
+      try {
+        for (int i = 0; i < maxLogsToProcess; i++) {
+          try {
+            final logStr = widget.logs[i].toString();
+            if (!_severityCache.containsKey(logStr)) {
+              _severityCache[logStr] = _getSafeSeverity(logStr);
+            }
+          } catch (e) {
+            print('Error processing log: $e');
+          }
+        }
+      } catch (e) {
+        print('Error in pre-processing: $e');
+      }
+      
+      if (mounted) {
+        _updateFilteredLogs();
+      }
+    });
+  }
+  
+  LogSeverity _getSafeSeverity(String log) {
+    try {
+      if (log.isEmpty) return LogSeverity.info;
+      
+      final lowercaseLog = log.toLowerCase();
+      
+      if (lowercaseLog.contains('no more sessions')) {
+        return LogSeverity.warning;
+      }
+      else if (lowercaseLog.contains('error') || 
+          lowercaseLog.contains('fail') || 
+          lowercaseLog.contains('critical')) {
+        return LogSeverity.error;
+      } else if (lowercaseLog.contains('warn') || 
+                lowercaseLog.contains('could not') || 
+                lowercaseLog.contains('unable to')) {
+        return LogSeverity.warning;
+      } else {
+        return LogSeverity.info;
+      }
+    } catch (e) {
+      print('Error determining log severity: $e');
+      return LogSeverity.info;
+    }
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchDebounce?.cancel();
-    super.dispose();
+  void _preProcessLogs() {
+    _preProcessLogsSimply();
   }
 
   LogSeverity _getLogSeverity(String log) {
@@ -602,21 +682,7 @@ class _AllLogsPageState extends State<AllLogsPage> {
       return _severityCache[log]!;
     }
     
-    final lowercaseLog = log.toLowerCase();
-    LogSeverity severity;
-    
-    if (lowercaseLog.contains('error') || 
-        lowercaseLog.contains('fail') || 
-        lowercaseLog.contains('critical')) {
-      severity = LogSeverity.error;
-    } else if (lowercaseLog.contains('warn') || 
-               lowercaseLog.contains('could not') || 
-               lowercaseLog.contains('unable to')) {
-      severity = LogSeverity.warning;
-    } else {
-      severity = LogSeverity.info;
-    }
-  
+    LogSeverity severity = _getSafeSeverity(log);
     _severityCache[log] = severity;
     return severity;
   }
@@ -625,35 +691,69 @@ class _AllLogsPageState extends State<AllLogsPage> {
     if (widget.logs.isEmpty) {
       setState(() {
         _filteredLogs = [];
+        _isFiltering = false;
       });
       return;
     }
     
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 100), () {
-      final filtered = widget.logs.where((log) {
-        final logStr = log.toString();
-        final severity = _getLogSeverity(logStr);
+    
+    setState(() {
+      _isFiltering = true;
+    });
+    
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      try {
+        final searchQuery = _searchController.text.toLowerCase();
+        final maxLogsToProcess = math.min(300, widget.logs.length);
+        final logsToProcess = widget.logs.sublist(0, maxLogsToProcess);
         
-        if (_selectedFilter != 'All' && 
-            _selectedFilter.toLowerCase() != severity.toString().split('.').last.toLowerCase()) {
-          return false;
+        final filtered = logsToProcess.where((log) {
+          try {
+            final logStr = log.toString();
+            
+            bool matchesFilter = true;
+            if (_selectedFilter != 'All') {
+              final severity = _severityCache[logStr] ?? _getSafeSeverity(logStr);
+              matchesFilter = 
+                _selectedFilter.toLowerCase() == severity.toString().split('.').last.toLowerCase();
+            }
+            
+            if (!matchesFilter) return false;
+            
+            if (searchQuery.isNotEmpty) {
+              return logStr.toLowerCase().contains(searchQuery);
+            }
+            
+            return true;
+          } catch (e) {
+            print('Error filtering log: $e');
+            return false; 
+          }
+        }).toList();
+        
+        final displayingAllLogs = maxLogsToProcess >= widget.logs.length;
+        
+        if (mounted) {
+          setState(() {
+            _filteredLogs = filtered;
+            _isFiltering = false;
+            _displayingFullList = displayingAllLogs;
+          });
         }
-        
-        if (_searchController.text.isNotEmpty) {
-          return logStr.toLowerCase().contains(_searchController.text.toLowerCase());
+      } catch (e) {
+        print('Error in _updateFilteredLogs: $e');
+        if (mounted) {
+          setState(() {
+            _filteredLogs = [];
+            _isFiltering = false;
+          });
         }
-        
-        return true;
-      }).toList();
-      
-      if (mounted) {
-        setState(() {
-          _filteredLogs = filtered;
-        });
       }
     });
   }
+  
+  bool _displayingFullList = true;
 
   @override
   Widget build(BuildContext context) {
@@ -662,7 +762,7 @@ class _AllLogsPageState extends State<AllLogsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('System Logs'),
+        title: Text('System Logs ${widget.totalLogsCount > widget.logs.length ? "(Showing ${widget.logs.length} of ${widget.totalLogsCount})" : ""}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.copy),
@@ -800,15 +900,19 @@ class _AllLogsPageState extends State<AllLogsPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.filter_alt_off,
+                        _isFiltering 
+                            ? Icons.hourglass_empty
+                            : Icons.filter_alt_off,
                         size: 48,
                         color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        widget.logs.isEmpty
-                            ? 'No system logs available'
-                            : 'No logs match the current filter',
+                        _isFiltering
+                            ? 'Filtering logs...'
+                            : (widget.logs.isEmpty
+                                ? 'No system logs available'
+                                : 'No logs match the current filter'),
                         style: TextStyle(
                           color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
@@ -820,7 +924,7 @@ class _AllLogsPageState extends State<AllLogsPage> {
                   itemCount: _filteredLogs.length,
                   itemBuilder: (context, index) {
                     final log = _filteredLogs[index].toString();
-                    final severity = _getLogSeverity(log);
+                    final severity = _severityCache[log] ?? _getLogSeverity(log);
                     
                     Color severityColor;
                     IconData severityIcon;
@@ -878,6 +982,34 @@ class _AllLogsPageState extends State<AllLogsPage> {
                   },
                 ),
           ),
+          
+          if (!_displayingFullList)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              child: Text(
+                'Note: For performance reasons, only showing the first 300 matching logs',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.orange[700],
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            
+          if (widget.totalLogsCount > widget.logs.length)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                'Note: Only showing the first ${widget.logs.length} logs for performance reasons',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
         ],
       ),
     );
