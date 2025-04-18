@@ -327,7 +327,7 @@ class SSHService {
   Future<bool> checkRequiredPackages() async {
     try {
       final result = await executeCommand(
-      'dpkg -l | grep -E "htop|iotop|sysstat|ifstat|nmon|libraspberrypi-bin|lsb-release|lynis"'
+      'dpkg -l | grep -E "htop|iotop|sysstat|ifstat|nmon|libraspberrypi-bin|lsb-release"'
       );
       return result.contains('htop') &&
             result.contains('iotop') &&
@@ -335,8 +335,7 @@ class SSHService {
             result.contains('ifstat') &&
             result.contains('nmon') &&
             result.contains('lsb-release') &&
-            result.contains('libraspberrypi-bin') &&
-            result.contains('lynis');
+            result.contains('libraspberrypi-bin');
     } catch (e) {
       return false;
     }
@@ -345,7 +344,7 @@ class SSHService {
   Future<void> installRequiredPackages() async {
     await executeCommand('''
       sudo apt-get update 
-      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin lsb-release lynis
+      sudo apt-get install -y htop iotop sysstat ifstat nmon libraspberrypi-bin lsb-release
       sudo systemctl enable sysstat 
       sudo systemctl start sysstat
     ''');
@@ -362,11 +361,6 @@ class SSHService {
         hostname -I &&
         echo "===OS_INFO===" &&
         lsb_release -d &&
-        echo "===KERNEL_INFO===" &&
-        uname -r &&
-        echo "===BOOT_INFO===" &&
-        who -b &&
-        systemd-analyze 2>/dev/null || echo "N/A" &&
         echo "===CPU_MODEL===" &&
         lscpu | grep 'Model name' &&
         echo "===CPU_USAGE===" &&
@@ -385,10 +379,8 @@ class SSHService {
         free -m &&
         echo "===DISK_INFO===" &&
         df -h --total &&
-        echo "===DISK_IO===" &&
-        iostat -d -k 1 1 2>/dev/null || echo "N/A" &&
-        echo "===TOP_PROCESSES===" &&
-        ps aux --sort=-%cpu | head -6 &&
+        echo "===PROCESSES===" &&
+        ps aux --sort=-%cpu &&
         echo "===NETWORK_INFO===" &&
         ifstat -T 1 1 | tail -n 1 &&
         echo "===PING_STATS===" &&
@@ -397,47 +389,15 @@ class SSHService {
         iwconfig wlan0 2>/dev/null || echo "N/A" &&
         echo "===SYSTEM_UPTIME===" &&
         uptime &&
-        echo "===SECURITY_INFO===" &&
-        sudo lynis audit system --no-colors --quiet || echo "LYNIS_NOT_AVAILABLE" &&
-        echo "===LYNIS_REPORT===" &&
-        sudo cat /var/log/lynis.log 2>/dev/null || cat /tmp/lynis-report.dat 2>/dev/null || echo "REPORT_NOT_AVAILABLE" &&
         echo "===OPEN_PORTS===" &&
         netstat -tuln 2>/dev/null | grep "LISTEN" | awk '{print \$4}' | awk -F: '{print \$NF}' | sort -n | uniq || echo "N/A" &&
         echo "===SYSTEM_LOGS===" &&
-        journalctl -p 3 --no-pager -n 5 2>/dev/null || echo "N/A"
+        journalctl -p 0..3 --no-pager -n 50 2>/dev/null || echo "N/A"
       ''');
       
       final sections = result.split('\n');
       String currentSection = '';
       
-      stats['boot_stats'] = {
-        'last_boot': 'Unknown',
-        'boot_time': 'N/A',
-        'kernel_time': 'N/A',
-        'systemd_time': 'N/A'
-      };
-      
-      stats['disk_io'] = {
-        'read_bytes_per_sec': 0.0,
-        'write_bytes_per_sec': 0.0,
-        'iops_read': 0,
-        'iops_write': 0,
-        'total_read': 'N/A',
-        'total_write': 'N/A'
-      };
-      
-      stats['security_info'] = {
-        'warnings': [],
-        'suggestions': [],
-        'open_ports': [],
-        'hardening_index': 0,
-        'vulnerable_packages': 0,
-        'updates_available': 0,
-        'security_updates': 0,
-        'firewall_status': 'Unknown',
-        'failed_logins': 0
-      };
-
       for (var line in sections) {
         line = line.trim();
 
@@ -599,14 +559,14 @@ class SSHService {
             }
             break;
 
-          case 'TOP_PROCESSES':
-            if (stats['top_processes'] == null) {
-              stats['top_processes'] = [];
+          case 'PROCESSES':
+            if (stats['processes'] == null) {
+              stats['processes'] = [];
             }
             if (line.isNotEmpty && !line.startsWith('USER')) {
               final parts = line.split(RegExp(r'\s+'));
               if (parts.length >= 11) {
-                (stats['top_processes'] as List).add({
+                (stats['processes'] as List).add({
                   'user': parts[0],
                   'pid': parts[1],
                   'cpu': double.tryParse(parts[2]) ?? 0.0,

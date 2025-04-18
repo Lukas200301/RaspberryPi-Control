@@ -25,8 +25,6 @@ class StatsController {
   final List<FlSpot> cpuFreqHistory = [];
   final List<FlSpot> pingLatencyHistory = [];
   final List<FlSpot> wifiSignalHistory = [];
-  final List<FlSpot> diskReadHistory = [];
-  final List<FlSpot> diskWriteHistory = [];
 
   double timeIndex = 0;
   Map<String, dynamic> currentStats = {};
@@ -37,7 +35,6 @@ class StatsController {
   bool _paused = false;
   static const Duration STATS_INTERVAL = Duration(seconds: 3);
   
-  SSHService? _currentSSHService;
   int _failedFetchCount = 0;
   static const int MAX_FAILED_FETCHES = 5;
 
@@ -47,7 +44,6 @@ class StatsController {
       return;
     }
     
-    _currentSSHService = sshService;
     _isMonitoring = true;
     _paused = false;
     _monitoringTimer?.cancel();
@@ -75,7 +71,6 @@ class StatsController {
     _paused = false;
     _monitoringTimer?.cancel();
     _connectionStatusSubscription?.cancel();
-    _currentSSHService = null;
     _failedFetchCount = 0;
   }
   
@@ -146,10 +141,6 @@ class StatsController {
     addToHistory(cpuFreqHistory, stats['cpu_frequency'] ?? 0);
     addToHistory(pingLatencyHistory, stats['ping_latency'] ?? 0);
     addToHistory(wifiSignalHistory, stats['wifi_signal_percent']?.toDouble() ?? 0);
-
-    final diskIo = stats['disk_io'] as Map<String, dynamic>? ?? {};
-    addToHistory(diskReadHistory, diskIo['read_bytes_per_sec'] ?? 0);
-    addToHistory(diskWriteHistory, diskIo['write_bytes_per_sec'] ?? 0);
   }
 
   void dispose() {

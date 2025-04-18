@@ -577,6 +577,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
               isDarkMode: widget.isDarkMode,
               toggleTheme: widget.toggleTheme,
               logOut: _logOff,
+              isConnected: isReallyConnected, 
             ),
           ],
         ),

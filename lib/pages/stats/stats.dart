@@ -12,12 +12,10 @@ import 'widgets/charts/memory_chart.dart';
 import 'widgets/charts/temperature_chart.dart';
 import 'widgets/charts/network_chart.dart';
 import 'widgets/charts/hardware_monitor_chart.dart';
-import 'widgets/process_monitor_widget.dart';
+import 'widgets/system_processes_widget.dart'; 
 import 'widgets/network_ping_widget.dart';
 import 'widgets/system_logs_widget.dart';
-import 'widgets/boot_performance_widget.dart';
-import 'widgets/disk_io_widget.dart';
-import 'widgets/security_status_widget.dart';
+import '../settings/settings.dart';  
 
 class Stats extends StatefulWidget {
   final SSHService? sshService;
@@ -33,7 +31,7 @@ class Stats extends StatefulWidget {
   StatsState createState() => StatsState();
 }
 
-class StatsState extends State<Stats> {
+class StatsState extends State<Stats> with WidgetsBindingObserver {
   Timer? _monitoringTimer;
   bool isLoading = true;
   bool isInstallingPackages = false;
@@ -76,11 +74,19 @@ class StatsState extends State<Stats> {
 
   bool _isConnected = true;
   StreamSubscription? _connectionSubscription;
+  StreamSubscription? _dashboardChangedSubscription;
+
+  List<DashboardWidgetInfo> _dashboardWidgets = [];
 
   @override
   void initState() {
     super.initState();
     _initializePrefs();
+    WidgetsBinding.instance.addObserver(this);
+    
+    _dashboardChangedSubscription = Settings.dashboardChanged.listen((_) {
+      _loadDashboardSettings();
+    });
     
     if (widget.sshService != null) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -105,15 +111,25 @@ class StatsState extends State<Stats> {
     
     _searchController.addListener(_filterServices);
     _startInitialFetch();
+    _loadDashboardSettings();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _dashboardChangedSubscription?.cancel();
     _monitoringTimer?.cancel();
     _searchFocusNode.dispose();
     _searchController.dispose();
     _connectionSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadDashboardSettings();
+    }
   }
 
   void _filterServices() {
@@ -418,6 +434,76 @@ class StatsState extends State<Stats> {
     }
   }
 
+  Future<void> _loadDashboardSettings() async {
+    print("Loading dashboard settings");
+    final prefs = await SharedPreferences.getInstance();
+    
+    final Map<String, bool> visibilityMap = {};
+    final hiddenWidgetsStr = prefs.getStringList('hiddenDashboardWidgets') ?? [];
+    
+    final hasSavedSettings = (prefs.getStringList('dashboardWidgetOrder') != null || 
+                            !hiddenWidgetsStr.isEmpty);
+    
+    for (final widgetId in hiddenWidgetsStr) {
+      visibilityMap[widgetId] = false;
+    }
+    
+    final List<String>? savedOrder = prefs.getStringList('dashboardWidgetOrder');
+    
+    final allWidgets = DashboardWidgetInfo.getDefaultWidgets();
+    
+    List<DashboardWidgetInfo> widgetsToUse = [];
+    
+    if (savedOrder != null && savedOrder.isNotEmpty) {
+      final List<DashboardWidgetInfo> orderedWidgets = [];
+      
+      for (String widgetId in savedOrder) {
+        final widget = allWidgets.firstWhere(
+          (w) => w.id == widgetId,
+          orElse: () => DashboardWidgetInfo(
+            id: widgetId,
+            name: widgetId.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' '),
+            icon: Icons.widgets,
+          ),
+        );
+        
+        if (visibilityMap.containsKey(widget.id)) {
+          widget.visible = visibilityMap[widget.id]!;
+        }
+        
+        orderedWidgets.add(widget);
+      }
+      
+      for (final widget in allWidgets) {
+        if (!orderedWidgets.any((w) => w.id == widget.id)) {
+          if (visibilityMap.containsKey(widget.id)) {
+            widget.visible = visibilityMap[widget.id]!;
+          }
+          orderedWidgets.add(widget);
+        }
+      }
+      
+      widgetsToUse = orderedWidgets;
+    } else {
+      widgetsToUse = [...allWidgets]; 
+      for (final widget in widgetsToUse) {
+        if (visibilityMap.containsKey(widget.id)) {
+          widget.visible = visibilityMap[widget.id]!;
+        }
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _dashboardWidgets = widgetsToUse;
+        _hasSavedSettings = hasSavedSettings; 
+        print("Dashboard widgets updated: ${_dashboardWidgets.length}, custom settings: $hasSavedSettings");
+      });
+    }
+  }
+
+  bool _hasSavedSettings = false;
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -479,97 +565,110 @@ class StatsState extends State<Stats> {
         child: Column(
           children: [
             const SizedBox(height: 16),
-            SystemInfoWidget(systemInfo: currentStats),
-            const SizedBox(height: 16),
-            BootPerformanceWidget(systemInfo: currentStats),
-            const SizedBox(height: 16),
-            SecurityStatusWidget(securityInfo: currentStats['security_info'] ?? {}),
-            const SizedBox(height: 16),
-            ServiceControlWidget(
-              services: services,
-              filteredServices: filteredServices,
-              showSearchBar: _showSearchBar,
-              searchController: _searchController,
-              searchFocusNode: _searchFocusNode,
-              onSearchToggle: () {
-                setState(() {
-                  _showSearchBar = !_showSearchBar;
-                  if (!_showSearchBar) {
-                    _searchController.clear();
-                    _filterServices();
-                  }
-                });
-              },
-              onRefresh: _refreshServices,
-              onFilterChange: _filterServices,
-              onStartService: _startService,
-              onStopService: _stopService,
-              onRestartService: _restartService,
-              getServiceLogs: _getServiceLogs,
-            ),
-            const SizedBox(height: 16),
-            HardwareMonitorChart(
-              cpuFreqHistory: StatsController.instance.cpuFreqHistory,
-              wifiSignalHistory: StatsController.instance.wifiSignalHistory,
-              timeIndex: timeIndex,
-              currentFreq: currentStats['cpu_frequency'] ?? 0.0,
-              coreVoltage: currentStats['core_voltage'] ?? 0.0,
-              throttlingStatus: currentStats['throttling_status'] as Map<String, bool>?,
-            ),
-            const SizedBox(height: 16),
-            ProcessMonitorWidget(
-              processes: currentStats['top_processes'] ?? [],
-            ),
-            const SizedBox(height: 16),
-            DiskIOWidget(
-              ioStats: currentStats['disk_io'] ?? {},
-              readHistory: StatsController.instance.diskReadHistory,
-              writeHistory: StatsController.instance.diskWriteHistory,
-              timeIndex: timeIndex,
-            ),
-            const SizedBox(height: 16),
-            DiskUsageWidget(disks: currentStats['disks'] ?? []),
-            const SizedBox(height: 16),
-            CpuChartWidget(
-              cpuHistory: cpuHistory,
-              cpuUserHistory: cpuUserHistory,
-              cpuSystemHistory: cpuSystemHistory,
-              cpuNiceHistory: cpuNiceHistory,
-              cpuIoWaitHistory: cpuIoWaitHistory,
-              cpuIrqHistory: cpuIrqHistory,
-              timeIndex: timeIndex,
-            ),
-            const SizedBox(height: 16),
-            MemoryChartWidget(
-              memoryHistory: memoryHistory,
-              memoryTotal: currentStats['memory_total'] ?? 0.0,
-              timeIndex: timeIndex,
-            ),
-            const SizedBox(height: 16),
-            NetworkPingWidget(
-              pingHistory: StatsController.instance.pingLatencyHistory,
-              timeIndex: timeIndex,
-              currentLatency: currentStats['ping_latency'] ?? 0.0,
-            ),
-            const SizedBox(height: 16),
-            TemperatureChartWidget(
-              cpuTempHistory: cpuTempHistory,
-              gpuTempHistory: gpuTempHistory,
-              timeIndex: timeIndex,
-            ),
-            const SizedBox(height: 16),
-            NetworkChartWidget(
-              networkInHistory: networkInHistory,
-              networkOutHistory: networkOutHistory,
-              timeIndex: timeIndex,
-            ),
-            const SizedBox(height: 16),
-            SystemLogsWidget(
-              logs: currentStats['system_logs'] ?? [],
-            ),
+            ..._buildDashboardWidgets(),
           ],
         ),
       ),
     );
+  }
+  
+  List<Widget> _buildDashboardWidgets() {
+    final List<Widget> widgets = [];
+    
+    final Map<String, Widget Function()> widgetBuilders = {
+      'system_info': () => SystemInfoWidget(systemInfo: currentStats),
+      'service_control': () => ServiceControlWidget(
+        services: services,
+        filteredServices: filteredServices,
+        showSearchBar: _showSearchBar,
+        searchController: _searchController,
+        searchFocusNode: _searchFocusNode,
+        onSearchToggle: () {
+          setState(() {
+            _showSearchBar = !_showSearchBar;
+            if (!_showSearchBar) {
+              _searchController.clear();
+              _filterServices();
+            }
+          });
+        },
+        onRefresh: _refreshServices,
+        onFilterChange: _filterServices,
+        onStartService: _startService,
+        onStopService: _stopService,
+        onRestartService: _restartService,
+        getServiceLogs: _getServiceLogs,
+      ),
+      'hardware_monitor': () => HardwareMonitorChart(
+        cpuFreqHistory: StatsController.instance.cpuFreqHistory,
+        wifiSignalHistory: StatsController.instance.wifiSignalHistory,
+        timeIndex: timeIndex,
+        currentFreq: currentStats['cpu_frequency'] ?? 0.0,
+        coreVoltage: currentStats['core_voltage'] ?? 0.0,
+        throttlingStatus: currentStats['throttling_status'] as Map<String, bool>?,
+      ),
+      'system_processes': () => SystemProcessesWidget(
+        processes: currentStats['processes'] ?? [],
+      ),
+      'disk_usage': () => DiskUsageWidget(disks: currentStats['disks'] ?? []),
+      'cpu_chart': () => CpuChartWidget(
+        cpuHistory: cpuHistory,
+        cpuUserHistory: cpuUserHistory,
+        cpuSystemHistory: cpuSystemHistory,
+        cpuNiceHistory: cpuNiceHistory,
+        cpuIoWaitHistory: cpuIoWaitHistory,
+        cpuIrqHistory: cpuIrqHistory,
+        timeIndex: timeIndex,
+      ),
+      'memory_chart': () => MemoryChartWidget(
+        memoryHistory: memoryHistory,
+        memoryTotal: currentStats['memory_total'] ?? 0.0,
+        timeIndex: timeIndex,
+      ),
+      'network_ping': () => NetworkPingWidget(
+        pingHistory: StatsController.instance.pingLatencyHistory,
+        timeIndex: timeIndex,
+        currentLatency: currentStats['ping_latency'] ?? 0.0,
+      ),
+      'temperature_chart': () => TemperatureChartWidget(
+        cpuTempHistory: cpuTempHistory,
+        gpuTempHistory: gpuTempHistory,
+        timeIndex: timeIndex,
+      ),
+      'network_chart': () => NetworkChartWidget(
+        networkInHistory: networkInHistory,
+        networkOutHistory: networkOutHistory,
+        timeIndex: timeIndex,
+      ),
+      'system_logs': () => SystemLogsWidget(
+        logs: currentStats['system_logs'] ?? [],
+      ),
+    };
+    
+    List<DashboardWidgetInfo> widgetsToShow = DashboardWidgetInfo.getDefaultWidgets();
+    
+    if (_hasSavedSettings) {
+      final visibleWidgets = _dashboardWidgets.where((w) => w.visible).toList();
+      
+      if (visibleWidgets.isNotEmpty) {
+        widgetsToShow = visibleWidgets;
+      }
+    }
+    
+    print("Building dashboard with ${widgetsToShow.length} widgets, customized: $_hasSavedSettings");
+    
+    for (int i = 0; i < widgetsToShow.length; i++) {
+      final widget = widgetsToShow[i];
+      
+      if (widgetBuilders.containsKey(widget.id)) {
+        widgets.add(widgetBuilders[widget.id]!());
+        
+        if (i < widgetsToShow.length - 1) {
+          widgets.add(const SizedBox(height: 16));
+        }
+      }
+    }
+    
+    return widgets;
   }
 }

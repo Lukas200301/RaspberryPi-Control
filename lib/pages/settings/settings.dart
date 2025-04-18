@@ -6,11 +6,17 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/update_service.dart'; 
 import 'dart:io'; 
+import 'dart:async'; 
 
 class Settings extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback toggleTheme;
   final Function? logOut;
+  final bool isConnected; 
+
+  static final StreamController<bool> dashboardChangedController = 
+      StreamController<bool>.broadcast();
+  static Stream<bool> get dashboardChanged => dashboardChangedController.stream;
 
   static final GlobalKey updateSectionKey = GlobalKey();
   static final ScrollController scrollController = ScrollController();
@@ -32,6 +38,7 @@ class Settings extends StatefulWidget {
     required this.isDarkMode,
     required this.toggleTheme,
     this.logOut,
+    this.isConnected = false, 
   }) : super(key: key);
 
   @override
@@ -58,6 +65,8 @@ class _SettingsState extends State<Settings> {
   double _downloadProgress = 0.0;
   String _defaultPort = '22';
   bool _highlightUpdateSection = false;
+  
+  List<DashboardWidgetInfo> _dashboardWidgets = [];
 
   @override
   void initState() {
@@ -65,6 +74,7 @@ class _SettingsState extends State<Settings> {
     _loadSettings();
     _getAppVersion();
     _checkForUpdates();
+    _loadDashboardWidgets(); 
   }
   
   @override
@@ -527,6 +537,117 @@ class _SettingsState extends State<Settings> {
     }
   }
 
+  Future<void> _loadDashboardWidgets() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    final Map<String, bool> visibilityMap = {};
+    final hiddenWidgetsStr = prefs.getStringList('hiddenDashboardWidgets') ?? [];
+    for (final widgetId in hiddenWidgetsStr) {
+      visibilityMap[widgetId] = false;
+    }
+    
+    final List<String>? savedOrder = prefs.getStringList('dashboardWidgetOrder');
+    final allWidgets = DashboardWidgetInfo.getDefaultWidgets();
+
+    if (savedOrder != null && savedOrder.isNotEmpty) {
+      final List<DashboardWidgetInfo> orderedWidgets = [];
+      
+      for (String widgetId in savedOrder) {
+        final widget = allWidgets.firstWhere(
+          (w) => w.id == widgetId,
+          orElse: () => DashboardWidgetInfo(
+            id: widgetId,
+            name: widgetId.split('_').map((word) => word.capitalize()).join(' '),
+            icon: Icons.widgets,
+          ),
+        );
+        
+        if (visibilityMap.containsKey(widget.id)) {
+          widget.visible = visibilityMap[widget.id]!;
+        }
+        
+        orderedWidgets.add(widget);
+      }
+      
+      for (final widget in allWidgets) {
+        if (!orderedWidgets.any((w) => w.id == widget.id)) {
+          if (visibilityMap.containsKey(widget.id)) {
+            widget.visible = visibilityMap[widget.id]!;
+          }
+          orderedWidgets.add(widget);
+        }
+      }
+      
+      setState(() {
+        _dashboardWidgets = orderedWidgets;
+      });
+    } else {
+      for (final widget in allWidgets) {
+        if (visibilityMap.containsKey(widget.id)) {
+          widget.visible = visibilityMap[widget.id]!;
+        }
+      }
+      
+      setState(() {
+        _dashboardWidgets = allWidgets;
+      });
+    }
+  }
+  
+  Future<void> _saveDashboardWidgetSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> orderList = _dashboardWidgets.map((w) => w.id).toList();
+    await prefs.setStringList('dashboardWidgetOrder', orderList);
+    
+    final List<String> hiddenList = _dashboardWidgets
+        .where((w) => !w.visible)
+        .map((w) => w.id)
+        .toList();
+    await prefs.setStringList('hiddenDashboardWidgets', hiddenList);
+
+    Settings.dashboardChangedController.add(true);
+  }
+  
+  Future<void> _resetDashboardWidgets() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Dashboard Layout'),
+        content: const Text('Are you sure you want to reset all widgets to their default order and visibility?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              final prefs = await SharedPreferences.getInstance();
+              
+              await prefs.remove('dashboardWidgetOrder');
+              await prefs.remove('hiddenDashboardWidgets');
+              
+              setState(() {
+                _dashboardWidgets = DashboardWidgetInfo.getDefaultWidgets();
+              });
+              
+              Settings.dashboardChangedController.add(true);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Dashboard layout reset to defaults'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -570,6 +691,101 @@ class _SettingsState extends State<Settings> {
             ),
           ),
 
+          const SizedBox(height: 16),
+          
+          _buildSectionHeader('Stats Settings'),
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Stats Dashboard',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Drag to reorder. Toggle switches to show/hide widgets.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  SizedBox(
+                    height: 300, 
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _dashboardWidgets.length,
+                      itemBuilder: (context, index) {
+                        final widget = _dashboardWidgets[index];
+                        return Card(
+                          key: Key(widget.id),
+                          elevation: 1, 
+                          margin: const EdgeInsets.only(bottom: 4), 
+                          child: ListTile(
+                            dense: true, 
+                            leading: Icon(widget.icon, size: 20), 
+                            title: Text(widget.name),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Switch(
+                                  value: widget.visible,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      widget.visible = value;
+                                    });
+                                    _saveDashboardWidgetSettings();
+                                  },
+                                ),
+                                const Icon(Icons.drag_handle, size: 18), 
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      onReorder: (oldIndex, newIndex) {
+                        setState(() {
+                          if (newIndex > oldIndex) {
+                            newIndex -= 1;
+                          }
+                          final item = _dashboardWidgets.removeAt(oldIndex);
+                          _dashboardWidgets.insert(newIndex, item);
+                        });
+                        _saveDashboardWidgetSettings();
+                      },
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  OutlinedButton.icon(
+                    onPressed: _resetDashboardWidgets,
+                    icon: const Icon(Icons.restore, size: 16), 
+                    label: const Text('Reset to Default'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(36), 
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
           const SizedBox(height: 16),
           
           _buildSectionHeader('Connection Settings'),
@@ -1008,5 +1224,42 @@ class _SettingsState extends State<Settings> {
         ),
       ),
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return '${this[0].toUpperCase()}${substring(1)}';
+  }
+}
+
+class DashboardWidgetInfo {
+  final String id;
+  final String name;
+  final IconData icon;
+  bool visible;
+  
+  DashboardWidgetInfo({
+    required this.id,
+    required this.name,
+    required this.icon,
+    this.visible = true,
+  });
+
+  static List<DashboardWidgetInfo> getDefaultWidgets() {
+    return [
+      DashboardWidgetInfo(id: 'system_info', name: 'System Info', icon: Icons.info_outline),
+      DashboardWidgetInfo(id: 'service_control', name: 'Service Control', icon: Icons.miscellaneous_services),
+      DashboardWidgetInfo(id: 'hardware_monitor', name: 'Hardware Monitor', icon: Icons.memory),
+      DashboardWidgetInfo(id: 'system_processes', name: 'Processes', icon: Icons.view_list),
+      DashboardWidgetInfo(id: 'disk_usage', name: 'Disk Usage', icon: Icons.storage),
+      DashboardWidgetInfo(id: 'cpu_chart', name: 'CPU Chart', icon: Icons.speed),
+      DashboardWidgetInfo(id: 'memory_chart', name: 'Memory Chart', icon: Icons.sd_card),
+      DashboardWidgetInfo(id: 'network_ping', name: 'Network Ping', icon: Icons.network_ping),
+      DashboardWidgetInfo(id: 'temperature_chart', name: 'Temperature Chart', icon: Icons.thermostat),
+      DashboardWidgetInfo(id: 'network_chart', name: 'Network Chart', icon: Icons.network_check),
+      DashboardWidgetInfo(id: 'system_logs', name: 'System Logs', icon: Icons.article),
+    ];
   }
 }

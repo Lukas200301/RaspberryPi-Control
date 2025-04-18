@@ -60,7 +60,7 @@ class _FirstLaunchNoticeState extends State<FirstLaunchNotice> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
-                  'The Raspberry Pi must be set to English or German locale for all features to work correctly.\n\nSome monitoring features may not work properly with other system languages.',
+                  'The Raspberry Pi must be set to English locale for all features to work correctly.\n\nSome monitoring features may not work properly with other system languages.',
                   style: TextStyle(
                     fontSize: 16,
                     height: 1.4,
