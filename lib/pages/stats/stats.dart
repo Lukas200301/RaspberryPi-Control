@@ -516,7 +516,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
     if (isInstallingPackages) {
       return const Center(
         child: Text(
-          'Installing required packages, please wait...',
+          'Loading stats, please wait...',
           style: TextStyle(fontSize: 16),
         ),
       );

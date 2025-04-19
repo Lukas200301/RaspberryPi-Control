@@ -11,6 +11,7 @@ class Settings extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback toggleTheme;
   final Function? logOut;
+  final bool isConnected;  
 
   static final GlobalKey updateSectionKey = GlobalKey();
   static final ScrollController scrollController = ScrollController();
@@ -32,6 +33,7 @@ class Settings extends StatefulWidget {
     required this.isDarkMode,
     required this.toggleTheme,
     this.logOut,
+    required this.isConnected,  
   }) : super(key: key);
 
   @override

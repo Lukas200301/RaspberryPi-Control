@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'services/ssh_service.dart';
 import 'pages/connection/connection.dart';
@@ -58,9 +57,8 @@ class BackgroundService {
     }
   }
 
-
   static void resetAppState(BuildContext context) {
-    final state = context.findAncestorStateOfType<_BarsScreenState>();
+    final state = context.findAncestorStateOfType<_MainAppScreenState>();
     if (state != null) {
       state._logOff(); 
     }
@@ -116,6 +114,9 @@ class BackgroundService {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('isDarkMode') ?? true;
+  
   try {
     await BackgroundService.instance.initialize();
   } catch (e) {
@@ -129,7 +130,7 @@ void main() async {
     print('Failed to request notifications permission: $e');
   }
 
-  runApp(const MyApp(isDarkMode: true));
+  runApp(MyApp(isDarkMode: isDarkMode));
 }
 
 class MyApp extends StatefulWidget {
@@ -146,7 +147,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late bool isDarkMode;
-  final GlobalKey<_BarsScreenState> _barsScreenKey = GlobalKey<_BarsScreenState>();
+  final GlobalKey<_MainAppScreenState> _mainScreenKey = GlobalKey<_MainAppScreenState>();
 
   @override
   void initState() {
@@ -158,17 +159,28 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       isDarkMode = !isDarkMode;
     });
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setBool('isDarkMode', isDarkMode);
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isDarkMode', isDarkMode);
+      print('Theme preference saved: isDarkMode=$isDarkMode');
+    } catch (e) {
+      print('Failed to save theme preference: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Raspberry Pi Control',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.blueAccent,
+          foregroundColor: Colors.white,
+        ),
       ),
       darkTheme: ThemeData(
         brightness: Brightness.dark,
@@ -178,8 +190,9 @@ class _MyAppState extends State<MyApp> {
           secondary: Colors.blueAccent,
         ),
         scaffoldBackgroundColor: Colors.black,
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: Colors.blueAccent,
+          foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -191,16 +204,16 @@ class _MyAppState extends State<MyApp> {
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: Stack(
         children: [
-          BarsScreen(
-            key: _barsScreenKey,
+          MainAppScreen(
+            key: _mainScreenKey,
             isDarkMode: isDarkMode,
             toggleTheme: _toggleTheme,
           ),
           const FirstLaunchNotice(),
           UpdateNotice(
             onNavigateToTab: (index) {
-              if (_barsScreenKey.currentState != null) {
-                _barsScreenKey.currentState!._onItemTapped(index);
+              if (_mainScreenKey.currentState != null) {
+                _mainScreenKey.currentState!._navigateToPage(index);
               }
             },
           ),
@@ -210,26 +223,25 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class BarsScreen extends StatefulWidget {
+class MainAppScreen extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback toggleTheme;
 
-  const BarsScreen({
+  const MainAppScreen({
     super.key,
     required this.isDarkMode,
     required this.toggleTheme,
   });
 
   @override
-  State<BarsScreen> createState() => _BarsScreenState();
+  State<MainAppScreen> createState() => _MainAppScreenState();
 }
 
-class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
-  int _selectedIndex = 2;
+class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserver {
+  int _currentPageIndex = 2; 
   SSHService? sshService;
   final TextEditingController _commandController = TextEditingController();
   final GlobalKey<FileExplorerState> _fileExplorerKey = GlobalKey<FileExplorerState>();
-  String commandOutput = '';
   String connectionStatus = '';
   bool _isReconnecting = false;
   bool _wasConnectedBeforePause = false;
@@ -238,10 +250,32 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   Timer? _securityTimeoutTimer;
   DateTime _lastActivityTime = DateTime.now();
   
+  final List<String> _pageNames = [
+    'System Statistics',
+    'Terminal',
+    'Connections',
+    'File Explorer',
+    'Settings'
+  ];
+
+  final List<IconData> _pageIcons = [
+    Icons.analytics_outlined,
+    Icons.code_outlined,
+    Icons.connect_without_contact_outlined,
+    Icons.folder_outlined,
+    Icons.settings_outlined,
+  ];
+
+  final PageController _pageController = PageController(initialPage: 2);
+  
+  final GlobalKey<TerminalState> _terminalKey = GlobalKey<TerminalState>();
+  
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    _currentPageIndex = 2;
     
     const platform = MethodChannel('com.lukas200301.raspberrypi_control');
     platform.setMethodCallHandler((call) async {
@@ -258,6 +292,7 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     sshService?.disconnect();
     _stopBackgroundExecution();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -342,42 +377,210 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _onItemTapped(int index) {
-    // Allow navigation to Connections (2) or Settings (4) without a connection
-    // Restrict access to Stats (0), Terminal (1), and File Explorer (3) when not connected
-    if (sshService == null && index != 2 && index != 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please connect first')),
-      );
-      setState(() {
-        _selectedIndex = 2;
-      });
-    } else {
-      setState(() {
-        _selectedIndex = index;
-      });
+  bool _isPageChangeAllowed(int index) {
+    if (sshService == null || !sshService!.isConnected()) {
+      return index == 2 || index == 4;
     }
+    return true;
+  }
+  
+  void _handlePageChange(int index) {
+    FocusScope.of(context).unfocus();
+    
+    if (_currentPageIndex == index) return;
+    
+    if (_currentPageIndex == 1 && _terminalKey.currentState != null) {
+      _terminalKey.currentState!.forceReleaseTerminalFocus();
+    }
+    
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (_isPageChangeAllowed(index)) {
+        setState(() {
+          _currentPageIndex = index;
+        });
+      } else {
+        _pageController.jumpToPage(2);
+      }
+    });
   }
 
-  Future<void> _applyScreenWakeLock(bool keepOn) async {
-    if (keepOn) {
-      if (await Permission.ignoreBatteryOptimizations.isGranted) {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isOpeningDrawer = false;
+
+  void _openDrawer() {
+    if (_isOpeningDrawer) return;
+    _isOpeningDrawer = true;
+    
+    if (_currentPageIndex == 1 && _terminalKey.currentState != null) {
+      print("Releasing terminal focus before opening drawer");
+      _terminalKey.currentState!.forceReleaseTerminalFocus();
+    }
+    
+    FocusScope.of(context).unfocus();
+    
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted && _scaffoldKey.currentState != null) {
         try {
-          await SystemChannels.platform.invokeMethod('SystemChrome.setEnabledSystemUIMode', [SystemUiMode.immersiveSticky]);
-          await SystemChannels.platform.invokeMethod('HapticFeedback.vibrate');
-          print('Screen wake lock applied');
+          _scaffoldKey.currentState!.openDrawer();
         } catch (e) {
-          print('Error applying screen wake lock: $e');
+          print("Error opening drawer: $e");
         }
-      } else {
-        print('Battery optimization permission not granted, screen may turn off');
       }
+      
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _isOpeningDrawer = false;
+      });
+    });
+  }
+
+  Widget _buildDrawer() {
+    final isConnected = sshService != null && sshService!.isConnected();
+    final theme = Theme.of(context);
+    
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.developer_board,
+                      size: 40,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Raspberry Pi\nControl',
+                      style: TextStyle(
+                        color: theme.colorScheme.onPrimary,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  connectionStatus,
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimary.withOpacity(0.9),
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          
+          for (int index = 0; index < _pageNames.length; index++)
+            _buildDrawerItem(index, isConnected, theme),
+            
+          const Divider(),
+          
+          ListTile(
+            leading: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            title: Text(widget.isDarkMode ? 'Light Theme' : 'Dark Theme'),
+            onTap: () => _handleThemeToggle(),
+          ),
+          
+          if (isConnected)
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Disconnect'),
+              onTap: () => _handleDisconnect(),
+            ),
+            
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(int index, bool isConnected, ThemeData theme) {
+    final bool isDisabled = !isConnected && index != 2 && index != 4;
+    
+    return ListTile(
+      leading: Icon(
+        _pageIcons[index],
+        color: isDisabled 
+            ? theme.disabledColor 
+            : (_currentPageIndex == index 
+                ? theme.colorScheme.primary 
+                : null),
+      ),
+      title: Text(
+        _pageNames[index],
+        style: TextStyle(
+          color: isDisabled 
+              ? theme.disabledColor 
+              : (_currentPageIndex == index 
+                  ? theme.colorScheme.primary 
+                  : null),
+          fontWeight: _currentPageIndex == index 
+              ? FontWeight.bold 
+              : FontWeight.normal,
+        ),
+      ),
+      onTap: isDisabled ? null : () => _safeNavigateToPage(index),
+      selected: _currentPageIndex == index,
+    );
+  }
+
+  void _safeNavigateToPage(int index) {
+    Navigator.pop(context);
+    
+    Future.microtask(() {
+      if (mounted) {
+        _navigateToPage(index);
+      }
+    });
+  }
+
+  void _handleThemeToggle() {
+    Navigator.pop(context);
+    Future.microtask(() {
+      if (mounted) {
+        widget.toggleTheme();
+      }
+    });
+  }
+
+  void _handleDisconnect() {
+    Navigator.pop(context);
+    Future.microtask(() {
+      if (mounted) {
+        _logOff();
+      }
+    });
+  }
+
+  void _navigateToPage(int index) {
+    FocusScope.of(context).unfocus();
+    
+    if (!_isPageChangeAllowed(index)) {
+      setState(() {
+        _currentPageIndex = 2;
+        _pageController.jumpToPage(2);
+      });
     } else {
-      try {
-        await SystemChannels.platform.invokeMethod('SystemChrome.restoreSystemUIOverlays');
-      } catch (e) {
-        print('Error resetting screen wake lock: $e');
-      }
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          setState(() {
+            _currentPageIndex = index;
+          });
+          
+          _pageController.jumpToPage(index);
+        }
+      });
     }
   }
 
@@ -387,11 +590,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     final connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
     SSHService.defaultConnectionTimeout = connectionTimeout;
     
-    final keepScreenOn = prefs.getBool('keepScreenOn') ?? true;
-    if (sshService != null && sshService!.isConnected()) {
-      await _applyScreenWakeLock(keepScreenOn);
-    }
-    
     final keepAliveInterval = prefs.getString('sshKeepAliveInterval') ?? '60';
     if (sshService != null) {
       sshService!.setKeepAliveInterval(int.tryParse(keepAliveInterval) ?? 60);
@@ -400,15 +598,12 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     _startSecurityTimeoutMonitoring();
   }
 
-  void _setSSHService(SSHService? service) {
-    print('Setting SSHService: ${service?.name ?? "NULL"}');
-    
+  void _setSSHService(SSHService? service) {    
     final bool wasConnected = sshService != null;
     final bool willBeConnected = service != null;
     
     if (service == null && sshService != null) {
       print("Disconnected: Clearing SSH service reference");
-      _applyScreenWakeLock(false); 
       sshService?.disconnect();
     }
     
@@ -422,7 +617,8 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     if (wasConnected && !willBeConnected) {
       print("Disconnected: Enforcing navigation to Connections tab");
       setState(() {
-        _selectedIndex = 2;
+        _currentPageIndex = 2;
+        _pageController.jumpToPage(2);
       });
     }
     
@@ -446,7 +642,8 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
       
       _fileExplorerKey.currentState?.resetToRoot();
       
-      setState(() => _selectedIndex = 2);
+      setState(() => _currentPageIndex = 2);
+      _pageController.jumpToPage(2);
       
       await Future.delayed(const Duration(milliseconds: 100));
       sshService?.disconnect();
@@ -454,8 +651,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
       setState(() {
         connectionStatus = 'Disconnected';
         sshService = null;
-        commandOutput = '';
-        
         _enforceNavigationRestrictions();
       });
     }
@@ -465,11 +660,11 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     if (!_isReconnecting && 
         !_appJustResumed && 
         sshService == null && 
-        _selectedIndex != 2 && 
-        _selectedIndex != 4) {
+        _currentPageIndex != 2 && 
+        _currentPageIndex != 4) { 
       print("Enforcing navigation restrictions: redirecting to Connections tab");
       setState(() {
-        _selectedIndex = 2; 
+        _currentPageIndex = 2; 
       });
     }
   }
@@ -477,21 +672,18 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   void _sendCommand() async {
     if (sshService != null) {
       try {
-        final result = await sshService!.executeCommand(_commandController.text);
-        setState(() {
-          commandOutput += '\n\$ ${_commandController.text}\n$result';
-          _commandController.clear();
-        });
+        await sshService!.executeCommand(_commandController.text);
+        _commandController.clear();
       } catch (e) {
-        setState(() {
-          commandOutput += '\n\$ ${_commandController.text}\nError: $e';
-          _commandController.clear();
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Command error: $e')),
+        );
+        _commandController.clear();
       }
     } else {
-      setState(() {
-        commandOutput += '\nError: Not connected. Please log in first.';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not connected. Please connect first.')),
+      );
     }
   }
 
@@ -521,97 +713,85 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
     
     if (!isReconnectionInProgress && 
         !isReallyConnected && 
-        (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 3)) {
+        _currentPageIndex != 2 && 
+        _currentPageIndex != 4 && 
+        (_currentPageIndex == 0 || _currentPageIndex == 1 || _currentPageIndex == 3)) {
       print("Not connected but on restricted page - enforcing navigation to Connections tab");
       Future.microtask(() {
         if (mounted) {
           setState(() {
-            _selectedIndex = 2; 
+            _currentPageIndex = 2; 
+            _pageController.jumpToPage(2);
           });
         }
       });
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: IndexedStack(
-          key: const ValueKey<String>('main_stack'),
-          index: _selectedIndex,
+      key: _scaffoldKey,
+      extendBodyBehindAppBar: true, 
+      appBar: AppBar(
+        title: Text(_pageNames[_currentPageIndex]),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: _openDrawer,
+        ),
+        backgroundColor: Colors.blueAccent, 
+        foregroundColor: Colors.white, 
+        elevation: 4.0, 
+        surfaceTintColor: Colors.transparent, 
+      ),
+      drawer: Builder(
+        builder: (context) => _buildDrawer(),
+      ),
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+        },
+        child: PageView(
+          controller: _pageController,
+          physics: const ClampingScrollPhysics(), 
+          onPageChanged: _handlePageChange,
           children: [
-            sshService != null
+            sshService != null && sshService!.isConnected()
               ? Stats(
                   key: const PageStorageKey('stats_screen'),
                   sshService: sshService,
                 )
-              : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Please connect first.'),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () => _onItemTapped(2),  
-                        icon: const Icon(Icons.connect_without_contact),
-                        label: const Text('Go to Connections'),
-                      ),
-                    ],
-                  ),
-                ),
-            Terminal(
-              key: const PageStorageKey('terminal_screen'),
-              sshService: sshService,
-              commandController: _commandController,
-              commandOutput: commandOutput,
-              sendCommand: _sendCommand,
-            ),
+              : const Center(child: Text('Please connect to a Raspberry Pi first')),
+                
+            sshService != null && sshService!.isConnected()
+              ? Terminal(
+                  key: _terminalKey,
+                  sshService: sshService,
+                  commandController: _commandController,
+                  commandOutput: '',
+                  sendCommand: _sendCommand,
+                )
+              : const Center(child: Text('Please connect to a Raspberry Pi first')),
+                        
             Connection(
               key: const PageStorageKey('connection_screen'),
               setSSHService: _setSSHService,
               connectionStatus: connectionStatus,
             ),
-            FileExplorer(
-              key: _fileExplorerKey,
-              sshService: sshService,
-            ),
+                
+            sshService != null && sshService!.isConnected()
+              ? FileExplorer(
+                  key: _fileExplorerKey,
+                  sshService: sshService,
+                )
+              : const Center(child: Text('Please connect to a Raspberry Pi first')),
+                
             Settings(
               key: const PageStorageKey('settings_screen'),
               isDarkMode: widget.isDarkMode,
               toggleTheme: widget.toggleTheme,
               logOut: _logOff,
-              isConnected: isReallyConnected, 
+              isConnected: sshService != null && sshService!.isConnected(), 
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Stats',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.code),
-            label: 'Terminal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.connect_without_contact),
-            label: 'Connections',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.file_copy),
-            label: 'File Explorer',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
       ),
     );
   }

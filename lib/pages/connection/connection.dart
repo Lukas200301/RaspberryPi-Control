@@ -50,6 +50,55 @@ class ConnectionState extends State<Connection> {
     _loadDefaultPort();
     connectionStatus = widget.connectionStatus;
     isConnected = widget.connectionStatus.startsWith('Connected');
+    
+    if (isConnected && connections.isNotEmpty) {
+      _updateActiveConnectionFromStatus();
+    }
+  }
+  
+  @override
+  void didUpdateWidget(Connection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.connectionStatus != oldWidget.connectionStatus) {
+      setState(() {
+        connectionStatus = widget.connectionStatus;
+        isConnected = connectionStatus.startsWith('Connected');
+        
+        if (isConnected) {
+          _updateActiveConnectionFromStatus();
+        } else {
+          _activeConnectionId = '';
+        }
+      });
+    } else if (isConnected && _activeConnectionId.isEmpty && connections.isNotEmpty) {
+      setState(() {
+        _updateActiveConnectionFromStatus();
+      });
+    }
+  }
+
+  void _updateActiveConnectionFromStatus() {
+    if (connectionStatus.contains('(') && connectionStatus.contains(')')) {
+      final hostStart = connectionStatus.indexOf('(') + 1;
+      final hostEnd = connectionStatus.indexOf(')');
+      if (hostStart < hostEnd) {
+        final activeHost = connectionStatus.substring(hostStart, hostEnd).trim();
+        
+        for (var connection in connections) {
+          if (connection['host'] == activeHost) {
+            _activeConnectionId = connection['id'];
+            return;
+          }
+        }
+        
+        for (var connection in connections) {
+          if (connection['host'].toString().trim() == activeHost) {
+            _activeConnectionId = connection['id'];
+            return;
+          }
+        }
+      }
+    }
   }
 
   Future<void> _checkSecureStorage() async {
@@ -294,21 +343,35 @@ class ConnectionState extends State<Connection> {
   }
   
   void _disconnect() {
-    if (sshService != null) {
-      sshService!.disconnect();
+    try {
+      if (sshService != null) {
+        print("Disconnecting SSH service");
+        sshService!.disconnect();
+      }
+      
+      widget.setSSHService(null);
+      
       setState(() {
         isConnected = false;
         _activeConnectionId = '';
         connectionStatus = 'Disconnected';
+        sshService = null;
       });
-      
-      widget.setSSHService(null);
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Disconnected successfully'),
           backgroundColor: Colors.blue,
           duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('Error during disconnect: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error disconnecting: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
         ),
       );
     }
@@ -771,6 +834,14 @@ class ConnectionState extends State<Connection> {
 
   @override
   Widget build(BuildContext context) {
+    if (isConnected && _activeConnectionId.isEmpty && connections.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _updateActiveConnectionFromStatus();
+        });
+      });
+    }
+    
     final filteredConnections = _getFilteredConnections();
     final categories = _getCategories();
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
@@ -1034,6 +1105,16 @@ class ConnectionState extends State<Connection> {
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Colors.red,
                                           side: const BorderSide(color: Colors.red),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        ),
+                                      )
+                                    else if (isConnected)
+                                      OutlinedButton.icon(
+                                        onPressed: () => _showDisconnectDialog(connection),
+                                        icon: const Icon(Icons.swap_horiz, size: 16),
+                                        label: const Text('Switch to this'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Theme.of(context).colorScheme.primary,
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
                                         ),
                                       )

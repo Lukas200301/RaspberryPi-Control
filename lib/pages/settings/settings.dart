@@ -48,7 +48,6 @@ class Settings extends StatefulWidget {
 class _SettingsState extends State<Settings> {
   String _appVersion = '';
   int _connectionTimeout = 30; 
-  bool _keepScreenOn = true;
   String _sshKeepAliveInterval = '60'; 
   bool _sshCompression = false;
   String _terminalFontSize = '14';
@@ -86,7 +85,6 @@ class _SettingsState extends State<Settings> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _connectionTimeout = prefs.getInt('connectionTimeout') ?? 30;
-      _keepScreenOn = prefs.getBool('keepScreenOn') ?? true;
       _sshKeepAliveInterval = prefs.getString('sshKeepAliveInterval') ?? '60';
       _sshCompression = prefs.getBool('sshCompression') ?? false;
       _terminalFontSize = prefs.getString('terminalFontSize') ?? '14';
@@ -121,7 +119,6 @@ class _SettingsState extends State<Settings> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('connectionTimeout', _connectionTimeout);
-    await prefs.setBool('keepScreenOn', _keepScreenOn);
     await prefs.setString('sshKeepAliveInterval', _sshKeepAliveInterval);
     await prefs.setBool('sshCompression', _sshCompression);
     await prefs.setString('terminalFontSize', _terminalFontSize);
@@ -307,15 +304,6 @@ class _SettingsState extends State<Settings> {
     text = text.replaceAll(RegExp(r'<[^>]*>'), '');
     text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
     return text.trim();
-  }
-
-  Future<bool> _requestWakeLockPermission() async {
-    if (await Permission.ignoreBatteryOptimizations.isGranted) {
-      return true;
-    }
-    
-    PermissionStatus status = await Permission.ignoreBatteryOptimizations.request();
-    return status.isGranted;
   }
 
   void _clearDefaultDirectory() {
@@ -655,15 +643,6 @@ class _SettingsState extends State<Settings> {
         controller: Settings.scrollController, 
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Appearance'),
-          SwitchListTile(
-            secondary: const Icon(Icons.dark_mode),
-            title: const Text('Dark Mode'),
-            subtitle: const Text('Toggle between light and dark theme'),
-            value: widget.isDarkMode,
-            onChanged: (value) => widget.toggleTheme(),
-          ),
-
           const SizedBox(height: 16),
           
           _buildSectionHeader('Terminal Settings'),
@@ -812,36 +791,6 @@ class _SettingsState extends State<Settings> {
               ),
             ),
           ),
-          SwitchListTile(
-            secondary: const Icon(Icons.stay_current_portrait),
-            title: const Text('Keep Screen On'),
-            subtitle: const Text('Prevent device from sleeping during active connections'),
-            value: _keepScreenOn,
-            onChanged: (value) async {
-              if (value) {
-                bool hasPermission = await _requestWakeLockPermission();
-                if (!hasPermission) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Permission denied. Screen may turn off during connection.'),
-                        duration: Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                }
-                setState(() {
-                  _keepScreenOn = hasPermission;
-                });
-              } else {
-                setState(() {
-                  _keepScreenOn = false;
-                });
-              }
-              _saveSettings();
-            },
-          ),
-          
           SwitchListTile(
             secondary: const Icon(Icons.sync),
             title: const Text('Auto-Reconnect'),
