@@ -190,6 +190,7 @@ class _SystemProcessesWidgetState extends State<SystemProcessesWidget> {
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -258,82 +259,87 @@ class _SystemProcessesWidgetState extends State<SystemProcessesWidget> {
                   ),
                 ),
               )
-            : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: visibleProcesses.length,
-                itemBuilder: (context, index) {
-                  final process = visibleProcesses[index];
-                  final cpuUsage = process['cpu'] as double;
-                  final memoryUsage = process['memory'] as double;
-                  final command = process['command'] as String;
-                  final pid = process['pid'] as String;
-                  
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    elevation: 0,
-                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: InkWell(
-                      onTap: () => _showProcessDetails(process),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: _getProcessColor(cpuUsage).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
+            : Padding(
+                padding: const EdgeInsets.only(top: 4.0), 
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: visibleProcesses.length,
+                  itemBuilder: (context, index) {
+                    final process = visibleProcesses[index];
+                    final cpuUsage = process['cpu'] as double;
+                    final memoryUsage = process['memory'] as double;
+                    final command = process['command'] as String;
+                    final pid = process['pid'] as String;
+                    
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      elevation: 0,
+                      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: InkWell(
+                        onTap: () => _showProcessDetails(process),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), 
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6), 
+                                decoration: BoxDecoration(
+                                  color: _getProcessColor(cpuUsage).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.memory,
+                                  color: _getProcessColor(cpuUsage),
+                                  size: 18, 
+                                ),
                               ),
-                              child: Icon(
-                                Icons.memory,
-                                color: _getProcessColor(cpuUsage),
-                                size: 20,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min, 
+                                  children: [
+                                    Text(
+                                      command.split(' ')[0],
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'PID: $pid',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    command.split(' ')[0],
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    'PID: $pid',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
+                                  _buildUsageChip('CPU', cpuUsage, Colors.blue),
+                                  const SizedBox(height: 4),
+                                  _buildUsageChip('MEM', memoryUsage, Colors.orange),
                                 ],
                               ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                _buildUsageChip('CPU', cpuUsage, Colors.blue),
-                                const SizedBox(height: 4),
-                                _buildUsageChip('MEM', memoryUsage, Colors.orange),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.chevron_right),
-                          ],
+                              const SizedBox(width: 8),
+                              const Icon(Icons.chevron_right, size: 18),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
         
           if (_sortedProcesses.length > 5)

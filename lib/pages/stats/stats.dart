@@ -562,12 +562,14 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       onRefresh: _fetchStats,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            ..._buildDashboardWidgets(),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            children: [
+              const SizedBox(height: 96.0),
+              ..._buildDashboardWidgets(),
+            ],
+          ),
         ),
       ),
     );

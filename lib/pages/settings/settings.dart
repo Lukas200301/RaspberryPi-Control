@@ -638,13 +638,13 @@ class _SettingsState extends State<Settings> {
 
   @override
   Widget build(BuildContext context) {
+    final double topPadding = 112.0;
+    
     return Scaffold(
       body: ListView(
         controller: Settings.scrollController, 
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, topPadding, 16, 16),
         children: [
-          const SizedBox(height: 16),
-          
           _buildSectionHeader('Terminal Settings'),
           ListTile(
             leading: const Icon(Icons.text_fields),

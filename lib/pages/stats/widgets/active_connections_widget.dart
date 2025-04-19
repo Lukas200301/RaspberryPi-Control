@@ -168,12 +168,10 @@ class ActiveConnectionsWidget extends StatelessWidget {
                 ),
               )
             else
-              SizedBox(
-                height: visibleConnections.length * 73.0, 
-                child: ListView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: visibleConnections.length,
-                  itemBuilder: (context, index) {
+              Column(
+                children: List.generate(
+                  visibleConnections.length,
+                  (index) {
                     final connection = visibleConnections[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 4),
