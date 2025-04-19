@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../services/ssh_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:xterm/xterm.dart' as xterm;
 
 class Terminal extends StatefulWidget {
   final SSHService? sshService;
@@ -22,25 +23,54 @@ class Terminal extends StatefulWidget {
 }
 
 class TerminalState extends State<Terminal> {
+  late xterm.Terminal _terminal;
   final FocusNode _focusNode = FocusNode();
-  final ScrollController _scrollController = ScrollController();
-  List<String> _commandHistory = [];
-  int _historyIndex = -1;
   double _fontSize = 14.0;
-  final int _maxHistorySize = 50;
+  
+  StreamSubscription? _shellSubscription;
+  bool _isInteractiveMode = false;
+  bool _ctrlPressed = false;
 
-  List<String> _autocompleteSuggestions = [];
-  final List<String> _allCommands = [
-    'ls', 'cd', 'pwd', 'mkdir', 'rm', 'touch', 'echo', 'cat', 'grep',
-    'tail', 'head', 'exit', 'clear', 'chmod', 'chown', 'cp', 'mv', 'nano',
-    'vim', 'top', 'ps', 'kill', 'ssh', 'scp', 'find', 'du', 'df', 'tar',
-  ];
+  int _terminalColumns = 80;
+  int _terminalRows = 25;
 
   @override
   void initState() {
     super.initState();
+    _terminal = xterm.Terminal();
+    
+    _terminal.onOutput = (data) {
+      if (_isInteractiveMode && widget.sshService != null) {
+        widget.sshService!.sendToShell(data);
+      }
+    };
+    
+    _setupTerminalResize();
+    
     _loadTerminalSettings();
     _setupSettingsListener();
+    _initInteractiveShell();
+  }
+  
+  @override
+  void dispose() {
+    _shellSubscription?.cancel();
+    if (widget.sshService != null) {
+      widget.sshService!.closeShell();
+    }
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTerminalSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final newFontSize = double.tryParse(prefs.getString('terminalFontSize') ?? '14') ?? 14.0;
+
+    if (mounted) {
+      setState(() {
+        _fontSize = newFontSize;
+      });
+    }
   }
 
   void _setupSettingsListener() {
@@ -61,164 +91,161 @@ class TerminalState extends State<Terminal> {
     });
   }
 
-  Future<void> _loadTerminalSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final newFontSize = double.tryParse(prefs.getString('terminalFontSize') ?? '14') ?? 14.0;
+  void _handleShellOutput(String data) {
+    _terminal.write(data);
+  }
 
-    if (newFontSize != _fontSize) {
-      setState(() {
-        _fontSize = newFontSize;
-      });
+  void _setupTerminalResize() {
+    _terminal.onResize = (w, h, pw, ph) {
+      if (widget.sshService != null && _isInteractiveMode) {
+        setState(() {
+          _terminalColumns = w;
+          _terminalRows = h;
+        });
+        widget.sshService!.resizeShell(w, h);
+      }
+    };
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _calculateAndApplyTerminalSize();
+    });
+  }
+  
+  void _calculateAndApplyTerminalSize() {
+    final size = MediaQuery.of(context).size;
+    final availableHeight = size.height - 56 - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom - 16;
+    final availableWidth = size.width - 16;  
+    final columns = (availableWidth / 8).floor();
+    final rows = (availableHeight / 16).floor();
+    
+    final effectiveColumns = columns > 20 ? columns : 20;
+    final effectiveRows = rows > 10 ? rows : 10;
+    
+    setState(() {
+      _terminalColumns = effectiveColumns;
+      _terminalRows = effectiveRows;
+    });
+    
+    _terminal.resize(effectiveColumns, effectiveRows);
+    
+    if (widget.sshService != null && _isInteractiveMode) {
+      widget.sshService!.resizeShell(effectiveColumns, effectiveRows);
+    }
+  }
+
+  Future<void> _initInteractiveShell() async {
+    if (widget.sshService != null && widget.sshService!.isConnected()) {
+      try {
+        _terminal.write('Connecting to SSH...\r\n');
+        
+        await widget.sshService!.startShell(
+          width: _terminalColumns, 
+          height: _terminalRows
+        );
+        
+        _shellSubscription = widget.sshService!.shellOutput.listen(_handleShellOutput);
+        
+        setState(() {
+          _isInteractiveMode = true;
+        });
+        
+        _calculateAndApplyTerminalSize();
+        
+      } catch (e) {
+        print('Failed to initialize interactive shell: $e');
+        setState(() {
+          _isInteractiveMode = false;
+          _terminal.write('Failed to start interactive shell: $e\r\n');
+          _terminal.write('Falling back to basic command mode.\r\n');
+        });
+      }
+    } else {
+      _terminal.write('No SSH connection available. Please connect first.\r\n');
     }
   }
 
   @override
-  void dispose() {
-    _focusNode.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _sendCommand() async {
-    final command = widget.commandController.text.trim();
-    if (command.isNotEmpty) {
-      if (_commandHistory.isEmpty || _commandHistory.last != command) {
-        _commandHistory.add(command);
-        if (_commandHistory.length > _maxHistorySize) {
-          _commandHistory = _commandHistory.sublist(_commandHistory.length - _maxHistorySize);
-        }
-      }
-      _historyIndex = _commandHistory.length;
-      widget.sendCommand();
+  void didUpdateWidget(Terminal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sshService != widget.sshService) {
+      _shellSubscription?.cancel();
+      _initInteractiveShell();
     }
-    setState(() {
-      _autocompleteSuggestions.clear();
-    });
-    _focusNode.requestFocus();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      }
-    });
-  }
-
-  void _handleKeyPress(RawKeyEvent event) {
-    if (event is RawKeyDownEvent) {
-      if (event.logicalKey.keyLabel == 'Arrow Up') {
-        _navigateHistory(-1);
-      } else if (event.logicalKey.keyLabel == 'Arrow Down') {
-        _navigateHistory(1);
-      } else if (event.logicalKey == LogicalKeyboardKey.tab) {
-        _sendTabCompletion();
-      }
-    }
-  }
-
-  void _navigateHistory(int direction) {
-    if (_commandHistory.isEmpty) return;
-
-    setState(() {
-      _historyIndex += direction;
-      if (_historyIndex >= _commandHistory.length) {
-        _historyIndex = _commandHistory.length;
-        widget.commandController.text = '';
-      } else if (_historyIndex < 0) {
-        _historyIndex = 0;
-      }
-
-      if (_historyIndex < _commandHistory.length) {
-        widget.commandController.text = _commandHistory[_historyIndex];
-        widget.commandController.selection = TextSelection.fromPosition(
-          TextPosition(offset: widget.commandController.text.length),
-        );
-      }
-    });
-  }
-
-  void _updateAutocompleteSuggestions(String input) {
-    setState(() {
-      if (input.trim().isEmpty) {
-        _autocompleteSuggestions.clear();
-      } else {
-        _autocompleteSuggestions = _allCommands
-            .where((cmd) => cmd.startsWith(input))
-            .toList();
-      }
-    });
-  }
-
-  void _sendTabCompletion() {
-    final text = widget.commandController.text;
-    final words = text.split(' ');
-
-    if (_autocompleteSuggestions.isNotEmpty) {
-      final replacement = _autocompleteSuggestions.first;
-
-      words[words.length - 1] = replacement;
-      final newText = words.join(' ');
-
-      setState(() {
-        widget.commandController.text = newText;
-        widget.commandController.selection = TextSelection.fromPosition(
-          TextPosition(offset: newText.length),
-        );
-        _autocompleteSuggestions.clear();
-      });
-    }
-
-    _focusNode.requestFocus();
   }
 
   void _sendControlSequence(String key) {
-    if (widget.sshService != null) {
-      if (key == 'C') {
-        widget.sshService!.executeCommand('\x03');
-      } else if (key == 'D') {
-        widget.sshService!.executeCommand('\x04');
-      } else if (key == 'Z') {
-        widget.sshService!.executeCommand('\x1A');
+    if (widget.sshService != null && _isInteractiveMode) {
+      final int charCode = key.codeUnitAt(0) - 64; 
+      if (charCode > 0 && charCode < 27) {
+        final String ctrlChar = String.fromCharCode(charCode);
+        widget.sshService!.sendToShell(ctrlChar);
       }
-      _focusNode.requestFocus();
+    }
+    
+    setState(() {
+      _ctrlPressed = false;
+    });
+    _focusNode.requestFocus();
+  }
+
+  void _toggleCtrl() {
+    setState(() {
+      _ctrlPressed = !_ctrlPressed;
+    });
+    _focusNode.requestFocus();
+  }
+
+  void _sendSpecialKey(String sequence) {
+    if (widget.sshService != null && _isInteractiveMode) {
+      widget.sshService!.sendToShell(sequence);
     }
   }
 
-  void _insertText(String text) {
-    final currentText = widget.commandController.text;
-    final selection = widget.commandController.selection;
-    final newText = currentText.replaceRange(selection.start, selection.end, text);
-
-    widget.commandController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: selection.start + text.length),
-    );
-    _focusNode.requestFocus();
-  }
-
-  void _moveCursor(int direction) {
-    final selection = widget.commandController.selection;
-    int newPosition = selection.baseOffset + direction;
-    newPosition = newPosition.clamp(0, widget.commandController.text.length);
-    widget.commandController.selection = TextSelection.collapsed(offset: newPosition);
-    _focusNode.requestFocus();
-  }
-
-  Widget _buildSpecialKeyButton(String label, VoidCallback onPressed) {
+  Widget _buildSpecialKeyButton(String label, VoidCallback onPressed, {bool isActive = false}) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isActionButton = label == 'Send';
+    final isCtrlButton = label == 'Ctrl';
+    
+    final Color buttonColor = isCtrlButton && isActive
+        ? Colors.green.shade700 
+        : isActionButton 
+            ? Theme.of(context).colorScheme.primary 
+            : (isDarkMode ? Colors.grey[800]! : Colors.grey[200]!);
+    
+    final Color textColor = isCtrlButton && isActive
+        ? Colors.white
+        : isActionButton 
+            ? Colors.white
+            : (isDarkMode ? Colors.grey[200]! : Colors.grey[800]!);
 
-    return Material(
-      color: isDarkMode ? Colors.grey[850] : Colors.grey[300],
-      borderRadius: BorderRadius.circular(4),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDarkMode ? Colors.white : Colors.black87,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Material(
+        color: buttonColor,
+        borderRadius: BorderRadius.circular(8),
+        elevation: 2,
+        shadowColor: isDarkMode ? Colors.black54 : Colors.black26,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          splashColor: isActionButton 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.3) 
+              : (isDarkMode ? Colors.grey[700] : Colors.grey[300]),
+          highlightColor: isActionButton 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.2) 
+              : (isDarkMode ? Colors.grey[700] : Colors.grey[300]),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isActionButton ? 16 : 12, 
+              vertical: isActionButton ? 10 : 8
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: isActionButton ? 14 : 13,
+                fontWeight: isActionButton ? FontWeight.w600 : FontWeight.w500,
+                color: textColor,
+              ),
             ),
           ),
         ),
@@ -229,155 +256,244 @@ class TerminalState extends State<Terminal> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    final primaryColor = isDarkMode ? Colors.lightGreenAccent : Colors.black;
+    final backgroundColor = isDarkMode ? Colors.black : Colors.white;
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16.0),
-              child: SelectableText(
-                widget.commandOutput,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: _fontSize,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-            ),
-          ),
-          Container(
-            height: 48,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
-              border: Border(
-                top: BorderSide(
-                  color: isDarkMode ? Colors.grey[800]! : Colors.grey[400]!,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: Row(
-                  children: [
-                    _buildSpecialKeyButton('Tab', _sendTabCompletion),
-                    _buildSpecialKeyButton('Ctrl+C', () => _sendControlSequence('C')),
-                    _buildSpecialKeyButton('Ctrl+D', () => _sendControlSequence('D')),
-                    _buildSpecialKeyButton('Ctrl+Z', () => _sendControlSequence('Z')),
-                    _buildSpecialKeyButton('←', () => _moveCursor(-1)),
-                    _buildSpecialKeyButton('→', () => _moveCursor(1)),
-                    _buildSpecialKeyButton('|', () => _insertText('|')),
-                    _buildSpecialKeyButton('&', () => _insertText('&')),
-                    _buildSpecialKeyButton(';', () => _insertText(';')),
-                    _buildSpecialKeyButton('>', () => _insertText('>')),
-                    _buildSpecialKeyButton('<', () => _insertText('<')),
-                    _buildSpecialKeyButton('*', () => _insertText('*')),
-                    _buildSpecialKeyButton('~', () => _insertText('~')),
-                    _buildSpecialKeyButton('Send', _sendCommand),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              border: Border(
-                top: BorderSide(color: Colors.grey[850]!, width: 1),
-              ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      '\$',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            child: Container(
+              color: backgroundColor,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final newWidth = constraints.maxWidth;
+                    final newHeight = constraints.maxHeight;
+                    
+                    if (newWidth > 0 && newHeight > 0 && 
+                        (newWidth / 8).floor() != _terminalColumns || 
+                        (newHeight / 16).floor() != _terminalRows) {
+                      _calculateAndApplyTerminalSize();
+                    }
+                  });
+                  
+                  return xterm.TerminalView(
+                    _terminal,
+                    padding: const EdgeInsets.all(8.0),
+                    autofocus: true,
+                    focusNode: _focusNode,
+                    textStyle: xterm.TerminalStyle.fromTextStyle(
+                      TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: _fontSize,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: RawKeyboardListener(
-                        focusNode: FocusNode(),
-                        onKey: _handleKeyPress,
-                        child: TextField(
-                          controller: widget.commandController,
-                          focusNode: _focusNode,
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            fontSize: 14,
+                    theme: xterm.TerminalTheme(
+                      cursor: Colors.white,
+                      selection: Colors.blue.withOpacity(0.5),
+                      foreground: primaryColor,
+                      background: backgroundColor,
+                      black: Colors.black,
+                      red: Colors.red,
+                      green: Colors.green,
+                      yellow: Colors.yellow,
+                      blue: Colors.blue,
+                      magenta: Colors.purple,
+                      cyan: Colors.cyan,
+                      white: Colors.white,
+                      brightBlack: Colors.grey.shade700,
+                      brightRed: Colors.red.shade400,
+                      brightGreen: Colors.green.shade400,
+                      brightYellow: Colors.yellow.shade400,
+                      brightBlue: Colors.blue.shade400,
+                      brightMagenta: Colors.purple.shade400,
+                      brightCyan: Colors.cyan.shade400,
+                      brightWhite: Colors.white,
+                      searchHitBackground: Colors.yellow,
+                      searchHitBackgroundCurrent: Colors.orange,
+                      searchHitForeground: Colors.black,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          
+          SizedBox(
+            height: 56, 
+            child: Stack(
+              clipBehavior: Clip.none, 
+              children: [
+                Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
+                    border: Border(
+                      top: BorderSide(
+                        color: isDarkMode ? Colors.grey[800]! : Colors.grey[400]!,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        children: [
+                          _buildSpecialKeyButton('Tab', () => _sendSpecialKey('\t')),
+                          _buildSpecialKeyButton('Ctrl', _toggleCtrl, isActive: _ctrlPressed),
+                          _buildSpecialKeyButton('←', () => _sendSpecialKey('\x1b[D')),
+                          _buildSpecialKeyButton('→', () => _sendSpecialKey('\x1b[C')),
+                          _buildSpecialKeyButton('↑', () => _sendSpecialKey('\x1b[A')), 
+                          _buildSpecialKeyButton('↓', () => _sendSpecialKey('\x1b[B')),
+                          _buildSpecialKeyButton('PgUp', () => _sendSpecialKey('\x1b[5~')),
+                          _buildSpecialKeyButton('PgDn', () => _sendSpecialKey('\x1b[6~')),
+                          _buildSpecialKeyButton('Home', () => _sendSpecialKey('\x1b[H')),
+                          _buildSpecialKeyButton('End', () => _sendSpecialKey('\x1b[F')),
+                          _buildSpecialKeyButton('Esc', () => _sendSpecialKey('\x1b')),
+                          _buildSpecialKeyButton('|', () => _sendSpecialKey('|')),
+                          _buildSpecialKeyButton('&', () => _sendSpecialKey('&')),
+                          _buildSpecialKeyButton(';', () => _sendSpecialKey(';')),
+                          _buildSpecialKeyButton('>', () => _sendSpecialKey('>')),
+                          _buildSpecialKeyButton('<', () => _sendSpecialKey('<')),
+                          _buildSpecialKeyButton('*', () => _sendSpecialKey('*')),
+                          _buildSpecialKeyButton('~', () => _sendSpecialKey('~')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                if (_ctrlPressed)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[900] : Colors.grey[300],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 5,
+                            spreadRadius: 1,
                           ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: 'Enter command',
-                            hintStyle: TextStyle(
-                              color: isDarkMode ? Colors.grey : Colors.black54,
-                              fontSize: 14,
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildCtrlKeyButton('A', 'Select All'),
+                                    _buildCtrlKeyButton('C', 'Copy/Cancel'),
+                                    _buildCtrlKeyButton('D', 'EOF'),
+                                    _buildCtrlKeyButton('E', 'End of Line'),
+                                    _buildCtrlKeyButton('G', 'Get Help'),
+                                    _buildCtrlKeyButton('K', 'Kill Line'),
+                                    _buildCtrlKeyButton('L', 'Clear'),
+                                    _buildCtrlKeyButton('N', 'Next'),
+                                    _buildCtrlKeyButton('O', 'Save'),
+                                    _buildCtrlKeyButton('P', 'Previous'),
+                                    _buildCtrlKeyButton('Q', 'Resume'),
+                                    _buildCtrlKeyButton('R', 'Search'),
+                                    _buildCtrlKeyButton('S', 'Stop Output'),
+                                    _buildCtrlKeyButton('T', 'Spell Check'),
+                                    _buildCtrlKeyButton('U', 'Clear Line'),
+                                    _buildCtrlKeyButton('W', 'Delete Word'),
+                                    _buildCtrlKeyButton('X', 'Cut'),
+                                    _buildCtrlKeyButton('Z', 'Suspend'),
+                                    _buildCtrlKeyButton('_', 'Go To Line'),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          onSubmitted: (value) => _sendCommand(),
-                          onChanged: (value) {
-                            final words = value.trim().split(' ');
-                            if (words.isNotEmpty) {
-                              _updateAutocompleteSuggestions(words.last);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_autocompleteSuggestions.isNotEmpty)
-                  Container(
-                    alignment: Alignment.centerLeft,
-                    color: isDarkMode ? Colors.black : Colors.white,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: _autocompleteSuggestions
-                          .map(
-                            (s) => GestureDetector(
-                              onTap: () {
-                                final words = widget.commandController.text.split(' ');
-                                words[words.length - 1] = s;
-                                final newText = words.join(' ');
-                                setState(() {
-                                  widget.commandController.text = newText;
-                                  widget.commandController.selection = TextSelection.fromPosition(
-                                    TextPosition(offset: newText.length),
-                                  );
-                                  _autocompleteSuggestions.clear();
-                                });
-                                _focusNode.requestFocus();
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(6.0),
-                                child: Text(
-                                  s,
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 14,
-                                    color: isDarkMode ? Colors.white : Colors.black,
+                          
+                          SizedBox(
+                            width: 70, 
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  left: BorderSide(
+                                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[400]!,
+                                    width: 1,
+                                  ),
+                                ),
+                                color: isDarkMode ? Colors.grey[850] : Colors.grey[250],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _ctrlPressed = false;
+                                    });
+                                  },
+                                  child: Container(
+                                    height: 56, 
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Cancel',
+                                      style: TextStyle(
+                                        color: isDarkMode ? Colors.grey[200] : Colors.grey[800],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          )
-                          .toList(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCtrlKeyButton(String key, String tooltip) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Tooltip(
+      message: tooltip,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3.0),
+        child: Material(
+          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          borderRadius: BorderRadius.circular(6),
+          elevation: 1,
+          child: InkWell(
+            onTap: () => _sendControlSequence(key),
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                key,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.lightGreenAccent : Colors.green[800],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -26,7 +26,11 @@ class SSHService {
   int _consecutiveFailures = 0;
   static const int MAX_CONSECUTIVE_FAILURES = 3;
   final _reconnectionLock = Object(); 
-
+  SSHSession? _shellSession;
+  final _shellOutputController = StreamController<String>.broadcast();
+  Stream<String> get shellOutput => _shellOutputController.stream;
+  bool _hasActiveShell = false;
+  
   SSHService({
     required this.name,
     required this.host,
@@ -760,6 +764,8 @@ class SSHService {
   }
 
   void dispose() {
+    closeShell();
+    _shellOutputController.close();
     _keepAliveTimer?.cancel();
     _connectionMonitor?.cancel();
     _connectionStatusController.close();
@@ -800,6 +806,77 @@ class SSHService {
         }
       }
     });
+  }
+
+  Future<void> startShell({int width = 80, int height = 25}) async {
+    if (_client == null) {
+      await connect();
+    }
+    
+    if (_hasActiveShell) {
+      print('Shell already active');
+      return;
+    }
+    
+    try {
+      _shellSession = await _client!.shell(
+        pty: SSHPtyConfig(
+          width: width,
+          height: height,
+        ),
+      );
+      
+      _hasActiveShell = true;
+      
+      _shellSession!.stdout.listen((data) {
+        final output = utf8.decode(data, allowMalformed: true);
+        _shellOutputController.add(output);
+      });
+      
+      _shellSession!.stderr.listen((data) {
+        final output = utf8.decode(data, allowMalformed: true);
+        _shellOutputController.add(output);
+      });
+      
+      _shellSession!.done.then((_) {
+        _hasActiveShell = false;
+        print('Shell session closed');
+      }).catchError((error) {
+        _hasActiveShell = false;
+        print('Shell session error: $error');
+      });
+      
+    } catch (e) {
+      _hasActiveShell = false;
+      print('Failed to start shell: $e');
+      throw Exception('Failed to start interactive shell: $e');
+    }
+  }
+  
+  void sendToShell(String data) {
+    if (_shellSession != null && _hasActiveShell) {
+      _shellSession!.stdin.add(utf8.encode(data));
+    } else {
+      print('No active shell to send data to');
+    }
+  }
+  
+  void resizeShell(int width, int height) {
+    if (_shellSession != null && _hasActiveShell) {
+      try {
+        _shellSession!.resizeTerminal(width, height);
+      } catch (e) {
+        print('Failed to resize shell: $e');
+      }
+    }
+  }
+  
+  void closeShell() {
+    if (_shellSession != null) {
+      _hasActiveShell = false;
+      _shellSession!.close();
+      _shellSession = null;
+    }
   }
 }
 
