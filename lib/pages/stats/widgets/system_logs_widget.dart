@@ -26,6 +26,8 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
   Timer? _searchDebounce;
   
   final Map<String, LogSeverity> _severityCache = {};
+  final ScrollController _scrollController = ScrollController();
+  bool _initialScrollDone = false;
 
   @override
   void initState() {
@@ -47,6 +49,7 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
   void dispose() {
     _searchController.dispose();
     _searchDebounce?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -104,9 +107,25 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
       if (mounted) {
         setState(() {
           _filteredLogs = filtered;
+          if (!_initialScrollDone && _filteredLogs.isNotEmpty) {
+            _initialScrollDone = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _scrollToBottom();
+            });
+          }
         });
       }
     });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _updateLogStats() {
@@ -142,6 +161,7 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
     final textColor = isDarkMode ? Colors.white : Colors.black87;
 
     return Card(
+      margin: EdgeInsets.zero, 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -310,99 +330,98 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
           
           SizedBox(
             height: 300, 
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _filteredLogs.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _selectedFilter == 'All' && !_showSearch
-                              ? Icons.article_outlined
-                              : Icons.filter_alt_off,
-                          size: 40,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _selectedFilter == 'All' && !_showSearch && widget.logs.isEmpty
-                              ? 'No system logs available'
-                              : 'No logs match the current filter',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _filteredLogs.length,
-                    itemBuilder: (context, index) {
-                      final log = _filteredLogs[index];
-                      final logStr = log.toString();
-                      final severity = _getLogSeverity(logStr);
-                      
-                      Color severityColor;
-                      IconData severityIcon;
-                      
-                      switch (severity) {
-                        case LogSeverity.error:
-                          severityColor = Colors.red;
-                          severityIcon = Icons.error_outline;
-                          break;
-                        case LogSeverity.warning:
-                          severityColor = Colors.orange;
-                          severityIcon = Icons.warning_amber_outlined;
-                          break;
-                        default:
-                          severityColor = Colors.blue;
-                          severityIcon = Icons.info_outline;
-                      }
-                      
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: severityColor.withOpacity(0.3), 
-                              width: 1
-                            ),
+            child: _filteredLogs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _selectedFilter == 'All' && !_showSearch
+                            ? Icons.article_outlined
+                            : Icons.filter_alt_off,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedFilter == 'All' && !_showSearch && widget.logs.isEmpty
+                            ? 'No system logs available'
+                            : 'No logs match the current filter',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: _filteredLogs.length,
+                  itemBuilder: (context, index) {
+                    final log = _filteredLogs[index];
+                    final logStr = log.toString();
+                    final severity = _getLogSeverity(logStr);
+                    
+                    Color severityColor;
+                    IconData severityIcon;
+                    
+                    switch (severity) {
+                      case LogSeverity.error:
+                        severityColor = Colors.red;
+                        severityIcon = Icons.error_outline;
+                        break;
+                      case LogSeverity.warning:
+                        severityColor = Colors.orange;
+                        severityIcon = Icons.warning_amber_outlined;
+                        break;
+                      default:
+                        severityColor = Colors.blue;
+                        severityIcon = Icons.info_outline;
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: backgroundColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: severityColor.withOpacity(0.3), 
+                            width: 1
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _showSimpleLogDialog(context, logStr),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(severityIcon, size: 16, color: severityColor),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        logStr,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontFamily: 'monospace',
-                                          color: textColor,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _showSimpleLogDialog(context, logStr),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(severityIcon, size: 16, color: severityColor),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      logStr,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontFamily: 'monospace',
+                                        color: textColor,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
-                  ),
-            ),
+                      ),
+                    );
+                  },
+                ),
           ),
           
           Padding(
@@ -514,7 +533,7 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8), 
                 Container(
                   height: MediaQuery.of(context).size.height * 0.3,
                   decoration: BoxDecoration(
@@ -536,7 +555,7 @@ class _SystemLogsWidgetState extends State<SystemLogsWidget> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -592,6 +611,8 @@ class _AllLogsPageState extends State<AllLogsPage> {
   final Map<String, LogSeverity> _severityCache = {};
   Timer? _searchDebounce;
   bool _isFiltering = false;
+  final ScrollController _scrollController = ScrollController();
+  bool _initialScrollDone = false;
 
   @override
   void initState() {
@@ -735,6 +756,13 @@ class _AllLogsPageState extends State<AllLogsPage> {
             _filteredLogs = filtered;
             _isFiltering = false;
             _displayingFullList = displayingAllLogs;
+            
+            if (!_initialScrollDone && _filteredLogs.isNotEmpty) {
+              _initialScrollDone = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _scrollToBottom();
+              });
+            }
           });
         }
       } catch (e) {
@@ -749,6 +777,16 @@ class _AllLogsPageState extends State<AllLogsPage> {
     });
   }
   
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   bool _displayingFullList = true;
 
   @override
@@ -917,6 +955,8 @@ class _AllLogsPageState extends State<AllLogsPage> {
                   ),
                 )
               : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: _filteredLogs.length,
                   itemBuilder: (context, index) {
                     final log = _filteredLogs[index].toString();
@@ -1008,6 +1048,14 @@ class _AllLogsPageState extends State<AllLogsPage> {
             ),
         ],
       ),
+      floatingActionButton: _filteredLogs.isNotEmpty 
+          ? FloatingActionButton(
+              mini: true,
+              onPressed: _scrollToBottom,
+              tooltip: 'Latest logs',
+              child: const Icon(Icons.arrow_downward),
+            )
+          : null,
     );
   }
 
@@ -1032,7 +1080,7 @@ class _AllLogsPageState extends State<AllLogsPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8), 
                 Container(
                   height: MediaQuery.of(context).size.height * 0.3,
                   decoration: BoxDecoration(
@@ -1054,7 +1102,7 @@ class _AllLogsPageState extends State<AllLogsPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4), 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
