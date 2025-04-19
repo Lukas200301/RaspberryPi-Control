@@ -673,10 +673,6 @@ class _AllLogsPageState extends State<AllLogsPage> {
     }
   }
 
-  void _preProcessLogs() {
-    _preProcessLogsSimply();
-  }
-
   LogSeverity _getLogSeverity(String log) {
     if (_severityCache.containsKey(log)) {
       return _severityCache[log]!;

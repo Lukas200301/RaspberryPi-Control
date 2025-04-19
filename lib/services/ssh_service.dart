@@ -129,9 +129,49 @@ class SSHService {
   }
 
   Future<void> handleAppResume() async {
+    print("SSHService: handleAppResume called, connected=${isConnected()}");
+    
     if (!isConnected()) {
-      print("App resumed: Reconnecting...");
-      await reconnect();
+      print("SSHService: App resumed and not connected. Attempting to reconnect...");
+      
+      try {
+        _isReconnecting = true;
+        _connectionStatusController.add(false);
+        
+        await reconnect();
+        
+        print("SSHService: Resume reconnection successful");
+        _connectionStatusController.add(true);
+        
+        return;
+      } catch (e) {
+        print("SSHService: Resume reconnection failed: $e");
+        _connectionStatusController.add(false);
+        throw e;
+      } finally {
+        _isReconnecting = false;
+      }
+    } else {
+      try {
+        await _client!.run('echo ping');
+        print("SSHService: Connection verified after resume");
+        _connectionStatusController.add(true);
+      } catch (e) {
+        print("SSHService: Connection check failed after resume: $e");
+        _connectionStatusController.add(false);
+        
+        try {
+          _isReconnecting = true;
+          await reconnect();
+          _connectionStatusController.add(true);
+        } catch (e) {
+          print("SSHService: Resume recovery reconnection failed: $e");
+          _connectionStatusController.add(false);
+          throw e;
+        } finally {
+          _isReconnecting = false;
+        }
+      }
     }
   }
 

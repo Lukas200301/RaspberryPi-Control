@@ -255,7 +255,6 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _stopSecurityTimeoutMonitoring();
     WidgetsBinding.instance.removeObserver(this);
     sshService?.disconnect();
     _stopBackgroundExecution();
@@ -300,21 +299,23 @@ class _BarsScreenState extends State<BarsScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _wasConnectedBeforePause = sshService?.isConnected() ?? false;
-      _appJustResumed = false;
+      _wasConnectedBeforePause = sshService != null && sshService!.isConnected();
+      print("App paused, connection state saved: $_wasConnectedBeforePause");
     } else if (state == AppLifecycleState.resumed) {
-      _appJustResumed = true;
+      print("App resumed, was connected before: $_wasConnectedBeforePause");
       
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _appJustResumed = false;
-          });
-        }
-      });
-      
+      if (sshService != null) {
+        sshService!.handleAppResume().then((_) {
+          if (mounted) {
+            setState(() {
+            });
+          }
+        }).catchError((e) {
+          print("Error during app resume reconnection: $e");
+        });
+      }
+
       if (_wasConnectedBeforePause && sshService != null) {
-        print("App resumed: Attempting reconnection");
         setState(() => _isReconnecting = true);
         
         sshService!.reconnect().then((_) {
