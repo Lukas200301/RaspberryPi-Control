@@ -6,12 +6,19 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 
 ### Core Functionality
 - Connect to Raspberry Pi via SSH
-- Execute commands on the Raspberry Pi
+- Execute commands on the Raspberry Pi with an enhanced terminal interface
 - View detailed system stats (CPU, memory, temperature, disk usage, network traffic, etc.)
 - Manage multiple SSH connections
 - Transfer files between your device and the Raspberry Pi
 - Start, stop, and restart services on the Raspberry Pi
-- Light and dark theme support
+- Light and dark theme support with completely redesigned UI
+
+### Advanced System Monitoring
+- System log viewer for real-time diagnostics
+- Network ping utility to test connectivity
+- System processes monitor with detailed resource usage
+- Active connections tracker for network analysis
+- Enhanced dashboard with customizable metrics display
 
 ### Advanced Connection Features
 - Background connectivity that keeps your connection alive when app is minimized
@@ -19,8 +26,14 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - Configurable connection timeout settings
 - SSH keep-alive to prevent dropped connections
 - Security timeout to automatically disconnect after inactivity
-- Screen wake lock to prevent device from sleeping during active connections
 - SSH compression option for slow networks
+
+### Terminal Improvements
+- Fully revamped terminal with enhanced functionality
+- Command history navigation
+- Advanced text selection and manipulation
+- Better handling of complex shell operations
+- Improved performance for lengthy outputs
 
 ### File Management
 - Browse remote files with intuitive interface
@@ -28,12 +41,15 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 - Toggle hidden files visibility
 - Configurable file overwrite confirmation
 - Custom default download directory
+- Improved file operations with better error handling
 
 ### User Experience
+- Completely redesigned user interface for better usability
 - Custom terminal font size settings
 - In-app update system with automatic update checking
 - View release notes for new versions
-- Battery optimization management
+- Better battery optimization management
+- Improved navigation between app sections
 
 ## Important Notes
 
@@ -41,15 +57,6 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 
 ⚠️ **Background Operation**: To maintain connections in the background, you may need to exclude the app from battery optimization.
 
-## Screenshots
-
-<p align="center">
-  <img src="screenshots/stats.png" alt="Stats" width="200"/>
-  <img src="screenshots/terminal.png" alt="Commands" width="200"/>
-  <img src="screenshots/connections.png" alt="Connections" width="200"/>
-  <img src="screenshots/file_explorer.png" alt="File Explorer" width="200"/>
-  <img src="screenshots/settings.png" alt="Settings" width="200"/>
-</p>
 
 ## Getting Started
 
@@ -84,7 +91,7 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 3. Enter the connection details (name, host, port, username, password) and save the connection.
 4. Select the saved connection to connect to your Raspberry Pi.
 5. Use the "Terminal" tab to execute commands on the Raspberry Pi.
-6. Use the "Stats" tab to view detailed system stats.
+6. Use the "Stats" tab to view detailed system stats, logs, processes, and network information.
 7. Use the "File Explorer" tab to transfer files between your device and the Raspberry Pi.
 8. Use the "Service Control" section in the "Stats" tab to start, stop, and restart services.
 
@@ -93,8 +100,17 @@ RaspberryPi-Control is a Flutter application that allows you to control and moni
 ### Appearance
 - **Dark/Light Theme**: Choose between dark and light mode for the app interface
 
+### Dashboard Settings
+- **Widget Layout**: Configure how information is displayed on the dashboard
+
 ### Terminal Settings
 - **Terminal Font Size**: Adjust text size for better readability in terminal
+- **Command History Size**: Control how many previous commands are saved
+
+### System Monitoring
+- **Log Filters**: Configure which system logs to display
+- **Process Display**: Set sorting and filtering options for the process viewer
+- **Network Monitor**: Customize active connections display
 
 ### Connection Settings
 - **Default SSH Port**: Set your preferred default port for new connections
@@ -140,12 +156,18 @@ The app includes a robust update management system:
 - `shared_preferences`: For storing connection details locally
 - `convert`: For encoding and decoding data
 - `file_picker`: For picking files to upload
+- `open_file`: For opening downloaded files
 - `fl_chart`: For displaying charts
+- `android_intent_plus`: For launching Android-specific actions
 - `permission_handler`: For managing app permissions
+- `intl`: For internationalization and formatting
 - `package_info_plus`: For version information
-- `flutter_secure_storage`: For secure credential storage
+- `url_launcher`: For opening URLs and links
+- `http`: For network requests and update checking
 - `path_provider`: For file system access
+- `flutter_secure_storage`: For secure credential storage
 - `device_info_plus`: For device-specific information
+- `xterm`: For the enhanced terminal experience
 
 ## Development
 
@@ -154,19 +176,3 @@ The app includes a robust update management system:
 To build the app, run:
 ```bash
 flutter build apk
-```
-
-### Testing
-
-To run tests, use:
-```bash
-flutter test
-```
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
