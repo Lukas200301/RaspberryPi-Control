@@ -78,35 +78,78 @@ class ConnectionState extends State<Connection> {
   }
 
   void _updateActiveConnectionFromStatus() {
-    if (connectionStatus.contains('Connected to ') && connectionStatus.contains('(') && connectionStatus.contains(')')) {
-      final nameStart = connectionStatus.indexOf('Connected to ') + 'Connected to '.length;
-      final nameEnd = connectionStatus.lastIndexOf(', (');
+    print("Updating active connection from status: '$connectionStatus'");
+    
+    if (connectionStatus.isNotEmpty && connectionStatus.startsWith('Connected')) {
+      String? activeName;
+      String? activeHost;
       
-      final hostStart = connectionStatus.indexOf('(') + 1;
-      final hostEnd = connectionStatus.indexOf(')');
+      if (connectionStatus.contains('Connected to ') && connectionStatus.contains('(') && connectionStatus.contains(')')) {
+        try {
+          final nameStart = connectionStatus.indexOf('Connected to ') + 'Connected to '.length;
+          final nameEnd = connectionStatus.lastIndexOf(', (');
+          
+          final hostStart = connectionStatus.indexOf('(') + 1;
+          final hostEnd = connectionStatus.indexOf(')');
+          
+          if (nameStart < nameEnd && hostStart < hostEnd) {
+            activeName = connectionStatus.substring(nameStart, nameEnd).trim();
+            activeHost = connectionStatus.substring(hostStart, hostEnd).trim();
+            print("Extracted name: '$activeName', host: '$activeHost'");
+          }
+        } catch (e) {
+          print("Error parsing connection status: $e");
+        }
+      }
       
-      if (nameStart < nameEnd && hostStart < hostEnd) {
-        final activeName = connectionStatus.substring(nameStart, nameEnd).trim();
-        final activeHost = connectionStatus.substring(hostStart, hostEnd).trim();
-        
-        _activeConnectionId = '';
-        
+      if (activeName == null && activeHost == null && connectionStatus.contains('(') && connectionStatus.contains(')')) {
+        try {
+          final hostStart = connectionStatus.indexOf('(') + 1;
+          final hostEnd = connectionStatus.indexOf(')');
+          
+          if (hostStart < hostEnd) {
+            activeHost = connectionStatus.substring(hostStart, hostEnd).trim();
+            print("Fallback: extracted host only: '$activeHost'");
+          }
+        } catch (e) {
+          print("Error in fallback parsing: $e");
+        }
+      }
+      
+      _activeConnectionId = '';
+      
+      if (activeName != null && activeHost != null) {
         for (var connection in connections) {
           if (connection['name'] == activeName && connection['host'] == activeHost) {
             _activeConnectionId = connection['id'];
-            return;
-          }
-        }
-        
-        for (var connection in connections) {
-          if (connection['host'] == activeHost) {
-            _activeConnectionId = connection['id'];
+            print("Found exact match (name and host): ID ${connection['id']}");
             return;
           }
         }
       }
+      
+      if (activeHost != null) {
+        for (var connection in connections) {
+          if (connection['host'] == activeHost) {
+            _activeConnectionId = connection['id'];
+            print("Found host-only match: ID ${connection['id']}");
+            return;
+          }
+        }
+        
+        for (var connection in connections) {
+          if (connection['host'].toString().toLowerCase().trim() == activeHost.toLowerCase().trim()) {
+            _activeConnectionId = connection['id'];
+            print("Found case-insensitive host match: ID ${connection['id']}");
+            return;
+          }
+        }
+      }
+      
+      print("No matching connection found for status: '$connectionStatus'");
     } else {
       _activeConnectionId = '';
+      print("Connection status doesn't indicate an active connection");
     }
   }
 
@@ -323,11 +366,25 @@ class ConnectionState extends State<Connection> {
         _saveConnections();
       }
       
+      final specificConnectionId = connection['id'];
+      
       setState(() {
         isConnected = true;
-        _activeConnectionId = ''; 
-        _activeConnectionId = connection['id'];
+        _activeConnectionId = '';
+        _activeConnectionId = specificConnectionId;
+        
         connectionStatus = 'Connected to ${connection['name']}, (${connection['host']})';
+      });
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            if (_activeConnectionId != specificConnectionId) {
+              print("Correcting active connection ID: $_activeConnectionId -> $specificConnectionId");
+              _activeConnectionId = specificConnectionId;
+            }
+          });
+        }
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -844,12 +901,39 @@ class ConnectionState extends State<Connection> {
 
   @override
   Widget build(BuildContext context) {
-    if (isConnected && _activeConnectionId.isEmpty && connections.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        setState(() {
-          _updateActiveConnectionFromStatus();
+    if (isConnected && connections.isNotEmpty) {
+      bool hasMultipleActive = false;
+      String foundActiveId = '';
+      
+      for (var connection in connections) {
+        if (_activeConnectionId == connection['id']) {
+          if (foundActiveId.isEmpty) {
+            foundActiveId = connection['id'];
+          } else {
+            hasMultipleActive = true;
+            break;
+          }
+        }
+      }
+      
+      if (hasMultipleActive) {
+        print("Error: Multiple active connections detected - fixing...");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _activeConnectionId = foundActiveId.isNotEmpty ? foundActiveId : '';
+              _updateActiveConnectionFromStatus();
+            });
+          }
         });
-      });
+      } else if (_activeConnectionId.isEmpty) {
+        print("Connected but no active connection ID set - attempting to update from status");
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _updateActiveConnectionFromStatus();
+          });
+        });
+      }
     }
     
     final filteredConnections = _getFilteredConnections();

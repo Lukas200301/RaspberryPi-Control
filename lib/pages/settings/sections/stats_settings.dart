@@ -40,61 +40,116 @@ class StatsSettings extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Drag to reorder. Toggle switches to show/hide widgets.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Use the drag handles to reorder widgets. Toggle switches to show/hide.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 
-                SizedBox(
-                  height: 300, 
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  height: 320,
                   child: ReorderableListView.builder(
-                    shrinkWrap: true,
+                    buildDefaultDragHandles: false, 
+                    padding: const EdgeInsets.all(8),
                     itemCount: dashboardWidgets.length,
+                    onReorder: onReorder,
+                    proxyDecorator: (child, index, animation) {
+                      return Material(
+                        elevation: 4,
+                        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(10),
+                        child: child,
+                      );
+                    },
                     itemBuilder: (context, index) {
                       final widget = dashboardWidgets[index];
                       return Card(
                         key: Key(widget.id),
-                        elevation: 1, 
-                        margin: const EdgeInsets.only(bottom: 4), 
-                        child: ListTile(
-                          dense: true, 
-                          leading: Icon(widget.icon, size: 20), 
-                          title: Text(widget.name),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 8),
+                        color: Theme.of(context).colorScheme.surface,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                          child: Row(
                             children: [
-                              Switch(
-                                value: widget.visible,
-                                onChanged: (value) {
-                                  onVisibilityChanged(widget, value);
-                                },
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.drag_handle,
+                                    color: Colors.grey,
+                                    size: 20,
+                                  ),
+                                ),
                               ),
-                              const Icon(Icons.drag_handle, size: 18),
+                              
+                              Icon(widget.icon, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  widget.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              
+                              Container(
+                                height: 40,
+                                alignment: Alignment.centerRight,
+                                child: Switch(
+                                  value: widget.visible,
+                                  onChanged: (value) => onVisibilityChanged(widget, value),
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       );
                     },
-                    onReorder: onReorder,
                   ),
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 
-                OutlinedButton.icon(
-                  onPressed: resetDashboardWidgets,
-                  icon: const Icon(Icons.restore, size: 16), 
-                  label: const Text('Reset to Default'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(36), 
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: resetDashboardWidgets,
+                    icon: const Icon(Icons.restore, size: 16), 
+                    label: const Text(
+                      'Reset to Default',
+                      overflow: TextOverflow.visible,
+                      softWrap: false,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(36),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                   ),
                 ),
               ],
