@@ -78,11 +78,25 @@ class ConnectionState extends State<Connection> {
   }
 
   void _updateActiveConnectionFromStatus() {
-    if (connectionStatus.contains('(') && connectionStatus.contains(')')) {
+    if (connectionStatus.contains('Connected to ') && connectionStatus.contains('(') && connectionStatus.contains(')')) {
+      final nameStart = connectionStatus.indexOf('Connected to ') + 'Connected to '.length;
+      final nameEnd = connectionStatus.lastIndexOf(', (');
+      
       final hostStart = connectionStatus.indexOf('(') + 1;
       final hostEnd = connectionStatus.indexOf(')');
-      if (hostStart < hostEnd) {
+      
+      if (nameStart < nameEnd && hostStart < hostEnd) {
+        final activeName = connectionStatus.substring(nameStart, nameEnd).trim();
         final activeHost = connectionStatus.substring(hostStart, hostEnd).trim();
+        
+        _activeConnectionId = '';
+        
+        for (var connection in connections) {
+          if (connection['name'] == activeName && connection['host'] == activeHost) {
+            _activeConnectionId = connection['id'];
+            return;
+          }
+        }
         
         for (var connection in connections) {
           if (connection['host'] == activeHost) {
@@ -90,14 +104,9 @@ class ConnectionState extends State<Connection> {
             return;
           }
         }
-        
-        for (var connection in connections) {
-          if (connection['host'].toString().trim() == activeHost) {
-            _activeConnectionId = connection['id'];
-            return;
-          }
-        }
       }
+    } else {
+      _activeConnectionId = '';
     }
   }
 
@@ -316,6 +325,7 @@ class ConnectionState extends State<Connection> {
       
       setState(() {
         isConnected = true;
+        _activeConnectionId = ''; 
         _activeConnectionId = connection['id'];
         connectionStatus = 'Connected to ${connection['name']}, (${connection['host']})';
       });

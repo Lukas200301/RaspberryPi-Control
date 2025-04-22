@@ -168,6 +168,12 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
       setState(() {
         _fontSize = newFontSize;
       });
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _calculateAndApplyTerminalSize();
+        }
+      });
     }
   }
 
@@ -182,7 +188,7 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
 
     await _loadTerminalSettings();
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
         _checkForSettingsChanges();
       }

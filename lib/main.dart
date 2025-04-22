@@ -4,6 +4,7 @@ import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'services/ssh_service.dart';
 import 'pages/connection/connection.dart';
 import 'pages/terminal/terminal.dart';
@@ -21,35 +22,46 @@ class BackgroundService {
   final _platform = const MethodChannel('com.lukas200301.raspberrypi_control');
 
   BackgroundService._internal();
-
   Future<void> initialize() async {
     if (_initialized) return;
     
     try {
-      const androidConfig = FlutterBackgroundAndroidConfig(
-        notificationTitle: "Raspberry Pi Control",
-        notificationText: "Running in background",
-        notificationImportance: AndroidNotificationImportance.Default,
-        notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
-        enableWifiLock: true,
-      );
-
-      await _platform.invokeMethod('requestNotificationPermissions');
-      
-      final initialized = await FlutterBackground.initialize(androidConfig: androidConfig);
-      if (!initialized) {
-        throw Exception('Failed to initialize FlutterBackground');
-      }
-
-      _initialized = true;
-      
-      if (!await FlutterBackground.hasPermissions) {
-        final intent = AndroidIntent(
-          action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-          data: 'package:com.lukas200301.raspberrypi_control',
+      if (Platform.isAndroid) {
+        const androidConfig = FlutterBackgroundAndroidConfig(
+          notificationTitle: "Raspberry Pi Control",
+          notificationText: "Running in background",
+          notificationImportance: AndroidNotificationImportance.Default,
+          notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
+          enableWifiLock: true,
         );
-        await intent.launch();
+        
+        try {
+          await _platform.invokeMethod('requestNotificationPermissions');
+        } catch (e) {
+          print('Failed to request notifications permission: $e');
+        }
+        
+        try {
+          final initialized = await FlutterBackground.initialize(androidConfig: androidConfig);
+          if (!initialized) {
+            throw Exception('Failed to initialize FlutterBackground');
+          }
+          
+          if (!await FlutterBackground.hasPermissions) {
+            final intent = AndroidIntent(
+              action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+              data: 'package:com.lukas200301.raspberrypi_control',
+            );
+            await intent.launch();
+          }
+        } catch (e) {
+          print('Failed to initialize FlutterBackground: $e');
+        }
+      } else {
+        print('Background services not supported on this platform, skipping initialization');
       }
+      
+      _initialized = true;
     } catch (e) {
       print('Failed to initialize background service: $e');
       _initialized = false;
@@ -63,7 +75,6 @@ class BackgroundService {
       state._logOff(); 
     }
   }
-
   Future<void> enableBackground() async {
     print("Enabling background service...");
     
@@ -71,39 +82,47 @@ class BackgroundService {
       await initialize();
     }
 
-    try {
-      if (await FlutterBackground.hasPermissions) {
-        await FlutterBackground.enableBackgroundExecution();
-        _isEnabled = true;
-        print("Background service enabled");
+    if (Platform.isAndroid) {
+      try {
+        if (await FlutterBackground.hasPermissions) {
+          await FlutterBackground.enableBackgroundExecution();
+          _isEnabled = true;
+          print("Background service enabled");
 
-        await Future.delayed(const Duration(milliseconds: 500));
-        await _platform.invokeMethod('updateNotification', {
-          'title': 'Raspberry Pi Control',
-          'text': 'Connected and running in background'
-        });
-      } else {
-        print("No background permissions");
-        throw Exception('Background permissions not granted');
+          await Future.delayed(const Duration(milliseconds: 500));
+          await _platform.invokeMethod('updateNotification', {
+            'title': 'Raspberry Pi Control',
+            'text': 'Connected and running in background'
+          });
+        } else {
+          print("No background permissions");
+          throw Exception('Background permissions not granted');
+        }
+      } catch (e) {
+        print("Error in enableBackground: $e");
       }
-    } catch (e) {
-      print("Error in enableBackground: $e");
-      throw e;
+    } else {
+      print("Background services not supported on this platform, skipping");
+      _isEnabled = false;
     }
   }
-
   Future<void> disableBackground() async {
     if (_isEnabled) {
       _isEnabled = false;
-      try {
-        await _platform.invokeMethod('updateNotification', {
-          'title': '',
-          'text': '',
-          'clear': true
-        });
-        await FlutterBackground.disableBackgroundExecution();
-      } catch (e) {
-        print('Error disabling background service: $e');
+      
+      if (Platform.isAndroid) {
+        try {
+          await _platform.invokeMethod('updateNotification', {
+            'title': '',
+            'text': '',
+            'clear': true
+          });
+          await FlutterBackground.disableBackgroundExecution();
+        } catch (e) {
+          print('Error disabling background service: $e');
+        }
+      } else {
+        print('Background services not supported on this platform, nothing to disable');
       }
     }
   }
@@ -122,12 +141,13 @@ void main() async {
   } catch (e) {
     print('Warning: Background service initialization failed, continuing without background support');
   }
-
   const platform = MethodChannel('com.lukas200301.raspberrypi_control');
-  try {
-    await platform.invokeMethod('requestNotificationPermissions');
-  } catch (e) {
-    print('Failed to request notifications permission: $e');
+  if (Platform.isAndroid) {
+    try {
+      await platform.invokeMethod('requestNotificationPermissions');
+    } catch (e) {
+      print('Failed to request notifications permission: $e');
+    }
   }
 
   runApp(MyApp(isDarkMode: isDarkMode));
@@ -438,100 +458,226 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
     final theme = Theme.of(context);
     
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.developer_board,
-                      size: 40,
-                      color: theme.colorScheme.onPrimary,
+      elevation: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+        ),
+        child: Column(
+          children: [
+            Container(
+              height: 170,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withBlue(
+                      (theme.colorScheme.primary.blue + 30).clamp(0, 255)
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Raspberry Pi\nControl',
-                      style: TextStyle(
-                        color: theme.colorScheme.onPrimary,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomRight: Radius.circular(24),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              alignment: Alignment.bottomLeft,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Image.asset(
+                            'assets/icon/ic_launcher.png', 
+                            width: 32,
+                            height: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          'Raspberry Pi\nControl',
+                          style: TextStyle(
+                            color: theme.colorScheme.onPrimary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isConnected 
+                            ? Colors.green.withOpacity(0.2) 
+                            : Colors.red.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isConnected ? Icons.link : Icons.link_off,
+                            size: 14,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            connectionStatus,
+                            style: TextStyle(
+                              color: theme.colorScheme.onPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const Spacer(),
-                Text(
-                  connectionStatus,
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary.withOpacity(0.9),
-                    fontSize: 12,
+              ),
+            ),
+            
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  const SizedBox(height: 8),
+                  
+                  for (int index = 0; index < _pageNames.length; index++)
+                    _buildDrawerItem(index, isConnected, theme),
+                  
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Divider(
+                      color: theme.dividerColor.withOpacity(0.5),
+                      thickness: 1,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                    child: Text(
+                      'Preferences',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 12,
+                        color: theme.colorScheme.primary.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                  
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(widget.isDarkMode ? 'Light Theme' : 'Dark Theme'),
+                    onTap: () => _handleThemeToggle(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  ),
+                  
+                  if (isConnected)
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.logout,
+                          color: Colors.red.shade700,
+                          size: 20,
+                        ),
+                      ),
+                      title: const Text('Disconnect'),
+                      onTap: () => _handleDisconnect(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    ),
+                ],
+              ),
             ),
-          ),
-          
-          for (int index = 0; index < _pageNames.length; index++)
-            _buildDrawerItem(index, isConnected, theme),
-            
-          const Divider(),
-          
-          ListTile(
-            leading: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            title: Text(widget.isDarkMode ? 'Light Theme' : 'Dark Theme'),
-            onTap: () => _handleThemeToggle(),
-          ),
-          
-          if (isConnected)
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Disconnect'),
-              onTap: () => _handleDisconnect(),
-            ),
-            
-          const SizedBox(height: 8),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDrawerItem(int index, bool isConnected, ThemeData theme) {
     final bool isDisabled = !isConnected && index != 2 && index != 4;
+    final bool isSelected = _currentPageIndex == index;
+    final primaryColor = theme.colorScheme.primary; 
     
-    return ListTile(
-      leading: Icon(
-        _pageIcons[index],
-        color: isDisabled 
-            ? theme.disabledColor 
-            : (_currentPageIndex == index 
-                ? theme.colorScheme.primary 
-                : null),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? primaryColor.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
       ),
-      title: Text(
-        _pageNames[index],
-        style: TextStyle(
-          color: isDisabled 
-              ? theme.disabledColor 
-              : (_currentPageIndex == index 
-                  ? theme.colorScheme.primary 
-                  : null),
-          fontWeight: _currentPageIndex == index 
-              ? FontWeight.bold 
-              : FontWeight.normal,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? primaryColor 
+                : (isDisabled 
+                    ? theme.disabledColor.withOpacity(0.1) 
+                    : theme.colorScheme.surface),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            _pageIcons[index],
+            color: isDisabled 
+                ? theme.disabledColor 
+                : (isSelected 
+                    ? Colors.white 
+                    : theme.iconTheme.color),
+            size: 20,
+          ),
+        ),
+        title: Text(
+          _pageNames[index],
+          style: TextStyle(
+            color: isDisabled 
+                ? theme.disabledColor 
+                : (isSelected 
+                    ? primaryColor 
+                    : theme.textTheme.bodyLarge?.color),
+            fontWeight: isSelected 
+                ? FontWeight.w600 
+                : FontWeight.normal,
+          ),
+        ),
+        onTap: isDisabled ? null : () => _safeNavigateToPage(index),
+        selected: isSelected,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
-      onTap: isDisabled ? null : () => _safeNavigateToPage(index),
-      selected: _currentPageIndex == index,
     );
   }
 
@@ -540,7 +686,21 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
     
     Future.microtask(() {
       if (mounted) {
-        _navigateToPage(index);
+        if (sshService == null || !sshService!.isConnected()) {
+          if (index == 2 || index == 4) {
+            _navigateToPage(index);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Please connect to a Raspberry Pi first'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            _navigateToPage(2);
+          }
+        } else {
+          _navigateToPage(index);
+        }
       }
     });
   }
@@ -750,7 +910,9 @@ class _MainAppScreenState extends State<MainAppScreen> with WidgetsBindingObserv
         },
         child: PageView(
           controller: _pageController,
-          physics: const ClampingScrollPhysics(), 
+          physics: isReallyConnected 
+              ? const ClampingScrollPhysics() 
+              : const NeverScrollableScrollPhysics(),
           onPageChanged: _handlePageChange,
           children: [
             sshService != null && sshService!.isConnected()

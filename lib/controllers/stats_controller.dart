@@ -26,12 +26,17 @@ class StatsController {
   final List<FlSpot> pingLatencyHistory = [];
   final List<FlSpot> wifiSignalHistory = [];
 
+  List<Map<String, dynamic>> services = [];
+  DateTime _lastServicesFetchTime = DateTime(1970);
+  static const Duration SERVICES_FETCH_INTERVAL = Duration(minutes: 1);
+
   double timeIndex = 0;
   Map<String, dynamic> currentStats = {};
   final _statsStreamController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get statsStream => _statsStreamController.stream;
 
   bool _isMonitoring = false;
+  bool get isMonitoring => _isMonitoring;
   bool _paused = false;
   static const Duration STATS_INTERVAL = Duration(seconds: 3);
   
@@ -62,6 +67,7 @@ class StatsController {
     });
     
     if (sshService.isConnected()) {
+      _fetchServices(sshService);
       _startMonitoringTimer(sshService);
     }
   }
@@ -105,7 +111,15 @@ class StatsController {
       _failedFetchCount = 0; 
       timeIndex += 1;
 
+      final now = DateTime.now();
+      if (now.difference(_lastServicesFetchTime) >= SERVICES_FETCH_INTERVAL) {
+        await _fetchServices(sshService);
+      }
+
       _updateChartData(stats);
+      
+      stats['services'] = services;
+      
       currentStats = stats;
       _statsStreamController.add(stats);
     } catch (e) {
@@ -117,6 +131,35 @@ class StatsController {
         print("Too many failed fetches, pausing monitoring");
         _failedFetchCount = 0;
       }
+    }
+  }
+
+  Future<void> _fetchServices(SSHService sshService) async {
+    if (!sshService.isConnected()) return;
+    
+    try {
+      final fetchedServices = await sshService.getServices();
+      services = fetchedServices.map((service) => 
+        Map<String, dynamic>.from(service)
+      ).toList();
+      _lastServicesFetchTime = DateTime.now();
+      print("Services updated: ${services.length}");
+    } catch (e) {
+      print("Error fetching services: $e");
+    }
+  }
+
+  Future<void> refreshServices(SSHService sshService) async {
+    if (!sshService.isConnected()) return;
+    
+    try {
+      await _fetchServices(sshService);
+      if (currentStats.isNotEmpty) {
+        currentStats['services'] = services;
+        _statsStreamController.add(currentStats);
+      }
+    } catch (e) {
+      print("Error refreshing services: $e");
     }
   }
 

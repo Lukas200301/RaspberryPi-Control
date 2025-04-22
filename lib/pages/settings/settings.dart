@@ -6,7 +6,14 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/update_service.dart'; 
 import 'dart:io'; 
-import 'dart:async'; 
+import 'dart:async';
+import 'sections/terminal_settings.dart';
+import 'sections/stats_settings.dart';
+import 'sections/connection_settings.dart';
+import 'sections/file_explorer_settings.dart';
+import 'sections/data_management.dart';
+import 'sections/about_section.dart';
+import 'models/dashboard_widget_info.dart';
 
 class Settings extends StatefulWidget {
   final bool isDarkMode;
@@ -263,47 +270,6 @@ class _SettingsState extends State<Settings> {
         );
       }
     }
-  }
-
-  String _cleanMarkdown(String markdown) {
-    String text = markdown;
-    
-    text = text.replaceAllMapped(RegExp(r'#{1,6}\s+(.+?)$', multiLine: true), (match) {
-      return '\n${match.group(1)}\n';
-    });
-    
-    text = text.replaceAllMapped(RegExp(r'^(\s*[-*+]|\s*\d+\.)\s+(.+?)$', multiLine: true), (match) {
-      return '• ${match.group(2)}\n';
-    });
-    
-    text = text.replaceAllMapped(RegExp(r'\*\*(.+?)\*\*'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAllMapped(RegExp(r'__(.+?)__'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAllMapped(RegExp(r'\*(.+?)\*'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAllMapped(RegExp(r'_(.+?)_'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAllMapped(RegExp(r'\[([^\]]+)\]\([^\)]+\)'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAllMapped(RegExp(r'```(?:\w+)?\n(.*?)```', dotAll: true), (match) {
-      return '\n${match.group(1)}\n';
-    });
-    text = text.replaceAllMapped(RegExp(r'`([^`]+)`'), (match) {
-      return match.group(1) ?? '';
-    });
-    text = text.replaceAll(RegExp(r'^(---|\*\*\*|___)$', multiLine: true), '\n—————\n');
-    text = text.replaceAllMapped(RegExp(r'^>\s+(.+?)$', multiLine: true), (match) {
-      return '″${match.group(1)}″\n';
-    });
-    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
-    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    return text.trim();
   }
 
   void _clearDefaultDirectory() {
@@ -642,535 +608,129 @@ class _SettingsState extends State<Settings> {
     
     return Scaffold(
       body: ListView(
-        controller: Settings.scrollController, 
+        controller: Settings.scrollController,
         padding: EdgeInsets.fromLTRB(16, topPadding, 16, 16),
         children: [
-          _buildSectionHeader('Terminal Settings'),
-          ListTile(
-            leading: const Icon(Icons.text_fields),
-            title: const Text('Terminal Font Size'),
-            subtitle: const Text('Adjust text size for better readability in terminal'),
-            trailing: SizedBox(
-              width: 70,
-              child: TextFormField(
-                initialValue: _terminalFontSize,
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (value) {
-                  setState(() {
-                    _terminalFontSize = value;
-                  });
-                  _saveSettings();
-                },
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-          
-          _buildSectionHeader('Stats Settings'),
-          Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Stats Dashboard',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Drag to reorder. Toggle switches to show/hide widgets.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  SizedBox(
-                    height: 300, 
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _dashboardWidgets.length,
-                      itemBuilder: (context, index) {
-                        final widget = _dashboardWidgets[index];
-                        return Card(
-                          key: Key(widget.id),
-                          elevation: 1, 
-                          margin: const EdgeInsets.only(bottom: 4), 
-                          child: ListTile(
-                            dense: true, 
-                            leading: Icon(widget.icon, size: 20), 
-                            title: Text(widget.name),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Switch(
-                                  value: widget.visible,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      widget.visible = value;
-                                    });
-                                    _saveDashboardWidgetSettings();
-                                  },
-                                ),
-                                const Icon(Icons.drag_handle, size: 18), 
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) {
-                            newIndex -= 1;
-                          }
-                          final item = _dashboardWidgets.removeAt(oldIndex);
-                          _dashboardWidgets.insert(newIndex, item);
-                        });
-                        _saveDashboardWidgetSettings();
-                      },
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  OutlinedButton.icon(
-                    onPressed: _resetDashboardWidgets,
-                    icon: const Icon(Icons.restore, size: 16), 
-                    label: const Text('Reset to Default'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(36), 
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          TerminalSettings(
+            terminalFontSize: _terminalFontSize,
+            onFontSizeChanged: (value) {
+              setState(() {
+                _terminalFontSize = value;
+              });
+            },
+            saveSettings: _saveSettings,
           ),
           
-          const SizedBox(height: 16),
-          
-          _buildSectionHeader('Connection Settings'),
-          ListTile(
-            leading: const Icon(Icons.numbers),
-            title: const Text('Default SSH Port'),
-            subtitle: const Text('Default port used when adding new connections'),
-            trailing: SizedBox(
-              width: 70,
-              child: TextFormField(
-                initialValue: _defaultPort,
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (value) {
-                  setState(() {
-                    _defaultPort = value.isEmpty ? '22' : value;
-                  });
-                  _saveSettings();
-                },
-              ),
-            ),
+          StatsSettings(
+            dashboardWidgets: _dashboardWidgets,
+            onReorder: (oldIndex, newIndex) {
+              setState(() {
+                if (newIndex > oldIndex) {
+                  newIndex -= 1;
+                }
+                final item = _dashboardWidgets.removeAt(oldIndex);
+                _dashboardWidgets.insert(newIndex, item);
+              });
+              _saveDashboardWidgetSettings();
+            },
+            onVisibilityChanged: (widget, value) {
+              setState(() {
+                widget.visible = value;
+              });
+              _saveDashboardWidgetSettings();
+            },
+            resetDashboardWidgets: _resetDashboardWidgets,
           ),
-          SwitchListTile(
-            secondary: const Icon(Icons.sync),
-            title: const Text('Auto-Reconnect'),
-            subtitle: const Text('Automatically retry connection when disconnected'),
-            value: _autoReconnect,
-            onChanged: (value) {
+          
+          ConnectionSettings(
+            defaultPort: _defaultPort,
+            onDefaultPortChanged: (value) {
+              setState(() {
+                _defaultPort = value;
+              });
+            },
+            autoReconnect: _autoReconnect,
+            onAutoReconnectChanged: (value) {
               setState(() {
                 _autoReconnect = value;
               });
-              _saveSettings();
             },
-          ),
-          
-          if (_autoReconnect) ...[
-            ListTile(
-              leading: const Icon(Icons.replay),
-              title: const Text('Reconnect Attempts'),
-              subtitle: const Text('Maximum number of times to try reconnecting'),
-              trailing: DropdownButton<int>(
-                value: _autoReconnectAttempts,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _autoReconnectAttempts = value;
-                    });
-                    _saveSettings();
-                  }
-                },
-                items: [1, 2, 3, 5, 10].map((attempts) {
-                  return DropdownMenuItem<int>(
-                    value: attempts,
-                    child: Text('$attempts'),
-                  );
-                }).toList(),
-              ),
-            ),
-            
-            ListTile(
-              leading: const Icon(Icons.timelapse),
-              title: const Text('Connection Retry Delay'),
-              subtitle: const Text('Time to wait between reconnection attempts'),
-              trailing: DropdownButton<int>(
-                value: _connectionRetryDelay,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _connectionRetryDelay = value;
-                    });
-                    _saveSettings();
-                  }
-                },
-                items: [2, 5, 10, 15, 30].map((delay) {
-                  return DropdownMenuItem<int>(
-                    value: delay,
-                    child: Text('$delay sec'),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-          
-          ListTile(
-            leading: const Icon(Icons.timer),
-            title: const Text('Connection Timeout'),
-            subtitle: const Text('Maximum time allowed for SSH connection to establish'),
-            trailing: DropdownButton<int>(
-              value: _connectionTimeout,
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _connectionTimeout = value;
-                  });
-                  _saveSettings();
-                }
-              },
-              items: [10, 20, 30, 45, 60, 90, 120].map((timeout) {
-                return DropdownMenuItem<int>(
-                  value: timeout,
-                  child: Text('$timeout sec'),
-                );
-              }).toList(),
-            ),
-          ),
-          
-          ListTile(
-            leading: const Icon(Icons.timer_outlined),
-            title: const Text('SSH Keep-Alive Interval'),
-            subtitle: const Text('Prevent connection drops by sending periodic signals'),
-            trailing: SizedBox(
-              width: 70,
-              child: TextFormField(
-                initialValue: _sshKeepAliveInterval,
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-                  border: OutlineInputBorder(),
-                  suffixText: 's',
-                ),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                onChanged: (value) {
-                  _sshKeepAliveInterval = value;
-                },
-                onEditingComplete: _saveSettings,
-              ),
-            ),
-          ),
-                
-          ListTile(
-            leading: const Icon(Icons.timer_off),
-            title: const Text('Security Timeout'),
-            subtitle: const Text('Automatically disconnect after inactivity'),
-            trailing: DropdownButton<int>(
-              value: _securityTimeout,
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _securityTimeout = value;
-                  });
-                  _saveSettings();
-                }
-              },
-              items: [0, 5, 10, 15, 30, 60].map((timeout) {
-                return DropdownMenuItem<int>(
-                  value: timeout,
-                  child: Text(timeout == 0 ? 'Disabled' : '$timeout min'),
-                );
-              }).toList(),
-            ),
-          ),
-          
-          SwitchListTile(
-            secondary: const Icon(Icons.compress),
-            title: const Text('SSH Compression'),
-            subtitle: const Text('Save data usage on slow networks (may reduce performance)'),
-            value: _sshCompression,
-            onChanged: (value) {
+            autoReconnectAttempts: _autoReconnectAttempts,
+            onAutoReconnectAttemptsChanged: (value) {
+              setState(() {
+                _autoReconnectAttempts = value!;
+              });
+            },
+            connectionRetryDelay: _connectionRetryDelay,
+            onConnectionRetryDelayChanged: (value) {
+              setState(() {
+                _connectionRetryDelay = value!;
+              });
+            },
+            connectionTimeout: _connectionTimeout,
+            onConnectionTimeoutChanged: (value) {
+              setState(() {
+                _connectionTimeout = value!;
+              });
+            },
+            sshKeepAliveInterval: _sshKeepAliveInterval,
+            onSshKeepAliveIntervalChanged: (value) {
+              setState(() {
+                _sshKeepAliveInterval = value;
+              });
+            },
+            securityTimeout: _securityTimeout,
+            onSecurityTimeoutChanged: (value) {
+              setState(() {
+                _securityTimeout = value!;
+              });
+            },
+            sshCompression: _sshCompression,
+            onSshCompressionChanged: (value) {
               setState(() {
                 _sshCompression = value;
               });
-              _saveSettings();
             },
+            saveSettings: _saveSettings,
           ),
-
-          const SizedBox(height: 16),
-          _buildSectionHeader('File Explorer Settings'),
           
-          SwitchListTile(
-            secondary: const Icon(Icons.visibility),
-            title: const Text('Show Hidden Files'),
-            subtitle: const Text('Display files starting with a dot (.)'),
-            value: _showHiddenFiles,
-            onChanged: (value) {
+          FileExplorerSettings(
+            showHiddenFiles: _showHiddenFiles,
+            onShowHiddenFilesChanged: (value) {
               setState(() {
                 _showHiddenFiles = value;
               });
-              _saveSettings();
             },
-          ),
-          
-          SwitchListTile(
-            secondary: const Icon(Icons.warning),
-            title: const Text('Confirm File Overwrite'),
-            subtitle: const Text('Ask before replacing existing files'),
-            value: _confirmBeforeOverwrite,
-            onChanged: (value) {
+            confirmBeforeOverwrite: _confirmBeforeOverwrite,
+            onConfirmBeforeOverwriteChanged: (value) {
               setState(() {
                 _confirmBeforeOverwrite = value;
               });
-              _saveSettings();
             },
+            defaultDownloadDirectory: _defaultDownloadDirectory,
+            pickDefaultDirectory: _pickDefaultDirectory,
+            clearDefaultDirectory: _clearDefaultDirectory,
+            saveSettings: _saveSettings,
           ),
           
-          ListTile(
-            leading: const Icon(Icons.folder),
-            title: const Text('Default Download Directory'),
-            subtitle: Text(_defaultDownloadDirectory.isEmpty 
-                ? 'Not set (will ask each time)' 
-                : _defaultDownloadDirectory),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_defaultDownloadDirectory.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _clearDefaultDirectory,
-                    tooltip: 'Clear default directory',
-                  ),
-                IconButton(
-                  icon: const Icon(Icons.folder_open),
-                  onPressed: _pickDefaultDirectory,
-                  tooltip: 'Select default directory',
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-          
-          _buildSectionHeader('Data Management'),
-          ListTile(
-            leading: const Icon(Icons.delete_forever, color: Colors.red),
-            title: const Text('Clear App Data'),
-            subtitle: const Text('Reset all settings and delete saved connections (cannot be undone)'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: _clearAppData,
+          DataManagementSettings(
+            clearAppData: _clearAppData,
           ),
           
-          const SizedBox(height: 16),
-          _buildSectionHeader('About'),
-          
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 800),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: _highlightUpdateSection ? [
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                )
-              ] : [],
-            ),
-            padding: _highlightUpdateSection ? const EdgeInsets.all(4) : EdgeInsets.zero,
-            child: Card(
-              key: Settings.updateSectionKey,
-              shape: _highlightUpdateSection ? 
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
-                  ),
-                ) : null,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'App Version',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _appVersion,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _isCheckingForUpdates
-                            ? const CircularProgressIndicator()
-                            : ElevatedButton.icon(
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Check for Updates'),
-                                onPressed: _checkForUpdates,
-                              ),
-                      ],
-                    ),
-                    
-                    if (_updateInfo != null) ...[
-                      const SizedBox(height: 16),
-                      if (_updateInfo!['updateAvailable'] == true) ...[
-                        Text(
-                          'New version available: ${_updateInfo!['latestVersion']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                        
-                        if (_updateInfo!.containsKey('newerReleases') && (_updateInfo!['newerReleases'] as List).length > 1) ...[
-                          Text(
-                            'Contains ${(_updateInfo!['newerReleases'] as List).length} updates since your version',
-                            style: TextStyle(
-                              color: Colors.grey[800],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                        
-                        const SizedBox(height: 8),
-                        if (_updateInfo!['releaseNotes'] != null)
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _cleanMarkdown(_updateInfo!['releaseNotes']),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 16),
-                        if (_isDownloadingUpdate) ...[
-                          LinearProgressIndicator(value: _downloadProgress),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Downloading... ${(_downloadProgress * 100).toStringAsFixed(1)}%',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ] else ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.file_download),
-                                  label: const Text('Download & Install'),
-                                  onPressed: _downloadAndInstallUpdate,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextButton.icon(
-                                  icon: const Icon(Icons.open_in_new),
-                                  label: const Text('Open Release Page'),
-                                  onPressed: _openReleasePage,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ] else ...[
-                        Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(
-                              'You are using the latest version ($_appVersion).',
-                              style: const TextStyle(color: Colors.green),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: const Text('GitHub Repository'),
-            subtitle: const Text('Report issues, view source code, suggest features or contribute code'),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: _launchGitHub,
+          AboutSection(
+            appVersion: _appVersion,
+            isCheckingForUpdates: _isCheckingForUpdates,
+            updateInfo: _updateInfo,
+            isDownloadingUpdate: _isDownloadingUpdate,
+            downloadProgress: _downloadProgress,
+            highlightUpdateSection: _highlightUpdateSection,
+            checkForUpdates: _checkForUpdates,
+            downloadAndInstallUpdate: _downloadAndInstallUpdate,
+            openReleasePage: _openReleasePage,
+            launchGitHub: _launchGitHub,
+            updateSectionKey: Settings.updateSectionKey,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 8, top: 16),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
       ),
     );
   }
@@ -1180,36 +740,5 @@ extension StringExtension on String {
   String capitalize() {
     if (isEmpty) return this;
     return '${this[0].toUpperCase()}${substring(1)}';
-  }
-}
-
-class DashboardWidgetInfo {
-  final String id;
-  final String name;
-  final IconData icon;
-  bool visible;
-  
-  DashboardWidgetInfo({
-    required this.id,
-    required this.name,
-    required this.icon,
-    this.visible = true,
-  });
-
-  static List<DashboardWidgetInfo> getDefaultWidgets() {
-    return [
-      DashboardWidgetInfo(id: 'system_info', name: 'System Info', icon: Icons.info_outline),
-      DashboardWidgetInfo(id: 'service_control', name: 'Service Control', icon: Icons.miscellaneous_services),
-      DashboardWidgetInfo(id: 'hardware_monitor', name: 'Hardware Monitor', icon: Icons.memory),
-      DashboardWidgetInfo(id: 'system_processes', name: 'Processes', icon: Icons.view_list),
-      DashboardWidgetInfo(id: 'disk_usage', name: 'Disk Usage', icon: Icons.storage),
-      DashboardWidgetInfo(id: 'active_connections', name: 'Network Connections', icon: Icons.device_hub),
-      DashboardWidgetInfo(id: 'cpu_chart', name: 'CPU Chart', icon: Icons.speed),
-      DashboardWidgetInfo(id: 'memory_chart', name: 'Memory Chart', icon: Icons.sd_card),
-      DashboardWidgetInfo(id: 'network_ping', name: 'Network Ping', icon: Icons.network_ping),
-      DashboardWidgetInfo(id: 'temperature_chart', name: 'Temperature Chart', icon: Icons.thermostat),
-      DashboardWidgetInfo(id: 'network_chart', name: 'Network Chart', icon: Icons.network_check),
-      DashboardWidgetInfo(id: 'system_logs', name: 'System Logs', icon: Icons.article),
-    ];
   }
 }

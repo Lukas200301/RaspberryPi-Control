@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../service_control_page.dart';
+import '../../../controllers/stats_controller.dart';
 
 class ServiceControlWidget extends StatelessWidget {
-  final List<Map<String, String>> services;
+  final List<Map<String, dynamic>> services;
   final List<Map<String, String>> filteredServices;
   final bool showSearchBar;
   final TextEditingController searchController;
@@ -34,11 +35,11 @@ class ServiceControlWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> convertedServices = 
-      services.map((service) => Map<String, dynamic>.from(service)).toList();
+      StatsController.instance.services;
       
     final List<Map<String, dynamic>> runningServices = convertedServices
       .where((service) {
-        final status = (service['status'] ?? '').toLowerCase();
+        final status = (service['status'] ?? '').toString().toLowerCase();
         return status == 'running' || status == 'active';
       }).toList();
     
@@ -80,12 +81,24 @@ class ServiceControlWidget extends StatelessWidget {
           ),
           
           if (runningServices.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Center(
-                child: Text(
-                  'No running services found',
-                  style: TextStyle(color: Colors.grey),
+                child: Column(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey.shade400, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No running services found',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: onRefresh,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('Refresh Services'),
+                    )
+                  ],
                 ),
               ),
             )
@@ -303,6 +316,7 @@ class ServiceControlWidget extends StatelessWidget {
                             final isDarkMode = brightness == Brightness.dark || 
                                               Theme.of(context).brightness == Brightness.dark;
                             
+
                             return AlertDialog(
                               title: Text('Logs: ${service['name']}'),
                               content: Container(

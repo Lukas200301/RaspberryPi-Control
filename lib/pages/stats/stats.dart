@@ -17,6 +17,7 @@ import 'widgets/network_ping_widget.dart';
 import 'widgets/system_logs_widget.dart';
 import 'widgets/active_connections_widget.dart';
 import '../settings/settings.dart';  
+import '../settings/models/dashboard_widget_info.dart';  
 
 class Stats extends StatefulWidget {
   final SSHService? sshService;
@@ -32,16 +33,20 @@ class Stats extends StatefulWidget {
   StatsState createState() => StatsState();
 }
 
-class StatsState extends State<Stats> with WidgetsBindingObserver {
+class StatsState extends State<Stats> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+  bool _isInitialized = false;
   Timer? _monitoringTimer;
   bool isLoading = true;
   bool isInstallingPackages = false;
   bool packagesInstalled = false;
   bool _showSearchBar = false;
   SharedPreferences? prefs;
-  List<Map<String, String>> services = [];
   String _sortOption = 'Name';
+  
   List<Map<String, String>> filteredServices = [];
+
+  @override
+  bool get wantKeepAlive => true;
 
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
@@ -89,14 +94,14 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       _loadDashboardSettings();
     });
     
-    if (widget.sshService != null) {
+    if (widget.sshService != null && !_isInitialized) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           _connectionSubscription = widget.sshService!.connectionStatus.listen((connected) {
             if (mounted) {
               setState(() {
                 _isConnected = connected;
-                if (connected && !isLoading) {
+                if (connected && !isLoading && !_isInitialized) {
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (mounted) _fetchStats();
                   });
@@ -108,11 +113,15 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       });
       
       _checkRequiredPackages();
+      _isInitialized = true;
     }
     
     _searchController.addListener(_filterServices);
-    _startInitialFetch();
-    _loadDashboardSettings();
+    
+    if (!_isInitialized) {
+      _startInitialFetch();
+      _loadDashboardSettings();
+    }
   }
 
   @override
@@ -135,13 +144,23 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
 
   void _filterServices() {
     if (_searchController.text.isEmpty) {
-      filteredServices = List.from(services);
+      filteredServices = List.from(StatsController.instance.services.map((item) => 
+        Map<String, String>.from(item.map((key, value) => 
+          MapEntry(key, value?.toString() ?? '')
+        ))
+      ));
     } else {
       final query = _searchController.text.toLowerCase();
-      filteredServices = services.where((service) {
-        return service['name']!.toLowerCase().contains(query) ||
-               service['description']!.toLowerCase().contains(query);
-      }).toList();
+      filteredServices = StatsController.instance.services
+        .where((service) {
+          final name = (service['name'] ?? '').toString().toLowerCase();
+          final description = (service['description'] ?? '').toString().toLowerCase();
+          return name.contains(query) || description.contains(query);
+        })
+        .map((item) => Map<String, String>.from(item.map((key, value) => 
+          MapEntry(key, value?.toString() ?? '')
+        )))
+        .toList();
     }
     _sortServices();
   }
@@ -159,13 +178,42 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
     });
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   void _startMonitoring() {
     if (widget.sshService == null) {
       print("Error: SSHService is null. Monitoring cannot start.");
+      return;
+    }
+    
+    if (StatsController.instance.isMonitoring) {
+      print("Stats monitoring is already running, skipping initialization");
+      setState(() {
+        isLoading = false;
+        currentStats = StatsController.instance.currentStats;
+        timeIndex = StatsController.instance.timeIndex;
+        cpuHistory.clear();
+        cpuHistory.addAll(StatsController.instance.cpuHistory);
+        memoryHistory.clear();
+        memoryHistory.addAll(StatsController.instance.memoryHistory);
+        cpuTempHistory.clear();
+        cpuTempHistory.addAll(StatsController.instance.cpuTempHistory);
+        gpuTempHistory.clear();
+        gpuTempHistory.addAll(StatsController.instance.gpuTempHistory);
+        networkInHistory.clear();
+        networkInHistory.addAll(StatsController.instance.networkInHistory);
+        networkOutHistory.clear();
+        networkOutHistory.addAll(StatsController.instance.networkOutHistory);
+        cpuUserHistory.clear();
+        cpuUserHistory.addAll(StatsController.instance.cpuUserHistory);
+        cpuSystemHistory.clear();
+        cpuSystemHistory.addAll(StatsController.instance.cpuSystemHistory);
+        cpuNiceHistory.clear();
+        cpuNiceHistory.addAll(StatsController.instance.cpuNiceHistory);
+        cpuIoWaitHistory.clear();
+        cpuIoWaitHistory.addAll(StatsController.instance.cpuIoWaitHistory);
+        cpuIrqHistory.clear();
+        cpuIrqHistory.addAll(StatsController.instance.cpuIrqHistory);
+        isLoading = false;
+      });
       return;
     }
     
@@ -209,6 +257,54 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to start system monitoring: $e')),
       );
+    }
+  }
+
+  Future<void> _startService(String serviceName) async {
+    if (widget.sshService != null) {
+      try {
+        await widget.sshService!.startService(serviceName);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Service $serviceName started'))
+        );
+        await _refreshServices();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start service: $e'))
+        );
+      }
+    }
+  }
+
+  Future<void> _stopService(String serviceName) async {
+    if (widget.sshService != null) {
+      try {
+        await widget.sshService!.stopService(serviceName);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Service $serviceName stopped'))
+        );
+        await _refreshServices();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to stop service: $e'))
+        );
+      }
+    }
+  }
+
+  Future<void> _restartService(String serviceName) async {
+    if (widget.sshService != null) {
+      try {
+        await widget.sshService!.restartService(serviceName);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Service $serviceName restarted'))
+        );
+        await _refreshServices();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to restart service: $e'))
+        );
+      }
     }
   }
 
@@ -361,7 +457,6 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       await Future.delayed(const Duration(milliseconds: 800)); 
       
       try {
-        await _fetchServices();
         _filterServices(); 
         _sortServices(); 
       } catch (e) {
@@ -370,57 +465,12 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _fetchServices() async {
-    if (widget.sshService == null) {
-      return;
-    }
-
-    try {
-      if (!widget.sshService!.isConnected()) {
-        await widget.sshService!.connect();
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-      final fetchedServices = await widget.sshService!.getServices();
-      if (mounted) {
-        setState(() {
-          services = fetchedServices;
-          _filterServices(); 
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to fetch services: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _startService(String serviceName) async {
-    if (widget.sshService != null) {
-      await widget.sshService!.startService(serviceName);
-      _showMessage('Service $serviceName started');
-    }
-  }
-
-  Future<void> _stopService(String serviceName) async {
-    if (widget.sshService != null) {
-      await widget.sshService!.stopService(serviceName);
-      _showMessage('Service $serviceName stopped');
-    }
-  }
-
-  Future<void> _restartService(String serviceName) async {
-    if (widget.sshService != null) {
-      await widget.sshService!.restartService(serviceName);
-      _showMessage('Service $serviceName restarted');
-    }
-  }
-
   Future<void> _refreshServices() async {
-    await _fetchServices();
-    _filterServices();
-    _sortServices();
+    if (widget.sshService != null) {
+      await StatsController.instance.refreshServices(widget.sshService!);
+      _filterServices();
+      _sortServices();
+    }
   }
 
   Future<String> _getServiceLogs(String serviceName) async {
@@ -443,7 +493,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
     final hiddenWidgetsStr = prefs.getStringList('hiddenDashboardWidgets') ?? [];
     
     final hasSavedSettings = (prefs.getStringList('dashboardWidgetOrder') != null || 
-                            !hiddenWidgetsStr.isEmpty);
+                            hiddenWidgetsStr.isNotEmpty);  
     
     for (final widgetId in hiddenWidgetsStr) {
       visibilityMap[widgetId] = false;
@@ -469,7 +519,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
         );
         
         if (visibilityMap.containsKey(widget.id)) {
-          widget.visible = visibilityMap[widget.id]!;
+          widget.visible = visibilityMap[widget.id]!; 
         }
         
         orderedWidgets.add(widget);
@@ -478,7 +528,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       for (final widget in allWidgets) {
         if (!orderedWidgets.any((w) => w.id == widget.id)) {
           if (visibilityMap.containsKey(widget.id)) {
-            widget.visible = visibilityMap[widget.id]!;
+            widget.visible = visibilityMap[widget.id]!; 
           }
           orderedWidgets.add(widget);
         }
@@ -489,7 +539,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
       widgetsToUse = [...allWidgets]; 
       for (final widget in widgetsToUse) {
         if (visibilityMap.containsKey(widget.id)) {
-          widget.visible = visibilityMap[widget.id]!;
+          widget.visible = visibilityMap[widget.id]!; 
         }
       }
     }
@@ -507,6 +557,8 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); 
+    
     if (isLoading) {
       return const Center(
         child: CircularProgressIndicator(),
@@ -581,7 +633,7 @@ class StatsState extends State<Stats> with WidgetsBindingObserver {
     final Map<String, Widget Function()> widgetBuilders = {
       'system_info': () => SystemInfoWidget(systemInfo: currentStats),
       'service_control': () => ServiceControlWidget(
-        services: services,
+        services: StatsController.instance.services,
         filteredServices: filteredServices,
         showSearchBar: _showSearchBar,
         searchController: _searchController,
