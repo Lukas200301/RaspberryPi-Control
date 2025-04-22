@@ -80,11 +80,17 @@ class UpdateService {
       }
       
       String? downloadUrl;
+      String? windowsDownloadUrl;
+      
       if (latestRelease['assets'] != null && (latestRelease['assets'] as List).isNotEmpty) {
         for (var asset in latestRelease['assets']) {
-          if (asset['name'].toString().toLowerCase().endsWith('.apk')) {
-            downloadUrl = asset['browser_download_url'] as String?;
-            break;
+          final assetName = asset['name'].toString().toLowerCase();
+          final browserDownloadUrl = asset['browser_download_url'] as String?;
+          
+          if (assetName.endsWith('.apk')) {
+            downloadUrl = browserDownloadUrl;
+          } else if (assetName.endsWith('.exe') || assetName.endsWith('.msi')) {
+            windowsDownloadUrl = browserDownloadUrl;
           }
         }
       }
@@ -95,6 +101,7 @@ class UpdateService {
         'updateAvailable': updateAvailable,
         'releaseNotes': combinedNotes.toString().trim(),
         'downloadUrl': downloadUrl,
+        'windowsDownloadUrl': windowsDownloadUrl,
         'releaseUrl': latestRelease['html_url'] as String? ?? _githubReleaseUrl,
         'newerReleases': newerReleases,
       };
@@ -252,6 +259,11 @@ class UpdateService {
   ) async {
     try {
       print('Starting download and install process...');
+      
+      if (Platform.isWindows) {
+        await _downloadAndInstallWindowsUpdate(url, onProgress, onError, onSuccess);
+        return;
+      }
       
       if (Platform.isAndroid) {
         bool storageGranted = await _requestStoragePermission();
@@ -427,6 +439,152 @@ class UpdateService {
       }
     } catch (e) {
       print('Error during update process: $e');
+      onError(e.toString());
+    }
+  }
+  
+  static Future<void> _downloadAndInstallWindowsUpdate(
+    String url,
+    Function(double) onProgress,
+    Function(String) onError,
+    VoidCallback onSuccess,
+  ) async {
+    try {
+      print('Starting Windows update download and installation process...');
+      
+      final Directory tempDir = await getTemporaryDirectory();
+      final String fileName = url.split('/').last;
+      final String fileExtension = fileName.split('.').last.toLowerCase();
+      
+      if (fileExtension != 'exe' && fileExtension != 'msi') {
+        onError('Invalid Windows installer file format. Expected .exe or .msi, got .$fileExtension');
+        return;
+      }
+      
+      final String filePath = '${tempDir.path}\\$fileName';
+      final File file = File(filePath);
+      
+      print('Will download Windows installer to: $filePath');
+      
+      if (file.existsSync()) {
+        try {
+          await file.delete();
+          print('Deleted existing installer file');
+        } catch (e) {
+          print('Failed to delete existing file: $e');
+          onError('Failed to prepare for download: $e');
+          return;
+        }
+      }
+      
+      try {
+        if (!tempDir.existsSync()) {
+          tempDir.createSync(recursive: true);
+        }
+      } catch (e) {
+        print('Failed to create temporary directory: $e');
+        onError('Failed to create download directory: $e');
+        return;
+      }
+      
+      print('Starting Windows installer download...');
+      final client = http.Client();
+      
+      try {
+        final response = await client.send(http.Request('GET', Uri.parse(url)));
+        
+        if (response.statusCode != 200) {
+          onError('Failed to download update: HTTP ${response.statusCode}');
+          client.close();
+          return;
+        }
+        
+        final contentLength = response.contentLength ?? 0;
+        int totalBytesDownloaded = 0;
+        
+        final fileStream = file.openWrite();
+        
+        await response.stream.forEach((data) {
+          fileStream.add(data);
+          totalBytesDownloaded += data.length;
+          
+          if (contentLength > 0) {
+            final progress = totalBytesDownloaded / contentLength;
+            onProgress(progress);
+          }
+        });
+        
+        await fileStream.flush();
+        await fileStream.close();
+        print('Download completed successfully: ${file.path}');
+      } catch (e) {
+        print('Error during download: $e');
+        onError('Download error: $e');
+        client.close();
+        return;
+      } finally {
+        client.close();
+      }
+      
+      if (!file.existsSync()) {
+        onError('Downloaded file not found');
+        return;
+      }
+      
+      if (file.lengthSync() == 0) {
+        onError('Downloaded file is empty');
+        return;
+      }
+      
+      print('Installer downloaded to: ${file.path}');
+      print('File exists: ${file.existsSync()}');
+      print('File size: ${file.lengthSync()} bytes');
+      
+      try {
+        print('Launching Windows installer: ${file.path}');
+        
+        final ProcessResult result = await Process.run(
+          file.path,
+          [], 
+          runInShell: true,
+        );
+        
+        if (result.exitCode != 0) {
+          print('Installer non-zero exit code: ${result.exitCode}');
+          print('Installer stderr: ${result.stderr}');
+          
+          onSuccess();
+        } else {
+          print('Installer launched successfully');
+          onSuccess();
+        }
+      } catch (e) {
+        print('Error launching installer: $e');
+        
+        try {
+          final Uri fileUri = Uri.file(file.path);
+          if (await launchUrl(fileUri)) {
+            print('Launched installer via URL protocol');
+            onSuccess();
+          } else {
+            throw Exception('Failed to launch via URL protocol');
+          }
+        } catch (urlError) {
+          print('Error launching via URL: $urlError');
+          onError('Failed to launch installer. Please try downloading it manually.');
+          
+          try {
+            await launchUrl(
+              Uri.parse(_githubReleaseUrl),
+              mode: LaunchMode.externalApplication
+            );
+          } catch (e) {
+            print('Failed to open release page: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error during Windows update process: $e');
       onError(e.toString());
     }
   }

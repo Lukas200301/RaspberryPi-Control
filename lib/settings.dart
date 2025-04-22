@@ -373,20 +373,36 @@ class _SettingsState extends State<Settings> {
       }
     }
   }
-  
-  Future<void> _downloadAndInstallUpdate() async {
-    if (_updateInfo == null || _updateInfo!['downloadUrl'] == null) {
+    Future<void> _downloadAndInstallUpdate() async {
+    if (_updateInfo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No download URL available. Opening release page instead.'),
+          content: Text('Update information not available. Opening release page instead.'),
           backgroundColor: Colors.orange,
         ),
       );
       _openReleasePage();
       return;
     }
+
+    String? downloadUrl;
     
-    final downloadUrl = _updateInfo!['downloadUrl'] as String;
+    if (Platform.isWindows) {
+      downloadUrl = _updateInfo!['windowsDownloadUrl'] as String?;
+    } else if (Platform.isAndroid) {
+      downloadUrl = _updateInfo!['downloadUrl'] as String?;
+    }
+    
+    if (downloadUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No download URL available for ${Platform.isWindows ? 'Windows' : Platform.isAndroid ? 'Android' : 'this platform'}. Opening release page instead.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _openReleasePage();
+      return;
+    }
     
     setState(() {
       _isDownloadingUpdate = true;
