@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/update_service.dart'; 
+import '../../services/in_app_updater.dart';
+import 'widgets/update_progress_dialog.dart';
 import 'dart:io'; 
 import 'dart:async';
 import 'sections/terminal_settings.dart';
@@ -306,13 +308,12 @@ class _SettingsState extends State<Settings> {
       ),
     );
   }
-
   Future<void> _checkForUpdates() async {
     if (_isCheckingForUpdates) return;
     
     setState(() {
       _isCheckingForUpdates = true;
-      _updateInfo = null;
+      _highlightUpdateSection = false;
     });
     
     try {
@@ -321,22 +322,10 @@ class _SettingsState extends State<Settings> {
       if (mounted) {
         setState(() {
           _updateInfo = updateInfo;
-          if (updateInfo['updateAvailable'] == true) {
+          if (updateInfo['hasUpdate'] == true) {
             _highlightUpdateSection = true;
-            
-            Future.delayed(const Duration(seconds: 10), () {
-              if (mounted) {
-                setState(() {
-                  _highlightUpdateSection = false;
-                });
-              }
-            });
           }
         });
-      }
-      
-      if (updateInfo['updateAvailable'] == true) {
-        Settings.scrollToUpdates();
       }
     } catch (e) {
       if (mounted) {
@@ -352,123 +341,158 @@ class _SettingsState extends State<Settings> {
         setState(() {
           _isCheckingForUpdates = false;
         });
-      }
-    }
+      }    }
   }
-  
+
   Future<void> _downloadAndInstallUpdate() async {
-    if (_updateInfo == null || _updateInfo!['downloadUrl'] == null) {
+    if (_updateInfo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No download URL available. Opening release page instead.'),
+          content: Text('No update information available. Please check for updates first.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    final String? downloadUrl = UpdateService.getPlatformSpecificDownloadUrl(_updateInfo!);
+    
+    if (downloadUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No installer available for your platform. Opening release page instead.'),
           backgroundColor: Colors.orange,
         ),
       );
       _openReleasePage();
       return;
     }
-    
-    final downloadUrl = _updateInfo!['downloadUrl'] as String;
-    
-    setState(() {
-      _isDownloadingUpdate = true;
-      _downloadProgress = 0.0;
-    });
-    
-    await UpdateService.downloadAndInstallUpdate(
-      downloadUrl,
-      (progress) {
-        setState(() {
-          _downloadProgress = progress;
-        });
-      },
-      (error) {
-        if (mounted) {
+
+    if (Platform.isWindows) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => UpdateProgressDialog(
+          version: _updateInfo!['latestVersion'] as String,
+          onClose: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+      
+      final updater = InAppUpdater();
+      await updater.updateInApp(
+        downloadUrl: downloadUrl,
+        onRestartRequired: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Update complete. The app will restart momentarily.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        },
+      );
+    } else {
+      setState(() {
+        _isDownloadingUpdate = true;
+        _downloadProgress = 0.0;
+      });
+      
+      await UpdateService.downloadAndInstallUpdate(
+        downloadUrl,
+        (progress) {
           setState(() {
-            _isDownloadingUpdate = false;
+            _downloadProgress = progress;
           });
-          
-          if (error.contains('permanently denied') || 
-              error.contains('Install unknown apps')) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Permission Required'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(error),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'To enable installation:\n'
-                      '1. Tap "Open Settings"\n'
-                      '2. Tap "Install unknown apps"\n'
-                      '3. Find "Raspberry Pi Control"\n'
-                      '4. Toggle "Allow from this source"',
-                      style: TextStyle(fontSize: 13),
+        },
+        (error) {
+          if (mounted) {
+            setState(() {
+              _isDownloadingUpdate = false;
+            });
+            
+            if (error.contains('permanently denied') || 
+                error.contains('Install unknown apps')) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Permission Required'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(error),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'To enable installation:\n'
+                        '1. Tap "Open Settings"\n'
+                        '2. Tap "Install unknown apps"\n'
+                        '3. Find "Raspberry Pi Control"\n'
+                        '4. Toggle "Allow from this source"',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'After enabling the permission, you\'ll need to download the update again.',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'After enabling the permission, you\'ll need to download the update again.',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final success = await UpdateService.openInstallPackageSettings();
+                        if (!success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not open settings. Please enable "Install unknown apps" manually.'),
+                              duration: Duration(seconds: 5),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Open Settings'),
                     ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to download or install update: $error'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                  action: SnackBarAction(
+                    label: 'Release Page',
+                    onPressed: _openReleasePage,
                   ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final success = await UpdateService.openInstallPackageSettings();
-                      if (!success && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not open settings. Please enable "Install unknown apps" manually.'),
-                            duration: Duration(seconds: 5),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('Open Settings'),
-                  ),
-                ],
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to download or install update: $error'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
-                action: SnackBarAction(
-                  label: 'Release Page',
-                  onPressed: _openReleasePage,
                 ),
+              );
+            }
+          }
+        },
+        () {
+          if (mounted) {
+            setState(() {
+              _isDownloadingUpdate = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Update download completed. Installation started.'),
+                backgroundColor: Colors.green,
               ),
             );
           }
-        }
-      },
-      () {
-        if (mounted) {
-          setState(() {
-            _isDownloadingUpdate = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Update download completed. Installation started.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      },
-    );
-  }
-  
+        },
+      );
+    }
+  }  
   void _openReleasePage() async {
     if (_updateInfo == null || _updateInfo!['releaseUrl'] == null) return;
     
@@ -712,12 +736,10 @@ class _SettingsState extends State<Settings> {
             clearDefaultDirectory: _clearDefaultDirectory,
             saveSettings: _saveSettings,
           ),
-          
-          DataManagementSettings(
+            DataManagementSettings(
             clearAppData: _clearAppData,
           ),
-          
-          AboutSection(
+            AboutSection(
             appVersion: _appVersion,
             isCheckingForUpdates: _isCheckingForUpdates,
             updateInfo: _updateInfo,

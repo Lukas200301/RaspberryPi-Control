@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'update_executor.dart';
 
 class UpdateService {
   static const String _githubAllReleasesUrl = 'https://api.github.com/repos/Lukas200301/RaspberryPi-Control/releases';
@@ -541,21 +542,28 @@ class UpdateService {
       print('File size: ${file.lengthSync()} bytes');
       
       try {
-        print('Launching Windows installer: ${file.path}');
+        print('Preparing integrated Windows update: ${file.path}');
         
-        final ProcessResult result = await Process.run(
-          file.path,
-          [], 
-          runInShell: true,
-        );
+        final bool result = await UpdateExecutor.runSilentUpdate(file.path);
         
-        if (result.exitCode != 0) {
-          print('Installer non-zero exit code: ${result.exitCode}');
-          print('Installer stderr: ${result.stderr}');
-          
+        if (result) {
+          print('Integrated update process started successfully');
           onSuccess();
         } else {
-          print('Installer launched successfully');
+          print('Falling back to manual update method');
+          
+          final ProcessResult processResult = await Process.run(
+            file.path,
+            ['/SILENT'], 
+            runInShell: true,
+          );
+          
+          if (processResult.exitCode != 0) {
+            print('Installer non-zero exit code: ${processResult.exitCode}');
+            print('Installer stderr: ${processResult.stderr}');
+          } else {
+            print('Installer launched successfully');
+          }
           onSuccess();
         }
       } catch (e) {
@@ -587,5 +595,39 @@ class UpdateService {
       print('Error during Windows update process: $e');
       onError(e.toString());
     }
+  }
+  
+  static String? getPlatformSpecificDownloadUrl(Map<String, dynamic> updateInfo) {
+    if (updateInfo.isEmpty) return null;
+    
+    if (Platform.isWindows) {
+      return updateInfo['windowsDownloadUrl'] as String?;
+    } else if (Platform.isAndroid) {
+      return updateInfo['downloadUrl'] as String?;
+    } else if (Platform.isMacOS) {
+      // Handle macOS-specific download URL if available
+      return updateInfo['macDownloadUrl'] as String?;
+    } else if (Platform.isLinux) {
+      // Handle Linux-specific download URL if available
+      return updateInfo['linuxDownloadUrl'] as String?;
+    }
+    // Fallback to release URL for unsupported platforms
+    return null;
+  }
+  
+  static Future<void> downloadAndInstallPlatformUpdate(
+    Map<String, dynamic> updateInfo,
+    Function(double) onProgress,
+    Function(String) onError,
+    VoidCallback onSuccess,
+  ) async {
+    final String? downloadUrl = getPlatformSpecificDownloadUrl(updateInfo);
+    
+    if (downloadUrl == null) {
+      onError('No download available for your platform. Please download manually from the release page.');
+      return;
+    }
+    
+    await downloadAndInstallUpdate(downloadUrl, onProgress, onError, onSuccess);
   }
 }

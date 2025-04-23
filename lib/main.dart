@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:window_manager/window_manager.dart';
 import 'services/ssh_service.dart';
 import 'pages/connection/connection.dart';
 import 'pages/terminal/terminal.dart';
@@ -132,6 +133,36 @@ class BackgroundService {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+    
+    final prefs = await SharedPreferences.getInstance();
+    double? left = prefs.getDouble('window_left');
+    double? top = prefs.getDouble('window_top');
+    double? width = prefs.getDouble('window_width');
+    double? height = prefs.getDouble('window_height');
+    
+    WindowOptions windowOptions = WindowOptions(
+      size: width != null && height != null 
+          ? Size(width, height) 
+          : const Size(1000, 800),
+      center: (left == null || top == null),
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      
+      if (left != null && top != null) {
+        await windowManager.setPosition(Offset(left, top));
+      }
+      
+      await windowManager.focus();
+    });
+  }
   
   final prefs = await SharedPreferences.getInstance();
   final isDarkMode = prefs.getBool('isDarkMode') ?? true;
