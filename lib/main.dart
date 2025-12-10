@@ -31,7 +31,7 @@ class BackgroundService {
         const androidConfig = FlutterBackgroundAndroidConfig(
           notificationTitle: "Raspberry Pi Control",
           notificationText: "Running in background",
-          notificationImportance: AndroidNotificationImportance.Default,
+          notificationImportance: AndroidNotificationImportance.normal,
           notificationIcon: AndroidResource(name: 'ic_launcher', defType: 'mipmap'),
           enableWifiLock: true,
         );
