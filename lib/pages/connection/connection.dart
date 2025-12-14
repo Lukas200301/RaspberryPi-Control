@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../services/ssh_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -1052,14 +1055,45 @@ class ConnectionState extends State<Connection> {
                         final bool isFavorite = _favorites.contains(connection['id']);
                         final bool isActive = _activeConnectionId == connection['id'];
                         
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: isActive
-                                ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
-                                : BorderSide.none,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: AppDimensions.spaceMD),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: Theme.of(context).brightness == Brightness.dark
+                                  ? [
+                                      Colors.white.withOpacity(0.1),
+                                      Colors.white.withOpacity(0.05),
+                                    ]
+                                  : [
+                                      Colors.white.withOpacity(0.9),
+                                      Colors.white.withOpacity(0.6),
+                                    ],
+                            ),
+                            border: Border.all(
+                              color: isActive
+                                  ? AppColors.accentBlue
+                                  : Colors.white.withOpacity(0.2),
+                              width: isActive ? 2.0 : 1.5,
+                            ),
+                            boxShadow: isActive
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.accentBlue.withOpacity(0.4),
+                                      blurRadius: 20,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 0),
+                                    ),
+                                  ]
+                                : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
                           ),
                           child: Column(
                             children: [
@@ -1077,17 +1111,33 @@ class ConnectionState extends State<Connection> {
                                     const SizedBox(width: 8),
                                     if (isActive)
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(12),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              AppColors.accentBlue.withOpacity(0.3),
+                                              AppColors.accentBlue.withOpacity(0.2),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                                          border: Border.all(
+                                            color: AppColors.accentBlue,
+                                            width: 1,
+                                          ),
                                         ),
-                                        child: const Row(
+                                        child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.circle, color: Colors.green, size: 8),
-                                            SizedBox(width: 4),
-                                            Text('ACTIVE', style: TextStyle(fontSize: 10, color: Colors.green)),
+                                            Icon(Icons.circle, color: AppColors.accentBlue, size: 8),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'ACTIVE',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: AppColors.accentBlue,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -1134,7 +1184,7 @@ class ConnectionState extends State<Connection> {
                                 leading: IconButton(
                                   icon: Icon(
                                     isFavorite ? Icons.star : Icons.star_border,
-                                    color: isFavorite ? Colors.amber : Colors.grey,
+                                    color: isFavorite ? AppColors.warning : Colors.grey,
                                   ),
                                   tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
                                   onPressed: () => _toggleFavorite(connection['id']),
@@ -1197,9 +1247,12 @@ class ConnectionState extends State<Connection> {
                                         icon: const Icon(Icons.power_settings_new, size: 16),
                                         label: const Text('Disconnect'),
                                         style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.red,
-                                          side: const BorderSide(color: Colors.red),
+                                          foregroundColor: AppColors.error,
+                                          side: BorderSide(color: AppColors.error),
                                           padding: const EdgeInsets.symmetric(horizontal: 12),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(AppDimensions.radiusButton),
+                                          ),
                                         ),
                                       )
                                     else if (isConnected)
@@ -1235,10 +1288,13 @@ class ConnectionState extends State<Connection> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showEditDialog(),
-        tooltip: 'Add Connection',
-        child: const Icon(Icons.add),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: AppDimensions.bottomNavHeight + AppDimensions.bottomNavMargin),
+        child: FloatingActionButton(
+          onPressed: () => _showEditDialog(),
+          tooltip: 'Add Connection',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

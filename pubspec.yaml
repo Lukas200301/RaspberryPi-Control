@@ -13,39 +13,81 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
-version: 2.1.1+1
+version: 3.0.0+1
 
 environment:
-  sdk: ">=3.2.6 <4.0.0"
+  sdk: ">=3.2.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # State Management
+  get: ^4.6.6
+  get_storage: ^2.1.1
+
+  # SSH & Networking (existing)
   flutter_background: ^1.3.0
   dartssh2: ^2.13.0
+
+  # UI & Icons
   cupertino_icons: ^1.0.8
+
+  # Storage & Preferences
   shared_preferences: ^2.3.3
-  convert: ^3.1.2
-  file_picker: ^8.1.4
-  open_file: ^3.5.10
+  flutter_secure_storage: ^9.2.4
+
+  # UI Enhancements (NEW)
+  flutter_animate: ^4.3.0
+  shimmer: ^3.0.0
+  flutter_staggered_animations: ^1.1.1
+
+  # Performance (NEW)
+  flutter_cache_manager: ^3.3.1
+  cached_network_image: ^3.3.0
+
+  # Charts & Visualization
   fl_chart: ^0.70.1
+  syncfusion_flutter_charts: ^24.1.41
+  syncfusion_flutter_gauges: ^24.1.41
+
+  # File Operations
+  convert: ^3.1.2
+  file_picker: ^10.3.7
+  open_file: ^3.5.10
+  path_provider: ^2.1.5
+
+  # Platform Integration
   android_intent_plus: ^6.0.0
   permission_handler: ^11.3.1
-  intl: ^0.20.2
-  package_info_plus: ^8.1.2
   url_launcher: ^6.3.0
   url_launcher_android: ^6.3.10
-  http: ^1.2.2
-  path_provider: ^2.1.5
-  flutter_secure_storage: ^9.2.4
-  device_info_plus: ^11.2.0
-  xterm: ^4.0.0
   window_manager: ^0.5.1
+  device_info_plus: ^11.2.0
+
+  # Utilities
+  intl: ^0.19.0
+  package_info_plus: ^8.1.2
+  http: ^1.2.2
+  share_plus: ^7.2.1
+
+  # Terminal
+  xterm: ^4.0.0
+
+  # Optional (for future use)
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  grpc: ^5.1.0
+  protobuf: ^6.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.14.2
+  build_runner: ^2.4.6
+  freezed: ^2.4.5
+  json_serializable: ^6.7.1
+  very_good_analysis: ^5.1.0
 
 
 flutter:

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimensions.dart';
 
 class ServiceControlPage extends StatefulWidget {
   final List<Map<String, dynamic>>? initialServices;
@@ -116,51 +118,81 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
   void _showServiceLogs(String serviceName) async {
     if (widget.getServiceLogs == null) return;
     
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(child: CircularProgressIndicator(color: AppColors.accentIndigo)),
+    );
+
     final logs = await widget.getServiceLogs!(serviceName);
     
     if (!mounted) return;
+    Navigator.pop(context);
     
     showDialog(
       context: context,
-      builder: (context) {
-        final brightness = MediaQuery.platformBrightnessOf(context);
-        final isDarkMode = brightness == Brightness.dark || Theme.of(context).brightness == Brightness.dark;
-        
-        return AlertDialog(
-          title: Text('Logs: $serviceName'),
-          content: Container(
-            width: double.maxFinite,
-            height: 400,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black : Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-                width: 1,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(maxHeight: 600, maxWidth: 500),
+          decoration: BoxDecoration(
+            gradient: AppColors.glassGradientDark,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+            border: Border.all(color: AppColors.accentIndigo.withOpacity(0.3), width: 1.5),
+            boxShadow: [AppColors.indigoGlow()],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(AppDimensions.spaceLG),
+                child: Row(
+                  children: [
+                    Icon(Icons.article, color: AppColors.accentIndigo),
+                    SizedBox(width: AppDimensions.spaceSM),
+                    Expanded(
+                      child: Text(
+                        'Logs: $serviceName',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: SelectableText(
-                  logs,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontFamily: 'Courier',
-                    fontSize: 12,
+              Divider(color: Colors.white12, height: 1),
+              Flexible(
+                child: Container(
+                  margin: EdgeInsets.all(AppDimensions.spaceMD),
+                  padding: EdgeInsets.all(AppDimensions.spaceMD),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF0A0A0A),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                    border: Border.all(color: AppColors.accentIndigo.withOpacity(0.3), width: 1.5),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      logs,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'Courier',
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -176,15 +208,18 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
             onPressed: () {
               widget.onStartService!(service['name']);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Starting ${service['name']}...'))
+                SnackBar(
+                  content: Text('Starting ${service['name']}...'),
+                  backgroundColor: AppColors.success,
+                )
               );
             },
             icon: const Icon(Icons.play_arrow, size: 16),
             label: const Text('Start'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              visualDensity: VisualDensity.compact,
+              foregroundColor: AppColors.success,
+              side: BorderSide(color: AppColors.success.withOpacity(0.5), width: 1.5),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
 
@@ -195,15 +230,18 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
               onPressed: () {
                 widget.onStopService!(service['name']);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Stopping ${service['name']}...'))
+                  SnackBar(
+                    content: Text('Stopping ${service['name']}...'),
+                    backgroundColor: AppColors.error,
+                  )
                 );
               },
               icon: const Icon(Icons.stop, size: 16),
               label: const Text('Stop'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                visualDensity: VisualDensity.compact,
+                foregroundColor: AppColors.error,
+                side: BorderSide(color: AppColors.error.withOpacity(0.5), width: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ),
@@ -215,15 +253,18 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
               onPressed: isRunning ? () {
                 widget.onRestartService!(service['name']);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Restarting ${service['name']}...'))
+                  SnackBar(
+                    content: Text('Restarting ${service['name']}...'),
+                    backgroundColor: AppColors.accentTeal,
+                  )
                 );
               } : null,
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('Restart'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.blue,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                visualDensity: VisualDensity.compact,
+                foregroundColor: AppColors.accentTeal,
+                side: BorderSide(color: AppColors.accentTeal.withOpacity(0.5), width: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ),
@@ -238,29 +279,42 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.miscellaneous_services,
-            size: 80,
-            color: Colors.grey.shade300,
+          Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.accentIndigo.withOpacity(0.2),
+                  AppColors.accentTeal.withOpacity(0.2),
+                ],
+              ),
+              boxShadow: [AppColors.indigoGlow(opacity: 0.3)],
+            ),
+            child: Icon(
+              Icons.miscellaneous_services,
+              size: 64,
+              color: Colors.white54,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           Text(
             isSearching ? 'No matching services found' : 'No services available',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             isSearching ? 'Try different search terms or filters' : 'Try refreshing the services list',
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: Colors.white54,
             ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
+          OutlinedButton.icon(
             onPressed: () {
               setState(() {
                 if (isSearching) {
@@ -276,6 +330,11 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
             label: Text(
               isSearching ? 'Clear Filters' : 'Refresh',
             ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.accentIndigo,
+              side: BorderSide(color: AppColors.accentIndigo.withOpacity(0.5), width: 1.5),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),
@@ -284,11 +343,30 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-    
     return Scaffold(
+      backgroundColor: AppColors.darkGradientStart,
       appBar: AppBar(
-        title: const Text('Service Control'),
+        title: Row(
+          children: [
+            Text('Service Control', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            SizedBox(width: 8),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.accentIndigo.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accentIndigo.withOpacity(0.5)),
+              ),
+              child: Text(
+                '${filteredServices.length}',
+                style: TextStyle(color: AppColors.accentIndigo, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.sort),
@@ -369,32 +447,39 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: TextField(
-                  controller: searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search services...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            setState(() {
-                              searchController.clear();
-                              _applyFilter();
-                            });
-                          },
-                        )
-                      : null,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.glassGradientDark,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                    border: Border.all(color: AppColors.glassBorderDark(), width: 1.5),
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _applyFilter();
-                    });
-                  },
+                  child: TextField(
+                    controller: searchController,
+                    style: TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Search services...',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      suffixIcon: searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.white70),
+                            onPressed: () {
+                              setState(() {
+                                searchController.clear();
+                                _applyFilter();
+                              });
+                            },
+                          )
+                        : null,
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _applyFilter();
+                      });
+                    },
+                  ),
                 ),
               ),
               
@@ -403,49 +488,13 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    FilterChip(
-                      label: const Text('All'),
-                      selected: _filterStatus == 'all',
-                      onSelected: (_) => setState(() {
-                        _filterStatus = 'all';
-                        _applyFilter();
-                      }),
-                      backgroundColor: colorScheme.surfaceVariant,
-                      selectedColor: colorScheme.primaryContainer,
-                    ),
+                    _buildFilterChip('All', 'all', AppColors.accentIndigo),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Running'),
-                      selected: _filterStatus == 'running',
-                      onSelected: (_) => setState(() {
-                        _filterStatus = 'running';
-                        _applyFilter();
-                      }),
-                      backgroundColor: colorScheme.surfaceVariant,
-                      selectedColor: Colors.green.withOpacity(0.2),
-                    ),
+                    _buildFilterChip('Running', 'running', AppColors.success),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Exited'),
-                      selected: _filterStatus == 'exited',
-                      onSelected: (_) => setState(() {
-                        _filterStatus = 'exited';
-                        _applyFilter();
-                      }),
-                      backgroundColor: colorScheme.surfaceVariant,
-                      selectedColor: Colors.orange.withOpacity(0.2),
-                    ),
+                    _buildFilterChip('Exited', 'exited', AppColors.warning),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Dead'),
-                      selected: _filterStatus == 'dead',
-                      onSelected: (_) => setState(() {
-                        _filterStatus = 'dead';
-                        _applyFilter();
-                      }),
-                      backgroundColor: colorScheme.surfaceVariant,
-                      selectedColor: Colors.red.withOpacity(0.2),
-                    ),
+                    _buildFilterChip('Dead', 'dead', AppColors.error),
                   ],
                 ),
               ),
@@ -463,16 +512,28 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
                         final status = (service['status'] ?? '').toLowerCase();
                         final statusColor = _getStatusColor(status);
                         
-                        return Card(
+                        return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 2,
-                          clipBehavior: Clip.antiAlias,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.glassGradientDark,
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                            border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: statusColor.withOpacity(0.3),
+                                blurRadius: 20,
+                                spreadRadius: 1,
+                              ),
+                            ],
                           ),
-                          child: InkWell(
-                            onTap: () => _showServiceLogs(service['name']),
-                            child: Column(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showServiceLogs(service['name']),
+                              borderRadius: BorderRadius.circular(AppDimensions.radiusCard),
+                              splashColor: statusColor.withOpacity(0.1),
+                              highlightColor: statusColor.withOpacity(0.05),
+                              child: Column(
                               children: [
                                 ListTile(
                                   contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -484,23 +545,39 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
+                                            color: Colors.white,
                                           ),
                                         ),
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: statusColor.withOpacity(0.2),
                                           borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: statusColor.withOpacity(0.5)),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.circle, color: statusColor, size: 8),
-                                            const SizedBox(width: 4),
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: statusColor,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: statusColor.withOpacity(0.5),
+                                                    blurRadius: 8,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
                                             Text(
                                               status.toUpperCase(), 
-                                              style: TextStyle(fontSize: 10, color: statusColor)
+                                              style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)
                                             ),
                                           ],
                                         ),
@@ -514,22 +591,22 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
                                       if (service['description'] != null && service['description'].toString().isNotEmpty)
                                         Text(
                                           service['description'] ?? '',
-                                          style: const TextStyle(fontSize: 14),
+                                          style: const TextStyle(fontSize: 14, color: Colors.white70),
                                         ),
                                       if (service['load'] != null)
                                         Row(
                                           children: [
-                                            const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                                            const Icon(Icons.timer_outlined, size: 14, color: Colors.white54),
                                             const SizedBox(width: 6),
                                             Text(
                                               'Load: ${service['load']}',
-                                              style: const TextStyle(fontSize: 14),
+                                              style: const TextStyle(fontSize: 14, color: Colors.white54),
                                             ),
                                           ],
                                         ),
                                     ],
                                   ),
-                                  trailing: const Icon(Icons.chevron_right),
+                                  trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                                 ),
                                 
                                 Padding(
@@ -544,12 +621,51 @@ class _ServiceControlPageState extends State<ServiceControlPage> {
                               ],
                             ),
                           ),
+                        ),
                         );
                       },
                     ),
               ),
             ],
           ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, Color color) {
+    final isSelected = _filterStatus == value;
+    return InkWell(
+      onTap: () => setState(() {
+        _filterStatus = value;
+        _applyFilter();
+      }),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected ? AppColors.glassGradientDark : null,
+          color: isSelected ? null : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color.withOpacity(0.5) : Colors.white.withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: color.withOpacity(0.3),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
+          ] : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? color : Colors.white70,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
+        ),
+      ),
     );
   }
 }

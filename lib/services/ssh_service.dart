@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart';
+import 'package:get/get.dart';
+import '../core/services/background_service.dart';
 import '../controllers/stats_controller.dart';  
 
 class SSHService {
@@ -64,7 +65,7 @@ class SSHService {
       );
             
       try {
-        await BackgroundService.instance.enableBackground();
+        await Get.find<BackgroundService>().enableBackground();
       } catch (e) {
         print('Warning: Background service error: $e');
         _client?.close();
@@ -89,7 +90,7 @@ class SSHService {
     } catch (e) {
       _isReconnecting = false;
       _connectionStatusController.add(false);
-      await BackgroundService.instance.disableBackground();
+      await Get.find<BackgroundService>().disableBackground();
       throw Exception('Failed to connect: $e');
     }
   }
@@ -267,7 +268,7 @@ class SSHService {
       _connectionMonitor?.cancel();
 
       try {
-        await BackgroundService.instance.disableBackground();
+        await Get.find<BackgroundService>().disableBackground();
       } catch (e) {
         print('Warning: Failed to disable background service: $e');
       }

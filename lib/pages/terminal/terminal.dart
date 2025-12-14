@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import '../../services/ssh_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_dimensions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:xterm/xterm.dart' as xterm;
@@ -445,8 +448,8 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
     super.build(context);
     
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDarkMode ? Colors.lightGreenAccent : Colors.black;
-    final backgroundColor = isDarkMode ? Colors.black : Colors.white;
+    final primaryColor = isDarkMode ? AppColors.accentBlue : Colors.black;
+    final backgroundColor = isDarkMode ? const Color(0xFF000000) : Colors.white;
 
     const double controlPanelHeight = 56.0;
 
@@ -458,7 +461,7 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
             top: 0,
             left: 0,
             right: 0,
-            bottom: controlPanelHeight, 
+            bottom: controlPanelHeight + AppDimensions.bottomNavHeight + (AppDimensions.bottomNavMargin * 2),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
@@ -491,28 +494,28 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
                         ),
                       ),
                       theme: xterm.TerminalTheme(
-                        cursor: Colors.white,
-                        selection: Colors.blue.withOpacity(0.5),
+                        cursor: AppColors.accentBlue,
+                        selection: AppColors.accentBlue.withOpacity(0.4),
                         foreground: primaryColor,
                         background: backgroundColor,
                         black: Colors.black,
-                        red: Colors.red,
-                        green: Colors.green,
-                        yellow: Colors.yellow,
-                        blue: Colors.blue,
-                        magenta: Colors.purple,
-                        cyan: Colors.cyan,
-                        white: Colors.white,
-                        brightBlack: Colors.grey.shade700,
-                        brightRed: Colors.red.shade400,
-                        brightGreen: Colors.green.shade400,
-                        brightYellow: Colors.yellow.shade400,
-                        brightBlue: Colors.blue.shade400,
-                        brightMagenta: Colors.purple.shade400,
-                        brightCyan: Colors.cyan.shade400,
-                        brightWhite: Colors.white,
-                        searchHitBackground: Colors.yellow,
-                        searchHitBackgroundCurrent: Colors.orange,
+                        red: AppColors.error,
+                        green: AppColors.success,
+                        yellow: AppColors.warning,
+                        blue: AppColors.accentBlue,
+                        magenta: AppColors.accentPurple,
+                        cyan: AppColors.accentCyan,
+                        white: AppColors.textPrimary,
+                        brightBlack: AppColors.textTertiary,
+                        brightRed: AppColors.error,
+                        brightGreen: AppColors.success,
+                        brightYellow: AppColors.warning,
+                        brightBlue: AppColors.accentBlue,
+                        brightMagenta: AppColors.accentPurple,
+                        brightCyan: AppColors.accentCyan,
+                        brightWhite: AppColors.textPrimary,
+                        searchHitBackground: AppColors.warning,
+                        searchHitBackgroundCurrent: AppColors.accentBlue,
                         searchHitForeground: Colors.black,
                       ),
                     );
@@ -525,18 +528,38 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0, 
+            bottom: AppDimensions.bottomNavHeight + (AppDimensions.bottomNavMargin * 2),
             height: controlPanelHeight,
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[850] : Colors.grey[200],
-                border: Border(
-                  top: BorderSide(
-                    color: isDarkMode ? Colors.grey[800]! : Colors.grey[400]!,
-                    width: 1,
-                  ),
-                ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppDimensions.radiusLG),
               ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDarkMode
+                          ? [
+                              AppColors.darkGlass.withOpacity(0.9),
+                              AppColors.darkGlass.withOpacity(0.7),
+                            ]
+                          : [
+                              Colors.white.withOpacity(0.9),
+                              Colors.white.withOpacity(0.7),
+                            ],
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: isDarkMode
+                            ? AppColors.accentBlue.withOpacity(0.3)
+                            : Colors.grey[400]!,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -578,12 +601,29 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
                       child: Container(
                         height: controlPanelHeight,
                         decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[900] : Colors.grey[300],
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isDarkMode
+                                ? [
+                                    AppColors.accentBlue.withOpacity(0.25),
+                                    AppColors.accentBlue.withOpacity(0.15),
+                                  ]
+                                : [
+                                    AppColors.accentBlue.withOpacity(0.2),
+                                    AppColors.accentBlue.withOpacity(0.1),
+                                  ],
+                          ),
+                          border: Border.all(
+                            color: AppColors.accentBlue.withOpacity(0.5),
+                            width: 1.5,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 5,
-                              spreadRadius: 1,
+                              color: AppColors.accentBlue.withOpacity(0.3),
+                              blurRadius: 15,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 0),
                             ),
                           ],
                         ),
@@ -664,6 +704,8 @@ class TerminalState extends State<Terminal> with AutomaticKeepAliveClientMixin {
                 ],
               ),
             ),
+            ),
+          ),
           ),
         ],
       ),

@@ -103,15 +103,15 @@ class ServiceControlWidget extends StatelessWidget {
               ),
             )
           else
-            SizedBox(
-              height: 220, 
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemCount: runningServices.length, 
-                itemBuilder: (context, index) {
-                  final service = runningServices[index];
-                  final status = (service['status'] ?? '').toLowerCase();
-                  final Color statusColor = Colors.green;
+            ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: runningServices.length > 5 ? 5 : runningServices.length, 
+              itemBuilder: (context, index) {
+                final service = runningServices[index];
+                final status = (service['status'] ?? '').toLowerCase();
+                final Color statusColor = Colors.green;
                   
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -166,7 +166,6 @@ class ServiceControlWidget extends StatelessWidget {
                     ),
                   );
                 },
-              ),
             ),
           
           Container(
