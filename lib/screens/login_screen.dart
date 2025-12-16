@@ -772,80 +772,100 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.background,
-              Color(0xFF0A0A1A),
-            ],
-          ),
+          color: AppTheme.background,
         ),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.primaryIndigo.withValues(alpha: 0.5),
-                              width: 2,
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 36),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/icon/ic_launcher.png',
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/icon/ic_launcher.png',
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
+                          const Spacer(),
+                          if (_isCheckingStatus)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.glassLight,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primaryIndigo,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.glassLight,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: IconButton(
+                                onPressed: _checkConnectionStatus,
+                                icon: const Icon(Icons.refresh),
+                                color: AppTheme.primaryIndigo,
+                                tooltip: 'Refresh status',
+                              ),
                             ),
-                          ),
+                        ],
+                      ),
+                      const Gap(24),
+                      Text(
+                        'Welcome Back',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppTheme.textTertiary,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0.5,
                         ),
-                        const Spacer(),
-                        if (_isCheckingStatus)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.textTertiary,
-                            ),
-                          )
-                        else
-                          IconButton(
-                            onPressed: _checkConnectionStatus,
-                            icon: const Icon(Icons.refresh),
-                            color: AppTheme.textSecondary,
-                          ),
-                      ],
-                    ),
-                    const Gap(16),
-                    Text(
-                      'Welcome Back,',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
                       ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      'Commander',
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -1,
+                      const Gap(8),
+                      Text(
+                        'Connect to Your Devices',
+                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -1,
+                          color: AppTheme.primaryIndigo,
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
@@ -910,6 +930,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 conn.name,
                                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryIndigo,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -917,13 +938,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const Gap(8),
                               Row(
                                 children: [
-                                  const Icon(Icons.computer, size: 16, color: AppTheme.secondaryTeal),
+                                  const Icon(Icons.computer, size: 16, color: AppTheme.successGreen),
                                   const Gap(6),
                                   Expanded(
                                     child: Text(
                                       conn.host,
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppTheme.secondaryTeal,
+                                        color: AppTheme.successGreen,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -934,13 +955,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const Gap(4),
                               Row(
                                 children: [
-                                  const Icon(Icons.person, size: 16, color: AppTheme.textSecondary),
+                                  const Icon(Icons.person, size: 16, color: AppTheme.warningAmber),
                                   const Gap(6),
-                                  Text(
-                                    '${conn.username}@${conn.host}:${conn.port}',
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  Expanded(
+                                    child: Text(
+                                      '${conn.username}@${conn.host}:${conn.port}',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppTheme.warningAmber,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -949,6 +974,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       );
                     },
+                  ),
+                ),
+                const Gap(16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: TextButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/connections'),
+                    icon: const Icon(Icons.settings, size: 18),
+                    label: const Text('Manage Connections'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ] else ...[
@@ -987,61 +1024,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ],
 
-              // Quick Actions Bar
+              const Spacer(),
+              
+              // Quick Actions Bar - Enhanced
               Container(
-                margin: const EdgeInsets.all(24),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.glassLight,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.glassBorder),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                margin: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Row(
                   children: [
-                    Text(
-                      'Quick Actions',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppTheme.textTertiary,
+                    Expanded(
+                      child: GlassCard(
+                        onTap: () => _showAddConnectionSheet(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.add_circle_outline, size: 18, color: AppTheme.primaryIndigo),
+                              Gap(8),
+                              Text(
+                                'Add Device',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryIndigo,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                     const Gap(12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showAddConnectionSheet(),
-                            icon: const Icon(Icons.add),
-                            label: const Text('New Connection'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                    Expanded(
+                      child: GlassCard(
+                        onTap: _isDiscovering ? null : _discoverDevices,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.radar,
+                                size: 18,
+                                color: _isDiscovering ? AppTheme.textTertiary : AppTheme.primaryIndigo,
+                              ),
+                              const Gap(8),
+                              Flexible(
+                                child: Text(
+                                  'Scan Network',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _isDiscovering ? AppTheme.textTertiary : AppTheme.primaryIndigo,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const Gap(12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _isDiscovering ? null : _discoverDevices,
-                            icon: const Icon(Icons.radar),
-                            label: const Text('Find Devices'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (connections.isNotEmpty) ...[
-                      const Gap(8),
-                      TextButton.icon(
-                        onPressed: () => Navigator.pushNamed(context, '/connections'),
-                        icon: const Icon(Icons.list, size: 18),
-                        label: const Text('Manage All Connections'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
