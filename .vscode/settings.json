@@ -1,8 +1,0 @@
-{
-    "discord.enabled": true,
-    "discord.removeDetails": false,
-    "discord.removeLowerDetails": false,
-    "discord.removeRemoteRepository": true,
-    "discord.removeTimestamp": false,
-    "java.configuration.updateBuildConfiguration": "interactive"
-}

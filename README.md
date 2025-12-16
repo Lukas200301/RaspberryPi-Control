@@ -1,178 +1,300 @@
-# RaspberryPi-Control
+# Raspberry Pi Control v3.0 🚀
 
-RaspberryPi-Control is a Flutter application that allows you to control and monitor your Raspberry Pi remotely. You can execute commands, view system stats, manage SSH connections, and transfer files.
+A high-performance, real-time monitoring and control application for Raspberry Pi devices with a beautiful glassmorphic UI.
 
-## Features
+![Flutter](https://img.shields.io/badge/Flutter-3.10+-02569B?logo=flutter)
+![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)
+![gRPC](https://img.shields.io/badge/gRPC-Protocol-244c5a)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-### Core Functionality
-- Connect to Raspberry Pi via SSH
-- Execute commands on the Raspberry Pi with an enhanced terminal interface
-- View detailed system stats (CPU, memory, temperature, disk usage, network traffic, etc.)
-- Manage multiple SSH connections
-- Transfer files between your device and the Raspberry Pi
-- Start, stop, and restart services on the Raspberry Pi
-- Light and dark theme support with completely redesigned UI
+## ✨ Features
 
-### Advanced System Monitoring
-- System log viewer for real-time diagnostics
-- Network ping utility to test connectivity
-- System processes monitor with detailed resource usage
-- Active connections tracker for network analysis
-- Enhanced dashboard with customizable metrics display
+### 📊 Real-Time Dashboard
+- **Live System Stats**: CPU, RAM, Temperature, Uptime updated every 500ms
+- **CPU Charts**: Smooth vector graphs showing 60-second history
+- **Memory Visualization**: Detailed breakdown of Used/Free/Cached/Swap
+- **Thermal Monitoring**: Color-coded temperature gauges for CPU & GPU
+- **Top Processes**: View and manage resource-intensive processes
 
-### Advanced Connection Features
-- Background connectivity that keeps your connection alive when app is minimized
-- Auto-reconnect functionality when connection drops
-- Configurable connection timeout settings
-- SSH keep-alive to prevent dropped connections
-- Security timeout to automatically disconnect after inactivity
-- SSH compression option for slow networks
+### 📁 File Explorer (SFTP)
+- Browse remote directories with intuitive navigation
+- Upload/Download files with progress tracking
+- File previews with syntax highlighting
+- Rename, delete, create folders, change permissions
 
-### Terminal Improvements
-- Fully revamped terminal with enhanced functionality
-- Command history navigation
-- Advanced text selection and manipulation
-- Better handling of complex shell operations
-- Improved performance for lengthy outputs
+### 💻 Terminal Emulator
+- Full `xterm-256color` compatible SSH shell
+- Custom accessory keyboard (Esc, Tab, Ctrl, Alt, Arrows)
+- Command history support
 
-### File Management
-- Browse remote files with intuitive interface
-- Upload and download files between devices
-- Toggle hidden files visibility
-- Configurable file overwrite confirmation
-- Custom default download directory
-- Improved file operations with better error handling
+### ⚙️ Service Manager
+- List all systemd services (Active/Inactive/Failed)
+- Start, Stop, Restart, Enable, Disable services
+- Search and filter by service name
 
-### User Experience
-- Completely redesigned user interface for better usability
-- Custom terminal font size settings
-- In-app update system with automatic update checking
-- View release notes for new versions
-- Better battery optimization management
-- Improved navigation between app sections
+### 📜 System Logs
+- Real-time log streaming via journalctl
+- Filter by log level (Error/Warning/Info)
+- Service-specific filtering
 
-## Important Notes
+### 🔌 Connection Manager
+- Save multiple Pi connections securely
+- Favorite connections for quick access
+- Auto-reconnect with configurable retry logic
 
-⚠️ **Language Requirement**: The Raspberry Pi must be set to English or German locale for all features to work correctly. Some monitoring features may not work properly with other system languages.
+## 🎨 Design
 
-⚠️ **Background Operation**: To maintain connections in the background, you may need to exclude the app from battery optimization.
+**Cyberpunk / Sci-Fi Glassmorphism Theme**
+- Pure AMOLED Black background (#000000) for battery efficiency
+- Frosted glass cards with blur effects
+- Electric Indigo (#6366F1) and Teal (#14B8A6) accents
+- Smooth animations and transitions
 
+## 🏗️ Architecture
 
-## Getting Started
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Mobile App** | Flutter 3.10+ | Cross-platform UI (iOS/Android) |
+| **Backend Agent** | Go 1.25+ | Zero-dependency binary for Pi |
+| **Communication** | gRPC + Protobuf | High-speed binary streaming |
+| **Security** | SSH Tunnel | All traffic encrypted via SSH |
+
+### How It Works
+
+1. **User connects** via standard SSH (port 22)
+2. **App checks** if Go agent is installed on Pi
+3. **Auto-deploys** agent if missing/outdated (takes ~5 seconds)
+4. **Establishes** SSH tunnel for gRPC traffic
+5. **Streams** real-time stats at 500ms intervals
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Flutter SDK: [Install Flutter](https://flutter.dev/docs/get-started/install)
-- Dart SDK: Included with Flutter
-- A Raspberry Pi with SSH enabled
+1. **Flutter SDK** 3.10 or higher
+   ```bash
+   flutter doctor
+   ```
+
+2. **Go** 1.25 or higher (for building agent)
+   ```bash
+   go version
+   ```
+
+3. **Protocol Buffers Compiler** (protoc)
+   - Windows: `choco install protobuf`
+   - macOS: `brew install protobuf`
+   - Linux: `sudo apt-get install protobuf-compiler`
 
 ### Installation
 
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/Lukas200301/RaspberryPi-Control.git
-    cd RaspberryPi-Control
-    ```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/raspberrypi-control.git
+   cd raspberrypi-control
+   ```
 
-2. Install dependencies:
-    ```bash
-    flutter pub get
-    ```
+2. **Generate Protobuf files**
+   ```bash
+   # Install Dart protobuf plugin
+   dart pub global activate protoc_plugin
 
-3. Run the app:
-    ```bash
-    flutter run
-    ```
+   # Generate code
+   # Windows:
+   generate_protos.bat
 
-## Usage
+   # Linux/macOS:
+   chmod +x generate_protos.sh
+   ./generate_protos.sh
+   ```
 
-1. Launch the app on your device or emulator.
-2. Navigate to the "Connections" tab to add a new SSH connection.
-3. Enter the connection details (name, host, port, username, password) and save the connection.
-4. Select the saved connection to connect to your Raspberry Pi.
-5. Use the "Terminal" tab to execute commands on the Raspberry Pi.
-6. Use the "Stats" tab to view detailed system stats, logs, processes, and network information.
-7. Use the "File Explorer" tab to transfer files between your device and the Raspberry Pi.
-8. Use the "Service Control" section in the "Stats" tab to start, stop, and restart services.
+3. **Build the Go agent**
+   ```bash
+   cd agent
 
-## Configurable Settings
+   # Windows:
+   build.bat
 
-### Appearance
-- **Dark/Light Theme**: Choose between dark and light mode for the app interface
+   # Linux/macOS:
+   chmod +x build.sh
+   ./build.sh
+   ```
 
-### Dashboard Settings
-- **Widget Layout**: Configure how information is displayed on the dashboard
+4. **Install Flutter dependencies**
+   ```bash
+   flutter pub get
+   ```
 
-### Terminal Settings
-- **Terminal Font Size**: Adjust text size for better readability in terminal
-- **Command History Size**: Control how many previous commands are saved
+5. **Run the app**
+   ```bash
+   flutter run
+   ```
 
-### System Monitoring
-- **Log Filters**: Configure which system logs to display
-- **Process Display**: Set sorting and filtering options for the process viewer
-- **Network Monitor**: Customize active connections display
+## 📱 Usage
 
-### Connection Settings
-- **Default SSH Port**: Set your preferred default port for new connections
-- **Keep Screen On**: Prevent device from sleeping during active connections
-- **Auto-Reconnect**: Automatically try to re-establish connection when dropped
-- **Reconnect Attempts**: Configure how many times the app should try to reconnect
-- **Connection Retry Delay**: Set time between reconnection attempts
-- **Connection Timeout**: Maximum time allowed for SSH connections to establish
-- **SSH Keep-Alive**: Send periodic signals to prevent connection drops
-- **Security Timeout**: Automatically disconnect after a period of inactivity
-- **SSH Compression**: Enable compression to save data on slower networks
+### First Time Setup
 
-### File Explorer Settings
-- **Show Hidden Files**: Toggle visibility of files starting with a dot (.)
-- **Confirm File Overwrite**: Choose whether to prompt before replacing existing files
-- **Default Download Directory**: Set a fixed location for downloaded files
+1. **Launch the app**
+2. **Tap "Connections"** from the drawer menu
+3. **Add a new connection** with your Pi's details:
+   - Name: e.g., "My Raspberry Pi 4"
+   - Host: IP address or hostname
+   - Port: 22 (default SSH port)
+   - Username: e.g., "pi"
+   - Password: your SSH password
 
-### Data Management
-- **Clear App Data**: Reset all settings and remove saved connections
+4. **Connect** to your Pi
+5. **Install agent** when prompted (automatic, ~5 seconds)
+6. **Start monitoring!**
 
-### Background Operation
+### Supported Raspberry Pi Models
 
-The app will maintain connections in the background. A notification will appear to indicate the app is running. For best performance:
+- ✅ Raspberry Pi Zero/Zero W (ARMv6)
+- ✅ Raspberry Pi 2/3 (ARMv7)
+- ✅ Raspberry Pi 3/4/5 64-bit (ARM64)
 
-1. Allow the app to show notifications
-2. Exclude the app from battery optimization (prompted during first run)
-3. Grant necessary permissions when requested
+The app automatically detects your Pi's architecture and deploys the correct binary.
 
-## Updates System
+## 🔧 Development
 
-The app includes a robust update management system:
-- Automatic update checking on app launch
-- Manual update checks from the Settings tab
-- Direct in-app download and installation of updates
-- Detailed release notes for new versions
-- Open release page option for manual downloads
+### Project Structure
 
-## Dependencies
+```
+raspberrypi-control/
+├── agent/                  # Go agent source
+│   ├── main.go            # Entry point
+│   ├── server.go          # gRPC server implementation
+│   ├── build.sh           # Cross-compilation script
+│   └── proto/             # Generated Go protobuf code
+│
+├── lib/                   # Flutter app source
+│   ├── main.dart          # App entry point
+│   ├── models/            # Data models
+│   ├── providers/         # Riverpod state management
+│   ├── screens/           # UI screens
+│   ├── services/          # Business logic
+│   ├── theme/             # Glassmorphism theme
+│   ├── widgets/           # Reusable components
+│   └── generated/         # Generated Dart protobuf code
+│
+├── protos/                # Protocol Buffer definitions
+│   └── pi_control.proto   # API contract
+│
+├── assets/
+│   └── bin/               # Compiled Go agent binaries
+│
+└── README.md
+```
 
-- `flutter`: The Flutter SDK
-- `dartssh2`: SSH client library for Dart
-- `flutter_background`: For keeping the connection alive in background
-- `shared_preferences`: For storing connection details locally
-- `convert`: For encoding and decoding data
-- `file_picker`: For picking files to upload
-- `open_file`: For opening downloaded files
-- `fl_chart`: For displaying charts
-- `android_intent_plus`: For launching Android-specific actions
-- `permission_handler`: For managing app permissions
-- `intl`: For internationalization and formatting
-- `package_info_plus`: For version information
-- `url_launcher`: For opening URLs and links
-- `http`: For network requests and update checking
-- `path_provider`: For file system access
-- `flutter_secure_storage`: For secure credential storage
-- `device_info_plus`: For device-specific information
-- `xterm`: For the enhanced terminal experience
+### Building for Production
 
-## Development
-
-### Building
-
-To build the app, run:
+#### Android
 ```bash
-flutter build apk
+flutter build apk --release
+# or
+flutter build appbundle --release
+```
+
+#### iOS
+```bash
+flutter build ios --release
+```
+
+### Agent Development
+
+The Go agent runs on the Raspberry Pi and provides system information via gRPC.
+
+**Rebuild agent after changes:**
+```bash
+cd agent
+./build.sh  # Creates binaries for all Pi architectures
+```
+
+**Test agent locally:**
+```bash
+cd agent
+go run . --version
+go run . --port 50051
+```
+
+## 🔒 Security
+
+- **Encrypted Communication**: All traffic flows through SSH tunnel
+- **No Open Ports**: No firewall configuration needed
+- **Secure Storage**: Passwords encrypted in device keychain
+- **No Remote Access**: Agent only listens on localhost via SSH
+
+## 🛠️ Troubleshooting
+
+### Protobuf Generation Fails
+
+**Error**: `protoc: command not found`
+
+**Solution**: Install Protocol Buffers compiler (see Prerequisites)
+
+### SSH Connection Failed
+
+**Possible causes**:
+1. SSH not enabled on Pi: `sudo raspi-config` → Interface Options → SSH
+2. Wrong credentials: Double-check username/password
+3. Firewall blocking: Ensure port 22 is accessible
+4. Wrong IP address: Verify with `hostname -I` on Pi
+
+### Agent Installation Fails
+
+**Error**: Permission denied
+
+**Solution**: Ensure SSH user has write permissions to home directory
+
+### App Won't Compile
+
+**Error**: Missing generated files
+
+**Solution**: Run `generate_protos.bat` or `./generate_protos.sh` first
+
+## 📝 API Documentation
+
+See [protos/pi_control.proto](protos/pi_control.proto) for the complete gRPC API definition.
+
+### Key Services
+
+- `StreamStats`: Real-time system statistics (500ms intervals)
+- `ListProcesses`: Get all running processes
+- `KillProcess`: Terminate a process by PID
+- `ListServices`: Get all systemd services
+- `ManageService`: Start/stop/restart/enable/disable services
+- `StreamLogs`: Real-time log streaming
+- `GetDiskInfo`: Disk usage information
+- `GetNetworkInfo`: Network interface details
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- [Flutter](https://flutter.dev/) - UI framework
+- [Go](https://golang.org/) - Agent implementation
+- [gRPC](https://grpc.io/) - High-performance RPC framework
+- [gopsutil](https://github.com/shirou/gopsutil) - System information library
+- [dartssh2](https://pub.dev/packages/dartssh2) - SSH implementation for Dart
+
+## 📧 Contact
+
+For questions or support, please open an issue on GitHub.
+
+---
+
+Made with ❤️ for the Raspberry Pi community

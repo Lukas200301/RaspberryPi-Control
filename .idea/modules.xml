@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/flutter_application_1.iml" filepath="$PROJECT_DIR$/flutter_application_1.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/flutter_application_1_android.iml" filepath="$PROJECT_DIR$/android/flutter_application_1_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/raspberrypi_control.iml" filepath="$PROJECT_DIR$/raspberrypi_control.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/raspberrypi_control_android.iml" filepath="$PROJECT_DIR$/android/raspberrypi_control_android.iml" />
     </modules>
   </component>
 </project>

@@ -1,8 +1,7 @@
-name: RaspberryPi_Control
-description: A RaspberryPi_Control Control app.
-
+name: raspberrypi_control
+description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
-# pub.dev using `pub publish`. This is preferred for private packages.
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
@@ -12,95 +11,81 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # build by specifying --build-name and --build-number, respectively.
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
-# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
-version: 3.0.0+1
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
 
 environment:
-  sdk: ">=3.2.0 <4.0.0"
+  sdk: ^3.10.3
 
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
 dependencies:
   flutter:
     sdk: flutter
 
-  # State Management
-  get: ^4.6.6
-  get_storage: ^2.1.1
-
-  # SSH & Networking (existing)
-  flutter_background: ^1.3.0
-  dartssh2: ^2.13.0
-
-  # UI & Icons
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-
-  # Storage & Preferences
-  shared_preferences: ^2.3.3
-  flutter_secure_storage: ^9.2.4
-
-  # UI Enhancements (NEW)
-  flutter_animate: ^4.3.0
-  shimmer: ^3.0.0
-  flutter_staggered_animations: ^1.1.1
-
-  # Performance (NEW)
-  flutter_cache_manager: ^3.3.1
-  cached_network_image: ^3.3.0
-
-  # Charts & Visualization
-  fl_chart: ^0.70.1
-  syncfusion_flutter_charts: ^24.1.41
-  syncfusion_flutter_gauges: ^24.1.41
-
-  # File Operations
-  convert: ^3.1.2
-  file_picker: ^10.3.7
-  open_file: ^3.5.10
-  path_provider: ^2.1.5
-
-  # Platform Integration
-  android_intent_plus: ^6.0.0
-  permission_handler: ^11.3.1
-  url_launcher: ^6.3.0
-  url_launcher_android: ^6.3.10
-  window_manager: ^0.5.1
-  device_info_plus: ^11.2.0
-
-  # Utilities
-  intl: ^0.19.0
-  package_info_plus: ^8.1.2
-  http: ^1.2.2
-  share_plus: ^7.2.1
-
-  # Terminal
-  xterm: ^4.0.0
-
-  # Optional (for future use)
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
+  dartssh2: ^2.13.0
   grpc: ^5.1.0
   protobuf: ^6.0.0
+  flutter_riverpod: ^2.5.1
+  get_storage: ^2.1.1
+  fl_chart: ^1.1.1
+  google_fonts: ^6.3.3
+  flutter_animate: ^4.5.2
+  gap: ^3.0.1
+  path_provider: ^2.1.5
+  file_picker: ^10.3.7
+  multicast_dns: ^0.3.2+7
+  network_info_plus: ^6.0.2
+  permission_handler: ^11.3.0
+  flutter_background_service: ^5.0.10
+  flutter_local_notifications: ^18.0.1
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.14.2
-  build_runner: ^2.4.6
-  freezed: ^2.4.5
-  json_serializable: ^6.7.1
-  very_good_analysis: ^5.1.0
 
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
 
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
 flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
   uses-material-design: true
-  # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/bin/
     - assets/icon/
-  
+  # To add assets to your application, add an assets section, like this:
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+
   # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/assets-and-images/#resolution-aware
+  # https://flutter.dev/to/resolution-aware-images
 
   # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/assets-and-images/#from-packages
+  # https://flutter.dev/to/asset-from-package
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a
@@ -120,4 +105,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/custom-fonts/#from-packages
+  # see https://flutter.dev/to/font-from-package

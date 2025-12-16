@@ -86,15 +86,16 @@ VS_VERSION_INFO VERSIONINFO
  FILESUBTYPE 0x0L
 BEGIN
     BLOCK "StringFileInfo"
-    BEGIN        BLOCK "040904e4"
+    BEGIN
+        BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.lukas200301" "\0"
-            VALUE "FileDescription", "Raspberry Pi Control" "\0"
+            VALUE "CompanyName", "com.example" "\0"
+            VALUE "FileDescription", "raspberrypi_control" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Raspberry Pi Control" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.lukas200301. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Raspberry Pi Control.exe" "\0"
-            VALUE "ProductName", "Raspberry Pi Control" "\0"
+            VALUE "InternalName", "raspberrypi_control" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "OriginalFilename", "raspberrypi_control.exe" "\0"
+            VALUE "ProductName", "raspberrypi_control" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,0 +1,127 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/ssh_service.dart';
+import '../services/storage_service.dart';
+import '../services/agent_manager.dart';
+import '../services/grpc_service.dart';
+import '../services/network_discovery_service.dart';
+import '../models/ssh_connection.dart';
+import '../models/agent_info.dart';
+
+// Services
+final storageServiceProvider = Provider((ref) => StorageService());
+
+final sshServiceProvider = Provider((ref) => SSHService());
+
+final agentManagerProvider = Provider((ref) {
+  final sshService = ref.watch(sshServiceProvider);
+  return AgentManager(sshService);
+});
+
+final grpcServiceProvider = Provider((ref) => GrpcService());
+
+final networkDiscoveryServiceProvider = Provider((ref) => NetworkDiscoveryService());
+
+// Connection State
+final connectionListProvider = NotifierProvider<ConnectionListNotifier, List<SSHConnection>>(
+  ConnectionListNotifier.new,
+);
+
+class ConnectionListNotifier extends Notifier<List<SSHConnection>> {
+  @override
+  List<SSHConnection> build() {
+    final storage = ref.watch(storageServiceProvider);
+    return storage.getConnections();
+  }
+
+  Future<void> addConnection(SSHConnection connection) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.addConnection(connection);
+    state = storage.getConnections();
+  }
+
+  Future<void> updateConnection(SSHConnection connection) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.updateConnection(connection);
+    state = storage.getConnections();
+  }
+
+  Future<void> deleteConnection(String id) async {
+    final storage = ref.read(storageServiceProvider);
+    await storage.deleteConnection(id);
+    state = storage.getConnections();
+  }
+
+  Future<void> toggleFavorite(String id) async {
+    final connection = state.firstWhere((c) => c.id == id);
+    await updateConnection(connection.copyWith(isFavorite: !connection.isFavorite));
+  }
+}
+
+// Current Connection State
+class CurrentConnectionNotifier extends Notifier<SSHConnection?> {
+  @override
+  SSHConnection? build() => null;
+
+  void setConnection(SSHConnection? connection) {
+    state = connection;
+  }
+}
+
+final currentConnectionProvider = NotifierProvider<CurrentConnectionNotifier, SSHConnection?>(
+  CurrentConnectionNotifier.new,
+);
+
+final connectionStateProvider = StreamProvider<ConnectionState>((ref) {
+  final sshService = ref.watch(sshServiceProvider);
+  return sshService.connectionState;
+});
+
+// Agent State
+class AgentInfoNotifier extends Notifier<AgentInfo> {
+  @override
+  AgentInfo build() => AgentInfo.notInstalled();
+
+  void setAgentInfo(AgentInfo info) {
+    state = info;
+  }
+}
+
+final agentInfoProvider = NotifierProvider<AgentInfoNotifier, AgentInfo>(
+  AgentInfoNotifier.new,
+);
+
+// Navigation
+class CurrentScreenNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void setScreen(int index) {
+    state = index;
+  }
+}
+
+final currentScreenProvider = NotifierProvider<CurrentScreenNotifier, int>(
+  CurrentScreenNotifier.new,
+);
+
+// Live Stats Stream with keepAlive to maintain connection
+final liveStatsProvider = StreamProvider.autoDispose((ref) {
+  final grpcService = ref.watch(grpcServiceProvider);
+  
+  // Keep the provider alive for 30 seconds after last listener
+  ref.keepAlive();
+  
+  return grpcService.streamStats();
+});
+
+// Service List Provider
+final serviceListProvider = FutureProvider.autoDispose((ref) async {
+  final grpcService = ref.watch(grpcServiceProvider);
+  return await grpcService.listServices();
+});
+
+// Disk Info Provider
+final diskInfoProvider = FutureProvider.autoDispose((ref) async {
+  final grpcService = ref.watch(grpcServiceProvider);
+  return await grpcService.getDiskInfo();
+});

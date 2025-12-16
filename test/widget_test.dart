@@ -1,19 +1,13 @@
-// This is a basic Flutter widget test for RaspberryPi Control v3.0
 import 'package:flutter_test/flutter_test.dart';
-import 'package:get/get.dart';
-
-import 'package:RaspberryPi_Control/main.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:raspberrypi_control/main.dart';
 
 void main() {
-  testWidgets('App initializes correctly', (WidgetTester tester) async {
+  testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const RaspberryPiControlApp());
+    await tester.pumpWidget(const ProviderScope(child: RaspberryPiControlApp()));
 
-    // Wait for async initialization
-    await tester.pumpAndSettle();
-
-    // Verify that the app loads (home page should be visible)
-    // We expect to find the Connections page as default for non-connected state
-    expect(find.byType(GetMaterialApp), findsOneWidget);
+    // Verify app title is present
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 }

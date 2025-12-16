@@ -1,0 +1,208 @@
+syntax = "proto3";
+
+package picontrol;
+
+option go_package = "pi_agent/proto";
+
+// ==================== Services ====================
+
+service SystemMonitor {
+  // Stream real-time system statistics (CPU, RAM, temp, etc.)
+  rpc StreamStats (Empty) returns (stream LiveStats);
+
+  // Get list of all running processes
+  rpc ListProcesses (Empty) returns (ProcessList);
+
+  // Kill a specific process by PID
+  rpc KillProcess (ProcessId) returns (ActionStatus);
+
+  // List all systemd services
+  rpc ListServices (Empty) returns (ServiceList);
+
+  // Control a systemd service (start/stop/restart/enable/disable)
+  rpc ManageService (ServiceCommand) returns (ActionStatus);
+
+  // Stream system logs in real-time
+  rpc StreamLogs (LogFilter) returns (stream LogEntry);
+
+  // Get disk usage information
+  rpc GetDiskInfo (Empty) returns (DiskInfo);
+
+  // Get network interface information
+  rpc GetNetworkInfo (Empty) returns (NetworkInfo);
+
+  // Get active network connections
+  rpc GetNetworkConnections (Empty) returns (NetworkConnectionList);
+}
+
+// ==================== Messages ====================
+
+message Empty {}
+
+// Real-time system statistics
+message LiveStats {
+  // CPU usage percentage (0-100)
+  double cpu_usage = 1;
+
+  // Per-core CPU usage
+  repeated double cpu_per_core = 2;
+
+  // RAM usage in bytes
+  uint64 ram_used = 3;
+  uint64 ram_total = 4;
+  uint64 ram_free = 5;
+  uint64 ram_cached = 6;
+
+  // Swap usage in bytes
+  uint64 swap_used = 7;
+  uint64 swap_total = 8;
+
+  // CPU temperature in Celsius
+  double cpu_temp = 9;
+
+  // GPU temperature in Celsius (if available)
+  double gpu_temp = 10;
+
+  // System uptime in seconds
+  uint64 uptime = 11;
+
+  // Load averages
+  double load_1min = 12;
+  double load_5min = 13;
+  double load_15min = 14;
+
+  // Network stats (bytes per second)
+  uint64 net_bytes_sent = 15;
+  uint64 net_bytes_recv = 16;
+
+  // Top processes by CPU usage
+  repeated ProcessInfo top_processes = 17;
+
+  // Timestamp of this stat snapshot
+  int64 timestamp = 18;
+}
+
+// Process information
+message ProcessInfo {
+  int32 pid = 1;
+  string name = 2;
+  double cpu_percent = 3;
+  double memory_percent = 4;
+  uint64 memory_bytes = 5;
+  string status = 6;
+  string username = 7;
+  string cmdline = 8;
+}
+
+// List of all processes
+message ProcessList {
+  repeated ProcessInfo processes = 1;
+}
+
+// Process ID for kill operations
+message ProcessId {
+  int32 pid = 1;
+}
+
+// Service information
+message ServiceInfo {
+  string name = 1;
+  string status = 2; // active, inactive, failed, etc.
+  string description = 3;
+  bool enabled = 4;
+  string sub_state = 5; // running, dead, exited, etc.
+}
+
+// List of all services
+message ServiceList {
+  repeated ServiceInfo services = 1;
+}
+
+// Service control command
+message ServiceCommand {
+  string service_name = 1;
+  ServiceAction action = 2;
+}
+
+enum ServiceAction {
+  START = 0;
+  STOP = 1;
+  RESTART = 2;
+  ENABLE = 3;
+  DISABLE = 4;
+  RELOAD = 5;
+}
+
+// Generic action status response
+message ActionStatus {
+  bool success = 1;
+  string message = 2;
+  int32 error_code = 3;
+}
+
+// Log filter options
+message LogFilter {
+  // Filter by log level (empty = all)
+  repeated string levels = 1; // error, warning, info, debug
+
+  // Filter by service name (empty = all)
+  string service = 2;
+
+  // Number of past lines to include (0 = only new)
+  int32 tail_lines = 3;
+}
+
+// Single log entry
+message LogEntry {
+  int64 timestamp = 1;
+  string level = 2;
+  string service = 3;
+  string message = 4;
+}
+
+// Disk usage information
+message DiskInfo {
+  repeated DiskPartition partitions = 1;
+}
+
+message DiskPartition {
+  string device = 1;
+  string mount_point = 2;
+  string filesystem = 3;
+  uint64 total_bytes = 4;
+  uint64 used_bytes = 5;
+  uint64 free_bytes = 6;
+  double usage_percent = 7;
+}
+
+// Network interface information
+message NetworkInfo {
+  repeated NetworkInterface interfaces = 1;
+}
+
+message NetworkInterface {
+  string name = 1;
+  repeated string addresses = 2;
+  string mac_address = 3;
+  bool is_up = 4;
+  uint64 bytes_sent = 5;
+  uint64 bytes_recv = 6;
+  uint64 packets_sent = 7;
+  uint64 packets_recv = 8;
+}
+
+// Network connection information
+message NetworkConnectionList {
+  repeated NetworkConnection connections = 1;
+}
+
+message NetworkConnection {
+  string protocol = 1; // TCP, UDP, etc.
+  string local_address = 2;
+  int32 local_port = 3;
+  string remote_address = 4;
+  int32 remote_port = 5;
+  string status = 6; // ESTABLISHED, LISTEN, TIME_WAIT, etc.
+  int32 pid = 7;
+  string process_name = 8;
+}

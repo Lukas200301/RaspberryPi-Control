@@ -1,0 +1,783 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gap/gap.dart';
+import '../theme/app_theme.dart';
+import '../widgets/glass_card.dart';
+import '../models/ssh_connection.dart';
+import '../providers/app_providers.dart';
+import '../services/transfer_manager_service.dart';
+
+class ConnectionsScreen extends ConsumerWidget {
+  const ConnectionsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final connections = ref.watch(connectionListProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Connections'),
+        scrolledUnderElevation: 0,
+      ),
+      body: connections.isEmpty
+          ? _buildEmptyState(context)
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: connections.length,
+              separatorBuilder: (context, index) => const Gap(12),
+              itemBuilder: (context, index) {
+                final connection = connections[index];
+                return _buildConnectionCard(context, ref, connection);
+              },
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddConnectionDialog(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Add Connection'),
+        backgroundColor: AppTheme.primaryIndigo,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: GlassCard(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.devices,
+              size: 64,
+              color: AppTheme.textTertiary,
+            ),
+            const Gap(16),
+            Text(
+              'No Connections',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const Gap(8),
+            Text(
+              'Add a Raspberry Pi connection to get started',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionCard(
+    BuildContext context,
+    WidgetRef ref,
+    SSHConnection connection,
+  ) {
+    return GlassCard(
+      onTap: () => _connectToDevice(context, ref, connection),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.computer,
+              color: AppTheme.primaryIndigo,
+            ),
+          ),
+          const Gap(16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      connection.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (connection.isFavorite) ...[
+                      const Gap(8),
+                      const Icon(
+                        Icons.star,
+                        size: 16,
+                        color: AppTheme.warningAmber,
+                      ),
+                    ],
+                  ],
+                ),
+                const Gap(4),
+                Text(
+                  '${connection.username}@${connection.host}:${connection.port}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (connection.lastConnected != null) ...[
+                  const Gap(4),
+                  Text(
+                    'Last: ${_formatDate(connection.lastConnected!)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textTertiary,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          PopupMenuButton(
+            icon: const Icon(Icons.more_vert),
+            offset: const Offset(-8, 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            color: Colors.transparent,
+            elevation: 0,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                padding: EdgeInsets.zero,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppTheme.glassLight,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                    border: Border(
+                      top: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      left: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      right: BorderSide(color: AppTheme.glassBorder, width: 1),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.star_outline, size: 20),
+                      Gap(12),
+                      Text('Toggle Favorite'),
+                    ],
+                  ),
+                ),
+                onTap: () {
+                  ref.read(connectionListProvider.notifier).toggleFavorite(connection.id);
+                },
+              ),
+              PopupMenuItem(
+                padding: EdgeInsets.zero,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppTheme.glassLight,
+                    border: Border(
+                      left: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      right: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      top: BorderSide(color: AppTheme.glassBorder, width: 0.5),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      Gap(12),
+                      Text('Edit'),
+                    ],
+                  ),
+                ),
+                onTap: () {
+                  final ctx = context;
+                  Future.delayed(Duration.zero, () {
+                    _showEditConnectionDialog(ctx, ref, connection);
+                  });
+                },
+              ),
+              PopupMenuItem(
+                padding: EdgeInsets.zero,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppTheme.glassLight,
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                    border: Border(
+                      bottom: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      left: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      right: BorderSide(color: AppTheme.glassBorder, width: 1),
+                      top: BorderSide(color: AppTheme.glassBorder, width: 0.5),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: AppTheme.errorRose),
+                      Gap(12),
+                      Text('Delete', style: TextStyle(color: AppTheme.errorRose)),
+                    ],
+                  ),
+                ),
+                onTap: () {
+                  ref.read(connectionListProvider.notifier).deleteConnection(connection.id);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _connectToDevice(
+    BuildContext context,
+    WidgetRef ref,
+    SSHConnection connection,
+  ) async {
+    // Show connecting dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: AlertDialog(
+          backgroundColor: AppTheme.glassLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppTheme.glassBorder, width: 1),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              const Gap(16),
+              Text(
+                'Connecting to ${connection.name}...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Connect SSH
+      final sshService = ref.read(sshServiceProvider);
+      await sshService.connect(connection);
+
+      // Connect TransferManagerService with same credentials
+      TransferManagerService.connect(
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+      );
+
+      // Check agent
+      final agentManager = ref.read(agentManagerProvider);
+      final agentInfo = await agentManager.checkAgentVersion();
+
+      if (!agentInfo.isInstalled || agentInfo.needsUpdate) {
+        // Close connecting dialog
+        if (context.mounted) Navigator.pop(context);
+
+        // Show agent setup dialog
+        if (!context.mounted) return;
+        final install = await _showAgentSetupDialog(context, agentInfo);
+        if (install == true && context.mounted) {
+          await _installAgent(context, ref, agentManager);
+        }
+      }
+
+      // Start the agent and connect gRPC
+      if (context.mounted) {
+        final sshService = ref.read(sshServiceProvider);
+        
+        // Check and enable SSH forwarding if needed
+        try {
+          final forwardCheck = await sshService.execute(
+            'grep -i "^\\s*AllowTcpForwarding" /etc/ssh/sshd_config || echo "not_configured"'
+          );
+          debugPrint('SSH forwarding config: $forwardCheck');
+          
+          // Check if explicitly disabled
+          if (forwardCheck.toLowerCase().contains('allowtcpforwarding no') || 
+              forwardCheck.toLowerCase().contains('allowtcpforwarding=no')) {
+            if (context.mounted) {
+              final enable = await _showEnableForwardingDialog(context);
+              if (enable == true && context.mounted) {
+                await _enableSSHForwarding(context, ref, sshService, connection);
+              } else {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('SSH forwarding required for real-time monitoring',
+                          style: TextStyle(color: Colors.white)),
+                      backgroundColor: AppTheme.warningAmber,
+                    ),
+                  );
+                }
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Could not check SSH config: $e');
+        }
+
+        // Kill any existing agent first
+        try {
+          await sshService.execute('pkill -f ".pi_control/agent" || true');
+          await Future.delayed(const Duration(milliseconds: 200));
+        } catch (e) {
+          debugPrint('Error killing existing agent: $e');
+        }
+        
+        // Start the agent on all interfaces
+        try {
+          await sshService.execute('nohup ~/.pi_control/agent --host 0.0.0.0 --port 50051 > ~/.pi_control/agent.log 2>&1 & echo \$!');
+          debugPrint('Agent started on Pi (0.0.0.0:50051)');
+          // Give it time to start and bind to port
+          await Future.delayed(const Duration(seconds: 2));
+          
+          // Verify agent is running and port is listening
+          final portCheck = await sshService.execute('netstat -tuln | grep 50051 || ss -tuln | grep 50051 || echo "not_listening"');
+          debugPrint('Port 50051 status: $portCheck');
+          
+          if (portCheck.contains('not_listening')) {
+            throw Exception('Agent started but not listening on port 50051');
+          }
+        } catch (e) {
+          debugPrint('Error starting agent: $e');
+          if (context.mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to start agent: $e',
+                        style: const TextStyle(color: Colors.white)),
+                    backgroundColor: AppTheme.errorRose,
+                  ),
+                );
+              }
+            });
+          }
+          return;
+        }
+
+        // Set up SSH tunnel for gRPC
+        try {
+          final localPort = await sshService.forwardLocal(50051, 'localhost', 50051);
+          debugPrint('SSH tunnel established: localhost:$localPort -> Pi:localhost:50051');
+          
+          // Give tunnel time to establish
+          await Future.delayed(const Duration(seconds: 1));
+        } catch (e) {
+          debugPrint('Error setting up SSH tunnel: $e');
+          if (context.mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to setup tunnel: $e',
+                        style: const TextStyle(color: Colors.white)),
+                    backgroundColor: AppTheme.errorRose,
+                  ),
+                );
+              }
+            });
+          }
+          return;
+        }
+
+        // Connect gRPC service
+        try {
+          final grpcService = ref.read(grpcServiceProvider);
+          await grpcService.connect(50051);
+          debugPrint('gRPC connected successfully');
+        } catch (e) {
+          debugPrint('Error connecting gRPC: $e');
+          if (context.mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to connect to agent: $e',
+                        style: const TextStyle(color: Colors.white)),
+                    backgroundColor: AppTheme.errorRose,
+                  ),
+                );
+              }
+            });
+          }
+          return;
+        }
+      }
+
+      // Update current connection
+      ref.read(currentConnectionProvider.notifier).setConnection(
+            connection.copyWith(lastConnected: DateTime.now()),
+          );
+
+      // Save updated connection
+      await ref.read(connectionListProvider.notifier).updateConnection(
+            connection.copyWith(lastConnected: DateTime.now()),
+          );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Connected to ${connection.name}'),
+              backgroundColor: AppTheme.successGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection failed: $e', style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool?> _showEnableForwardingDialog(BuildContext context) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Enable SSH Forwarding?'),
+        content: Text(
+          'SSH port forwarding is currently disabled on your Raspberry Pi.\n\n'
+          'To enable real-time monitoring, we need to:\n'
+          '• Modify /etc/ssh/sshd_config\n'
+          '• Set AllowTcpForwarding yes\n'
+          '• Restart SSH service\n\n'
+          'This is required for secure gRPC communication.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryIndigo,
+            ),
+            child: const Text('Enable'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _enableSSHForwarding(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic sshService,
+    SSHConnection connection,
+  ) async {
+    try {
+      debugPrint('Enabling SSH forwarding...');
+      
+      // Backup original config
+      await sshService.execute('sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup');
+      
+      // Enable AllowTcpForwarding
+      await sshService.execute(
+        'echo "${connection.password}" | sudo -S sed -i "s/^\\s*AllowTcpForwarding.*/AllowTcpForwarding yes/" /etc/ssh/sshd_config'
+      );
+      
+      // Add if not exists
+      await sshService.execute(
+        'grep -q "^AllowTcpForwarding" /etc/ssh/sshd_config || echo "${connection.password}" | sudo -S sh -c "echo \'AllowTcpForwarding yes\' >> /etc/ssh/sshd_config"'
+      );
+      
+      // Restart SSH service (this will drop our connection)
+      await sshService.execute('echo "${connection.password}" | sudo -S systemctl restart sshd || sudo -S service ssh restart');
+      
+      debugPrint('SSH service restarting (connection will drop)...');
+      
+      // Wait for SSH service to restart and disconnect
+      await Future.delayed(const Duration(seconds: 3));
+      
+      // Reconnect SSH
+      debugPrint('Reconnecting SSH after forwarding enabled...');
+      await sshService.disconnect();
+      await Future.delayed(const Duration(seconds: 1));
+      await sshService.connect(connection);
+      debugPrint('SSH reconnected successfully');
+
+      // Reconnect TransferManagerService
+      TransferManagerService.connect(
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+      );
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('SSH forwarding enabled and reconnected',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error enabling SSH forwarding: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to enable forwarding: $e',
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool?> _showAgentSetupDialog(BuildContext context, dynamic agentInfo) async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Enable Real-Time Monitoring?'),
+        content: Text(
+          'To visualize system stats in real-time, the app needs to copy a small helper tool (Agent v3.0) to your Raspberry Pi. This takes about 5 seconds.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Use Basic Mode'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Install & Connect'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _installAgent(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic agentManager,
+  ) async {
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: AlertDialog(
+          backgroundColor: AppTheme.glassLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppTheme.glassBorder, width: 1),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              const Gap(16),
+              Text(
+                'Installing agent...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await agentManager.installAgent(
+        onProgress: (message) {
+          // Could update dialog with progress
+        },
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Agent installation failed: $e', style: const TextStyle(color: Colors.white)),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAddConnectionDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final hostController = TextEditingController();
+    final portController = TextEditingController(text: '22');
+    final usernameController = TextEditingController(text: 'pi');
+    final passwordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Add Connection'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: hostController,
+                decoration: const InputDecoration(labelText: 'Host/IP'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: portController,
+                decoration: const InputDecoration(labelText: 'Port'),
+                keyboardType: TextInputType.number,
+              ),
+              const Gap(16),
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final connection = SSHConnection(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                name: nameController.text,
+                host: hostController.text,
+                port: int.tryParse(portController.text) ?? 22,
+                username: usernameController.text,
+                password: passwordController.text,
+              );
+
+              ref.read(connectionListProvider.notifier).addConnection(connection);
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditConnectionDialog(
+    BuildContext context,
+    WidgetRef ref,
+    SSHConnection connection,
+  ) {
+    final nameController = TextEditingController(text: connection.name);
+    final hostController = TextEditingController(text: connection.host);
+    final portController = TextEditingController(text: connection.port.toString());
+    final usernameController = TextEditingController(text: connection.username);
+    final passwordController = TextEditingController(text: connection.password);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Edit Connection'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: hostController,
+                decoration: const InputDecoration(labelText: 'Host/IP'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: portController,
+                decoration: const InputDecoration(labelText: 'Port'),
+                keyboardType: TextInputType.number,
+              ),
+              const Gap(16),
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              const Gap(16),
+              TextField(
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updated = connection.copyWith(
+                name: nameController.text,
+                host: hostController.text,
+                port: int.tryParse(portController.text) ?? 22,
+                username: usernameController.text,
+                password: passwordController.text,
+              );
+
+              ref.read(connectionListProvider.notifier).updateConnection(updated);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
