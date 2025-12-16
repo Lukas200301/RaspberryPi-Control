@@ -1,4 +1,4 @@
-package com.example.raspberrypi_control
+package com.lukas200301.raspberrypi_control
 
 import io.flutter.embedding.android.FlutterActivity
 

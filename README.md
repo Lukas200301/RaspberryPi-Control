@@ -1,4 +1,4 @@
-# Raspberry Pi Control v3.0 🚀
+# Raspberry Pi Control
 
 A high-performance, real-time monitoring and control application for Raspberry Pi devices with a beautiful glassmorphic UI.
 

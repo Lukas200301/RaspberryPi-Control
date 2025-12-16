@@ -6,6 +6,7 @@ import '../services/grpc_service.dart';
 import '../services/network_discovery_service.dart';
 import '../models/ssh_connection.dart';
 import '../models/agent_info.dart';
+import '../models/app_settings.dart';
 
 // Services
 final storageServiceProvider = Provider((ref) => StorageService());
@@ -125,3 +126,6 @@ final diskInfoProvider = FutureProvider.autoDispose((ref) async {
   final grpcService = ref.watch(grpcServiceProvider);
   return await grpcService.getDiskInfo();
 });
+
+// App Settings Provider
+final appSettingsProvider = Provider((ref) => AppSettings());
