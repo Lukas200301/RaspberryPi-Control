@@ -4,51 +4,20 @@ import 'dart:ui';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Background Transfer Manager Service
 /// Handles persistent SFTP connections and file transfers in a background isolate
 class TransferManagerService {
-  static const String _channelId = 'transfer_manager_channel';
-  static const int _notificationId = 2000;
-  static final FlutterLocalNotificationsPlugin _notifications =
-      FlutterLocalNotificationsPlugin();
-
   /// Initialize the background service
   static Future<void> initialize() async {
     final service = FlutterBackgroundService();
-
-    // Initialize notifications
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
-    await _notifications.initialize(initSettings);
-
-    // Create notification channel
-    const androidChannel = AndroidNotificationChannel(
-      _channelId,
-      'Transfer Manager',
-      description: 'Manages file transfers with persistent SFTP connection',
-      importance: Importance.low,
-      showBadge: false,
-      playSound: false,
-      enableVibration: false,
-    );
-
-    await _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
 
     // Configure background service
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: false,
-        isForegroundMode: true,
-        notificationChannelId: _channelId,
-        initialNotificationTitle: 'Transfer Manager',
-        initialNotificationContent: 'Ready',
-        foregroundServiceNotificationId: _notificationId,
+        isForegroundMode: false,
       ),
       iosConfiguration: IosConfiguration(
         autoStart: false,
@@ -78,28 +47,6 @@ class TransferManagerService {
     Map<String, dynamic>? connectionConfig;
     Timer? keepaliveTimer;
     bool isConnected = false;
-
-    // Update notification helper
-    Future<void> updateNotification(String title, String body, {int? progress}) async {
-      final androidDetails = AndroidNotificationDetails(
-        _channelId,
-        'Transfer Manager',
-        importance: Importance.low,
-        priority: Priority.low,
-        showProgress: progress != null,
-        maxProgress: 100,
-        progress: progress ?? 0,
-        ongoing: true,
-        autoCancel: false,
-      );
-
-      await _notifications.show(
-        _notificationId,
-        title,
-        body,
-        NotificationDetails(android: androidDetails),
-      );
-    }
 
     // Keepalive mechanism - sends dummy command every 30 seconds
     void startKeepalive() {
@@ -136,8 +83,6 @@ class TransferManagerService {
       try {
         connectionConfig = config;
 
-        await updateNotification('Connecting...', 'Establishing SFTP connection');
-
         final socket = await SSHSocket.connect(
           config['host'],
           config['port'],
@@ -155,14 +100,12 @@ class TransferManagerService {
 
         startKeepalive();
 
-        await updateNotification('Connected', 'SFTP connection established');
         service.invoke('connected');
 
         debugPrint('TransferManager: Connected to ${config['host']}');
         return true;
       } catch (e) {
         debugPrint('TransferManager: Connection failed: $e');
-        await updateNotification('Connection Failed', e.toString());
         service.invoke('connectionFailed', {'error': e.toString()});
         return false;
       }
@@ -176,7 +119,6 @@ class TransferManagerService {
       sshClient?.close();
       sshClient = null;
       isConnected = false;
-      await updateNotification('Disconnected', 'SFTP connection closed');
       debugPrint('TransferManager: Disconnected');
     }
 
@@ -204,12 +146,6 @@ class TransferManagerService {
         final stat = await sftpClient!.stat(remotePath);
         final totalBytes = stat.size ?? 0;
 
-        await updateNotification(
-          'Downloading',
-          remotePath.split('/').last,
-          progress: 0,
-        );
-
         final remoteFile = await sftpClient!.open(remotePath);
         final localFile = File(localPath);
         final sink = localFile.openWrite();
@@ -224,11 +160,6 @@ class TransferManagerService {
           final progress = totalBytes > 0 ? ((transferredBytes / totalBytes) * 100).round() : 0;
           if (progress - lastProgress >= 5 || transferredBytes == totalBytes) {
             lastProgress = progress;
-            await updateNotification(
-              'Downloading',
-              '${remotePath.split('/').last} - $progress%',
-              progress: progress,
-            );
             service.invoke('downloadProgress', {
               'remotePath': remotePath,
               'localPath': localPath,
@@ -273,12 +204,6 @@ class TransferManagerService {
         final localFile = File(localPath);
         final totalBytes = await localFile.length();
 
-        await updateNotification(
-          'Uploading',
-          localPath.split('/').last,
-          progress: 0,
-        );
-
         final remoteFile = await sftpClient!.open(
           remotePath,
           mode: SftpFileOpenMode.create |
@@ -298,11 +223,6 @@ class TransferManagerService {
           final progress = ((transferredBytes / totalBytes) * 100).round();
           if (progress - lastProgress >= 5 || transferredBytes == totalBytes) {
             lastProgress = progress;
-            await updateNotification(
-              'Uploading',
-              '${localPath.split('/').last} - $progress%',
-              progress: progress,
-            );
             service.invoke('uploadProgress', {
               'localPath': localPath,
               'remotePath': remotePath,
@@ -359,11 +279,6 @@ class TransferManagerService {
       debugPrint('TransferManager: Uploading directory $localPath -> $remotePath');
 
       try {
-        await updateNotification(
-          'Uploading Folder',
-          localPath.split('/').last,
-        );
-
         // Check if remote directory exists, create if not
         try {
           await sftpClient!.stat(remotePath);
@@ -415,7 +330,6 @@ class TransferManagerService {
           'remotePath': remotePath,
         });
 
-        await updateNotification('Folder Uploaded', localPath.split('/').last);
         debugPrint('TransferManager: Folder upload complete: $remotePath');
       } catch (e) {
         debugPrint('TransferManager: Folder upload failed: $e');
@@ -455,11 +369,6 @@ class TransferManagerService {
       debugPrint('TransferManager: Downloading directory $remotePath -> $localPath');
 
       try {
-        await updateNotification(
-          'Downloading Folder',
-          remotePath.split('/').last,
-        );
-
         // Create local directory
         final localDir = Directory(localPath);
         if (!await localDir.exists()) {
@@ -509,7 +418,6 @@ class TransferManagerService {
           'localPath': localPath,
         });
 
-        await updateNotification('Folder Downloaded', remotePath.split('/').last);
         debugPrint('TransferManager: Folder download complete: $localPath');
       } catch (e) {
         debugPrint('TransferManager: Folder download failed: $e');
@@ -604,13 +512,9 @@ class TransferManagerService {
 
     service.on('stop').listen((event) async {
       await disconnect();
-      await _notifications.cancel(_notificationId);
       service.stopSelf();
       debugPrint('TransferManager: Service stopped');
     });
-
-    // Initial notification
-    await updateNotification('Transfer Manager', 'Ready');
   }
 
   /// Start the service

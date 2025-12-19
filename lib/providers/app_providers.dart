@@ -4,6 +4,7 @@ import '../services/storage_service.dart';
 import '../services/agent_manager.dart';
 import '../services/grpc_service.dart';
 import '../services/network_discovery_service.dart';
+import '../services/connection_manager.dart';
 import '../models/ssh_connection.dart';
 import '../models/agent_info.dart';
 import '../models/app_settings.dart';
@@ -21,6 +22,24 @@ final agentManagerProvider = Provider((ref) {
 final grpcServiceProvider = Provider((ref) => GrpcService());
 
 final networkDiscoveryServiceProvider = Provider((ref) => NetworkDiscoveryService());
+
+// Connection Manager - Central connection orchestrator
+final connectionManagerProvider = Provider((ref) {
+  final sshService = ref.watch(sshServiceProvider);
+  final grpcService = ref.watch(grpcServiceProvider);
+  final agentManager = ref.watch(agentManagerProvider);
+  return ConnectionManager(
+    sshService: sshService,
+    grpcService: grpcService,
+    agentManager: agentManager,
+  );
+});
+
+// Connection Manager State Stream
+final connectionManagerStateProvider = StreamProvider<ConnectionManagerState>((ref) {
+  final connectionManager = ref.watch(connectionManagerProvider);
+  return connectionManager.stateStream;
+});
 
 // Connection State
 final connectionListProvider = NotifierProvider<ConnectionListNotifier, List<SSHConnection>>(

@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/ssh_connection.dart';
 import '../providers/app_providers.dart';
-import '../services/transfer_manager_service.dart';
+import '../services/connection_manager.dart';
+import 'main_screen.dart';
 
 class ConnectionsScreen extends ConsumerWidget {
   const ConnectionsScreen({super.key});
@@ -237,6 +238,32 @@ class ConnectionsScreen extends ConsumerWidget {
     WidgetRef ref,
     SSHConnection connection,
   ) async {
+    final connectionManager = ref.read(connectionManagerProvider);
+
+    // Guard: Check if already connected or connecting
+    if (connectionManager.isConnecting) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Already connecting to a device...'),
+          backgroundColor: AppTheme.warningAmber,
+        ),
+      );
+      return;
+    }
+
+    if (connectionManager.isConnected) {
+      final current = connectionManager.currentConnection;
+      if (current?.id == connection.id) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Already connected to ${connection.name}'),
+            backgroundColor: AppTheme.warningAmber,
+          ),
+        );
+        return;
+      }
+    }
+
     // Show connecting dialog
     showDialog(
       context: context,
@@ -257,6 +284,7 @@ class ConnectionsScreen extends ConsumerWidget {
               Text(
                 'Connecting to ${connection.name}...',
                 style: Theme.of(context).textTheme.bodyLarge,
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -265,190 +293,167 @@ class ConnectionsScreen extends ConsumerWidget {
     );
 
     try {
-      // Connect SSH
-      final sshService = ref.read(sshServiceProvider);
-      await sshService.connect(connection);
-
-      // Connect TransferManagerService with same credentials
-      TransferManagerService.connect(
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
+      // Start connection
+      final result = await connectionManager.connect(
+        connection,
+        installAgentIfNeeded: false,
+        enableForwardingIfNeeded: false,
+        onProgress: (message) {
+          // Progress updates are handled by the state stream
+        },
       );
 
-      // Check agent
-      final agentManager = ref.read(agentManagerProvider);
-      final agentInfo = await agentManager.checkAgentVersion();
+      // Handle different result types
+      if (result is SuccessResult) {
+        // Update current connection state
+        ref.read(currentConnectionProvider.notifier).setConnection(
+          connection.copyWith(lastConnected: DateTime.now()),
+        );
 
-      if (!agentInfo.isInstalled || agentInfo.needsUpdate) {
+        // Save updated connection
+        await ref.read(connectionListProvider.notifier).updateConnection(
+          connection.copyWith(lastConnected: DateTime.now()),
+        );
+
+        if (context.mounted) {
+          Navigator.pop(context); // Close progress dialog
+
+          // Navigate to main screen (dashboard)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        }
+      } else if (result is AgentSetupRequiredResult) {
         // Close connecting dialog
         if (context.mounted) Navigator.pop(context);
 
         // Show agent setup dialog
         if (!context.mounted) return;
-        final install = await _showAgentSetupDialog(context, agentInfo);
+        final install = await _showAgentSetupDialog(context, result.agentInfo);
+
         if (install == true && context.mounted) {
+          final agentManager = ref.read(agentManagerProvider);
           await _installAgent(context, ref, agentManager);
+
+          // Continue connection after agent installation
+          if (context.mounted) {
+            await _continueConnection(context, ref, connection);
+          }
+        } else {
+          // User declined agent installation, cleanup
+          await connectionManager.disconnect();
         }
+      } else if (result is SSHForwardingRequiredResult) {
+        // Close connecting dialog
+        if (context.mounted) Navigator.pop(context);
+
+        // Show SSH forwarding dialog
+        if (!context.mounted) return;
+        final enable = await _showEnableForwardingDialog(context);
+
+        if (enable == true && context.mounted) {
+          await connectionManager.enableSSHForwarding();
+
+          // Continue connection after enabling forwarding
+          if (context.mounted) {
+            await _continueConnection(context, ref, connection);
+          }
+        } else {
+          // User declined, cleanup
+          await connectionManager.disconnect();
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('SSH forwarding required for real-time monitoring'),
+                backgroundColor: AppTheme.warningAmber,
+              ),
+            );
+          }
+        }
+      } else if (result is ErrorResult) {
+        throw Exception(result.error);
       }
-
-      // Start the agent and connect gRPC
+    } catch (e) {
       if (context.mounted) {
-        final sshService = ref.read(sshServiceProvider);
-        
-        // Check and enable SSH forwarding if needed
-        try {
-          final forwardCheck = await sshService.execute(
-            'grep -i "^\\s*AllowTcpForwarding" /etc/ssh/sshd_config || echo "not_configured"'
-          );
-          debugPrint('SSH forwarding config: $forwardCheck');
-          
-          // Check if explicitly disabled
-          if (forwardCheck.toLowerCase().contains('allowtcpforwarding no') || 
-              forwardCheck.toLowerCase().contains('allowtcpforwarding=no')) {
-            if (context.mounted) {
-              final enable = await _showEnableForwardingDialog(context);
-              if (enable == true && context.mounted) {
-                await _enableSSHForwarding(context, ref, sshService, connection);
-              } else {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('SSH forwarding required for real-time monitoring',
-                          style: TextStyle(color: Colors.white)),
-                      backgroundColor: AppTheme.warningAmber,
-                    ),
-                  );
-                }
-                return;
-              }
-            }
-          }
-        } catch (e) {
-          debugPrint('Could not check SSH config: $e');
-        }
-
-        // Kill any existing agent first
-        try {
-          await sshService.execute('pkill -f ".pi_control/agent" || true');
-          await Future.delayed(const Duration(milliseconds: 200));
-        } catch (e) {
-          debugPrint('Error killing existing agent: $e');
-        }
-        
-        // Start the agent on all interfaces
-        try {
-          await sshService.execute('nohup ~/.pi_control/agent --host 0.0.0.0 --port 50051 > ~/.pi_control/agent.log 2>&1 & echo \$!');
-          debugPrint('Agent started on Pi (0.0.0.0:50051)');
-          // Give it time to start and bind to port
-          await Future.delayed(const Duration(seconds: 2));
-          
-          // Verify agent is running and port is listening
-          final portCheck = await sshService.execute('netstat -tuln | grep 50051 || ss -tuln | grep 50051 || echo "not_listening"');
-          debugPrint('Port 50051 status: $portCheck');
-          
-          if (portCheck.contains('not_listening')) {
-            throw Exception('Agent started but not listening on port 50051');
-          }
-        } catch (e) {
-          debugPrint('Error starting agent: $e');
-          if (context.mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to start agent: $e',
-                        style: const TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.errorRose,
-                  ),
-                );
-              }
-            });
-          }
-          return;
-        }
-
-        // Set up SSH tunnel for gRPC
-        try {
-          final localPort = await sshService.forwardLocal(50051, 'localhost', 50051);
-          debugPrint('SSH tunnel established: localhost:$localPort -> Pi:localhost:50051');
-          
-          // Give tunnel time to establish
-          await Future.delayed(const Duration(seconds: 1));
-        } catch (e) {
-          debugPrint('Error setting up SSH tunnel: $e');
-          if (context.mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to setup tunnel: $e',
-                        style: const TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.errorRose,
-                  ),
-                );
-              }
-            });
-          }
-          return;
-        }
-
-        // Connect gRPC service
-        try {
-          final grpcService = ref.read(grpcServiceProvider);
-          await grpcService.connect(50051);
-          debugPrint('gRPC connected successfully');
-        } catch (e) {
-          debugPrint('Error connecting gRPC: $e');
-          if (context.mounted) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to connect to agent: $e',
-                        style: const TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.errorRose,
-                  ),
-                );
-              }
-            });
-          }
-          return;
-        }
+        Navigator.pop(context); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection failed: $e'),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
       }
+    }
+  }
 
-      // Update current connection
-      ref.read(currentConnectionProvider.notifier).setConnection(
-            connection.copyWith(lastConnected: DateTime.now()),
-          );
+  Future<void> _continueConnection(
+    BuildContext context,
+    WidgetRef ref,
+    SSHConnection connection,
+  ) async {
+    final connectionManager = ref.read(connectionManagerProvider);
 
-      // Save updated connection
-      await ref.read(connectionListProvider.notifier).updateConnection(
-            connection.copyWith(lastConnected: DateTime.now()),
-          );
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: AlertDialog(
+          backgroundColor: AppTheme.glassLight,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: AppTheme.glassBorder, width: 1),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              const Gap(16),
+              Text(
+                'Completing connection...',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
-      if (context.mounted) {
-        Navigator.pop(context);
+    try {
+      final result = await connectionManager.continueConnection();
+
+      if (result is SuccessResult) {
+        // Update current connection state
+        ref.read(currentConnectionProvider.notifier).setConnection(
+          connection.copyWith(lastConnected: DateTime.now()),
+        );
+
+        // Save updated connection
+        await ref.read(connectionListProvider.notifier).updateConnection(
+          connection.copyWith(lastConnected: DateTime.now()),
+        );
+
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Connected to ${connection.name}'),
-              backgroundColor: AppTheme.successGreen,
-            ),
+          Navigator.pop(context); // Close progress dialog
+
+          // Navigate to main screen (dashboard)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
           );
         }
+      } else if (result is ErrorResult) {
+        throw Exception(result.error);
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Connection failed: $e', style: const TextStyle(color: Colors.white)),
+            content: Text('Connection failed: $e'),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -486,75 +491,6 @@ class ConnectionsScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _enableSSHForwarding(
-    BuildContext context,
-    WidgetRef ref,
-    dynamic sshService,
-    SSHConnection connection,
-  ) async {
-    try {
-      debugPrint('Enabling SSH forwarding...');
-      
-      // Backup original config
-      await sshService.execute('sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup');
-      
-      // Enable AllowTcpForwarding
-      await sshService.execute(
-        'echo "${connection.password}" | sudo -S sed -i "s/^\\s*AllowTcpForwarding.*/AllowTcpForwarding yes/" /etc/ssh/sshd_config'
-      );
-      
-      // Add if not exists
-      await sshService.execute(
-        'grep -q "^AllowTcpForwarding" /etc/ssh/sshd_config || echo "${connection.password}" | sudo -S sh -c "echo \'AllowTcpForwarding yes\' >> /etc/ssh/sshd_config"'
-      );
-      
-      // Restart SSH service (this will drop our connection)
-      await sshService.execute('echo "${connection.password}" | sudo -S systemctl restart sshd || sudo -S service ssh restart');
-      
-      debugPrint('SSH service restarting (connection will drop)...');
-      
-      // Wait for SSH service to restart and disconnect
-      await Future.delayed(const Duration(seconds: 3));
-      
-      // Reconnect SSH
-      debugPrint('Reconnecting SSH after forwarding enabled...');
-      await sshService.disconnect();
-      await Future.delayed(const Duration(seconds: 1));
-      await sshService.connect(connection);
-      debugPrint('SSH reconnected successfully');
-
-      // Reconnect TransferManagerService
-      TransferManagerService.connect(
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-      );
-      
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('SSH forwarding enabled and reconnected',
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: AppTheme.successGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error enabling SSH forwarding: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to enable forwarding: $e',
-                style: const TextStyle(color: Colors.white)),
-            backgroundColor: AppTheme.errorRose,
-          ),
-        );
-      }
-      rethrow;
-    }
   }
 
   Future<bool?> _showAgentSetupDialog(BuildContext context, dynamic agentInfo) async {

@@ -21,11 +21,24 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   final Queue<double> _memHistory = Queue();
   final Queue<double> _uploadHistory = Queue();
   final Queue<double> _downloadHistory = Queue();
-  final int _maxDataPoints = 30;
+  int? _lastStatsHistorySetting;
 
   @override
   Widget build(BuildContext context) {
     final liveStatsAsync = ref.watch(liveStatsProvider);
+    final settings = ref.watch(appSettingsProvider);
+    // Calculate max data points based on stats history setting
+    // Assuming stats update every 2 seconds (default gRPC stream interval)
+    final maxDataPoints = (settings.statsHistory / 2).round();
+    
+    // Clear history if settings changed
+    if (_lastStatsHistorySetting != null && _lastStatsHistorySetting != settings.statsHistory) {
+      _cpuHistory.clear();
+      _memHistory.clear();
+      _uploadHistory.clear();
+      _downloadHistory.clear();
+    }
+    _lastStatsHistorySetting = settings.statsHistory;
 
     return Scaffold(
       appBar: AppBar(
@@ -35,6 +48,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              setState(() {
+                _cpuHistory.clear();
+                _memHistory.clear();
+                _uploadHistory.clear();
+                _downloadHistory.clear();
+              });
               ref.invalidate(liveStatsProvider);
             },
           ),
@@ -42,7 +61,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ),
       body: liveStatsAsync.when(
         data: (stats) {
-          _updateHistory(stats);
+          _updateHistory(stats, maxDataPoints);
           return _buildStats(context, stats);
         },
         loading: () => const Center(
@@ -91,7 +110,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     );
   }
 
-  void _updateHistory(LiveStats stats) {
+  void _updateHistory(LiveStats stats, int maxDataPoints) {
     _cpuHistory.add(stats.cpuUsage);
     final memPercent = stats.ramTotal > 0 ? (stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100) : 0.0;
     _memHistory.add(memPercent);
@@ -100,16 +119,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     _uploadHistory.add(stats.netBytesSent.toDouble() / 1024);
     _downloadHistory.add(stats.netBytesRecv.toDouble() / 1024);
 
-    if (_cpuHistory.length > _maxDataPoints) {
+    if (_cpuHistory.length > maxDataPoints) {
       _cpuHistory.removeFirst();
     }
-    if (_memHistory.length > _maxDataPoints) {
+    if (_memHistory.length > maxDataPoints) {
       _memHistory.removeFirst();
     }
-    if (_uploadHistory.length > _maxDataPoints) {
+    if (_uploadHistory.length > maxDataPoints) {
       _uploadHistory.removeFirst();
     }
-    if (_downloadHistory.length > _maxDataPoints) {
+    if (_downloadHistory.length > maxDataPoints) {
       _downloadHistory.removeFirst();
     }
   }

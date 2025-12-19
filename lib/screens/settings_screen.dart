@@ -160,14 +160,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               children: [
                 _buildSettingTile(
                   context,
-                  icon: Icons.speed,
-                  title: 'Update Interval',
-                  subtitle: '${settings.updateInterval}ms',
-                  onTap: () => _showUpdateIntervalDialog(context, settings),
-                ),
-                const Divider(color: AppTheme.glassBorder),
-                _buildSettingTile(
-                  context,
                   icon: Icons.timeline,
                   title: 'Stats History',
                   subtitle: '${settings.statsHistory} seconds',
@@ -339,77 +331,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
       trailing: trailing,
       onTap: onTap,
-    );
-  }
-
-  void _showUpdateIntervalDialog(BuildContext context, settings) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('Update Interval'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('250ms (Very Fast)'),
-              onTap: () {
-                setState(() => settings.updateInterval = 250);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings saved. Restart the app to apply changes.',
-                        style: TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.successGreen,
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              title: const Text('500ms (Real-time)'),
-              onTap: () {
-                setState(() => settings.updateInterval = 500);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings saved. Restart the app to apply changes.',
-                        style: TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.successGreen,
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              title: const Text('1000ms (Balanced)'),
-              onTap: () {
-                setState(() => settings.updateInterval = 1000);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings saved. Restart the app to apply changes.',
-                        style: TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.successGreen,
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              title: const Text('2000ms (Battery Saver)'),
-              onTap: () {
-                setState(() => settings.updateInterval = 2000);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Settings saved. Restart the app to apply changes.',
-                        style: TextStyle(color: Colors.white)),
-                    backgroundColor: AppTheme.successGreen,
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
     );
   }
 

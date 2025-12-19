@@ -2,7 +2,6 @@ import 'package:get_storage/get_storage.dart';
 
 class AppSettings {
   static const String _keyAnimations = 'animations_enabled';
-  static const String _keyUpdateInterval = 'update_interval';
   static const String _keyStatsHistory = 'stats_history';
   static const String _keyTerminalFontSize = 'terminal_font_size';
   static const String _keyAutoReconnect = 'auto_reconnect';
@@ -14,9 +13,6 @@ class AppSettings {
   set animationsEnabled(bool value) => _storage.write(_keyAnimations, value);
 
   // Monitoring
-  int get updateInterval => _storage.read(_keyUpdateInterval) ?? 500;
-  set updateInterval(int value) => _storage.write(_keyUpdateInterval, value);
-
   int get statsHistory => _storage.read(_keyStatsHistory) ?? 60;
   set statsHistory(int value) => _storage.write(_keyStatsHistory, value);
 

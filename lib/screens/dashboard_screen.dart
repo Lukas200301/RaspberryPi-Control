@@ -129,16 +129,18 @@ class DashboardScreen extends ConsumerWidget {
                         // Clear file transfers before disconnecting
                         ref.read(fileTransfersProvider.notifier).clearAll();
 
-                        // Disconnect in background without waiting
-                        Future.wait([
-                          ref.read(sshServiceProvider).disconnect(),
-                          ref.read(grpcServiceProvider).disconnect(),
-                        ], eagerError: true).timeout(
+                        // Clear current connection
+                        ref.read(currentConnectionProvider.notifier).setConnection(null);
+
+                        // Disconnect using connection manager
+                        final connectionManager = ref.read(connectionManagerProvider);
+                        connectionManager.disconnect().timeout(
                           const Duration(seconds: 2),
-                          onTimeout: () => [],
+                          onTimeout: () {
+                            debugPrint('Disconnect timeout, navigating anyway');
+                          },
                         ).catchError((e) {
                           debugPrint('Error during disconnect: $e');
-                          return [];
                         });
 
                         // Navigate immediately
