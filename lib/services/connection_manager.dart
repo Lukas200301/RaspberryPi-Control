@@ -270,36 +270,14 @@ class ConnectionManager {
   /// Setup agent and SSH tunnel
   Future<TunnelResult> _setupAgentAndTunnel(Function(String)? onProgress) async {
     try {
-      // Kill any existing agent
-      onProgress?.call('Preparing agent...');
-      try {
-        await _sshService.execute('pkill -f "/opt/pi-control/agent" || true');
-        await Future.delayed(const Duration(milliseconds: 300));
-      } catch (e) {
-        debugPrint('Could not kill existing agent: $e');
-      }
-
-      // Start agent
+      // Start agent using AgentManager
       onProgress?.call('Starting agent...');
       try {
-        await _sshService.execute(
-          'nohup /opt/pi-control/agent --host 0.0.0.0 --port 50051 > /opt/pi-control/agent.log 2>&1 &',
-        );
+        final agentManager = AgentManager(_sshService);
+        await agentManager.startAgent();
         debugPrint('✓ Agent started');
-
-        // Wait for agent to start
-        await Future.delayed(const Duration(seconds: 2));
-
-        // Verify agent is listening
-        final portCheck = await _sshService.execute(
-          'netstat -tuln 2>/dev/null | grep 50051 || ss -tuln 2>/dev/null | grep 50051 || echo "not_listening"',
-        );
-
-        if (portCheck.contains('not_listening')) {
-          return TunnelResult.error('Agent not listening on port 50051');
-        }
-        debugPrint('✓ Agent is listening on port 50051');
       } catch (e) {
+        debugPrint('Error starting agent: $e');
         return TunnelResult.error('Failed to start agent: $e');
       }
 

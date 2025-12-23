@@ -311,12 +311,10 @@ class ConnectionsScreen extends ConsumerWidget {
           lastConnected: DateTime.now(),
           agentVersion: result.connection.agentVersion, // Preserve agent version
         );
-        debugPrint('Updated connection with lastConnected - agent version: ${updatedConnection.agentVersion}');
         ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
 
         // Save updated connection with agent version
         await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
-        debugPrint('Connection saved to storage with agent version: ${updatedConnection.agentVersion}');
 
         if (context.mounted) {
           Navigator.pop(context); // Close progress dialog
@@ -388,11 +386,9 @@ class ConnectionsScreen extends ConsumerWidget {
         
         // Check if error is about sudo requirement
         if (errorMessage.contains('SUDO_REQUIRED') || errorMessage.contains('ROOT_REQUIRED')) {
-          debugPrint('Showing sudo required dialog');
           _showRootRequiredDialog(context);
         } else if (errorMessage.contains('AUTH_FAILED') && !errorMessage.contains('SUDO_REQUIRED')) {
           // Only show auth failed if it's truly an authentication issue, not a permission issue
-          debugPrint('Showing auth failed message');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Authentication failed. Please check your username and password.'),

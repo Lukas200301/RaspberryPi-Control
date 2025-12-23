@@ -45,32 +45,26 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         // Check if service is running
         final service = FlutterBackgroundService();
         bool isRunning = await service.isRunning();
-        debugPrint('Files Screen: Service running before restart: $isRunning');
         
         if (isRunning) {
           // Force stop to ensure clean state
-          debugPrint('Files Screen: Force stopping service...');
           await TransferManagerService.stop();
           await Future.delayed(const Duration(seconds: 1));
           
           isRunning = await service.isRunning();
-          debugPrint('Files Screen: Service running after stop: $isRunning');
         }
         
         // Start the background service fresh
-        debugPrint('Files Screen: Starting TransferManagerService...');
         await service.startService();
         
         // Wait for service to start and initialize
         await Future.delayed(const Duration(seconds: 2));
         
         isRunning = await service.isRunning();
-        debugPrint('Files Screen: Service running after start: $isRunning');
         
         // Connect to SSH
         final connection = ref.read(currentConnectionProvider);
         if (connection != null) {
-          debugPrint('Files Screen: Connecting transfer service to SSH...');
           _transferService.connect(
             host: connection.host,
             port: connection.port,
@@ -80,10 +74,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           
           // Wait for connection to establish
           await Future.delayed(const Duration(seconds: 2));
-          debugPrint('Files Screen: Transfer service setup complete');
         }
       } catch (e) {
-        debugPrint('Files Screen: Error setting up transfer service: $e');
+        debugPrint('Error initializing TransferManagerService: $e');
       }
     });
 

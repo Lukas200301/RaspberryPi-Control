@@ -107,24 +107,23 @@ class AgentVersionService {
   }
 
   /// Generate installation command for SSH (after file is uploaded)
+  /// Note: This is legacy code - AgentManager.installAgent() should be used instead
   static String getInstallCommand() {
     return '''
 # Stop the agent if running
-sudo systemctl stop pi-agent 2>/dev/null || true
-sudo pkill -f pi-agent 2>/dev/null || true
+sudo pkill -f "/opt/pi-control/agent" || true
 
 # Create directory if needed
 sudo mkdir -p /opt/pi-control
-sudo chown \$USER:\$USER /opt/pi-control
-
-# Make executable
-chmod +x /tmp/pi-agent
 
 # Move to /opt/pi-control
-mv /tmp/pi-agent /opt/pi-control/agent
+sudo mv /tmp/pi-control-agent /opt/pi-control/agent
 
-# Restart agent
-sudo systemctl restart pi-agent 2>/dev/null || /opt/pi-control/agent &
+# Make executable
+sudo chmod +x /opt/pi-control/agent
+
+# Start agent
+sudo nohup /opt/pi-control/agent --host 0.0.0.0 --port 50051 > /opt/pi-control/agent.log 2>&1 &
 
 echo "Agent updated to version $requiredAgentVersion"
 ''';

@@ -414,19 +414,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final agentManager = ref.read(agentManagerProvider);
       try {
         final hasSudo = await agentManager.checkSudoAccess();
-        debugPrint('Sudo access check result: $hasSudo');
         
         if (!hasSudo) {
-          debugPrint('User does not have sudo access - blocking connection');
           if (mounted) {
             Navigator.pop(context); // Close loading
             _showRootRequiredDialog();
           }
           return;
         }
-        debugPrint('✓ User has sudo access');
       } catch (e) {
-        debugPrint('Command execution error during sudo check: $e');
         if (mounted) {
           Navigator.pop(context); // Close loading
           _showRootRequiredDialog();
@@ -525,28 +521,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           debugPrint('Could not check SSH config: $e');
         }
 
-        // Kill any existing agent first
+        // Start the agent using AgentManager
         try {
-          await sshService.execute('pkill -f ".pi_control/agent" || true');
-          await Future.delayed(const Duration(milliseconds: 200));
-        } catch (e) {
-          debugPrint('Error killing existing agent: $e');
-        }
-        
-        // Start the agent on IPv4 specifically (bind to all interfaces for now)
-        try {
-          await sshService.execute('nohup ~/.pi_control/agent --host 0.0.0.0 --port 50051 > ~/.pi_control/agent.log 2>&1 & echo \$!');
-          debugPrint('Agent started on Pi (0.0.0.0:50051)');
-          // Give it time to start and bind to port
-          await Future.delayed(const Duration(seconds: 2));
-          
-          // Verify agent is running and port is listening
-          final portCheck = await sshService.execute('netstat -tuln | grep 50051 || ss -tuln | grep 50051 || echo "not_listening"');
-          debugPrint('Port 50051 status: $portCheck');
-          
-          if (portCheck.contains('not_listening')) {
-            throw Exception('Agent started but not listening on port 50051');
-          }
+          await agentManager.startAgent();
+          debugPrint('Agent started successfully');
         } catch (e) {
           debugPrint('Error starting agent: $e');
           if (mounted) {
@@ -698,17 +676,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Restart SSH service (this will drop our connection)
       await sshService.execute('echo "${connection.password}" | sudo -S systemctl restart sshd || sudo -S service ssh restart');
       
-      debugPrint('SSH service restarting (connection will drop)...');
       
       // Wait for SSH service to restart and disconnect
       await Future.delayed(const Duration(seconds: 3));
       
       // Reconnect SSH
-      debugPrint('Reconnecting SSH after forwarding enabled...');
       await sshService.disconnect();
       await Future.delayed(const Duration(seconds: 1));
       await sshService.connect(connection);
-      debugPrint('SSH reconnected successfully');
 
       // Reconnect TransferManagerService
       TransferManagerService.connect(

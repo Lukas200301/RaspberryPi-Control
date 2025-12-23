@@ -36,12 +36,10 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     switch (state) {
       case AppLifecycleState.resumed:
         // App came to foreground
-        debugPrint('App resumed - checking SSH connection');
         _checkAndReconnect();
         break;
       case AppLifecycleState.paused:
         // App went to background
-        debugPrint('App paused - SSH keepalive will maintain connection');
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
@@ -57,14 +55,11 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
     if (sshService.currentConnection != null &&
         sshService.currentState != ssh.ConnectionState.connected) {
       try {
-        debugPrint('Connection lost, attempting to reconnect...');
         await sshService.reconnect();
-        debugPrint('Reconnection successful');
 
         // Refresh file list after reconnection
         ref.invalidate(fileListProvider);
       } catch (e) {
-        debugPrint('Reconnection failed: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -161,19 +161,16 @@ class AgentElevationNotifier extends StateNotifier<AsyncValue<bool>> {
 
   Future<void> _checkElevation() async {
     try {
-      debugPrint('Checking agent elevation status...');
       final versionInfo = await grpcService.getVersion();
       debugPrint('Agent elevation check: isRoot = ${versionInfo.isRoot}, version = ${versionInfo.version}');
       state = AsyncValue.data(versionInfo.isRoot);
     } catch (e, stackTrace) {
-      debugPrint('Agent elevation check failed: $e');
       // If check fails, assume not root to be safe
       state = const AsyncValue.data(false);
     }
   }
 
   Future<void> refresh() async {
-    debugPrint('Refreshing agent elevation status...');
     state = const AsyncValue.loading();
     await _checkElevation();
   }

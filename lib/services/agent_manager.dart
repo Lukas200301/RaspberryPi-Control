@@ -93,7 +93,7 @@ class AgentManager {
       final bytes = binaryData.buffer.asUint8List();
 
       onProgress?.call('Creating installation directory...');
-      await sshService.execute('mkdir -p /opt/pi-control');
+      await sshService.execute('sudo mkdir -p /opt/pi-control');
 
       onProgress?.call('Stopping old agent if running...');
       await _stopAgent();
@@ -101,8 +101,10 @@ class AgentManager {
       onProgress?.call('Uploading agent binary...');
       final sftp = await sshService.getSftp();
 
+      // Upload to temp location first (SFTP might not have permission for /opt)
+      final tempPath = '/tmp/pi-control-agent';
       final remoteFile = await sftp.open(
-        AppConstants.agentInstallPath,
+        tempPath,
         mode: SftpFileOpenMode.create |
             SftpFileOpenMode.truncate |
             SftpFileOpenMode.write,
@@ -111,8 +113,10 @@ class AgentManager {
       await remoteFile.write(Stream.value(bytes));
       await remoteFile.close();
 
-      onProgress?.call('Setting executable permissions...');
-      await sshService.execute('chmod +x ${AppConstants.agentInstallPath}');
+      onProgress?.call('Installing agent to system directory...');
+      // Move to /opt with sudo and set permissions
+      await sshService.execute('sudo mv $tempPath ${AppConstants.agentInstallPath}');
+      await sshService.execute('sudo chmod +x ${AppConstants.agentInstallPath}');
 
       onProgress?.call('Verifying installation...');
       final version = await sshService.execute(
@@ -137,24 +141,35 @@ class AgentManager {
       // Kill existing agent if running
       await _stopAgent();
 
-      // Start agent
-      final command = 'nohup ${AppConstants.agentInstallPath} --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
+      // Ensure log directory exists and has proper permissions
+      await sshService.execute('sudo touch /opt/pi-control/agent.log');
+      await sshService.execute('sudo chmod 666 /opt/pi-control/agent.log');
+
+      // Start agent with sudo (required for /opt/pi-control/)
+      // Bind to 0.0.0.0 to accept connections from SSH tunnel
+      final command = 'sudo nohup ${AppConstants.agentInstallPath} --host 0.0.0.0 --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
 
       // Start agent in background
       await sshService.execute(command);
 
-      // Wait a bit for the agent to start
-      await Future.delayed(const Duration(seconds: 2));
+      // Wait for agent to start and bind to port
+      await Future.delayed(const Duration(seconds: 3));
 
       // Verify it's running
       final isRunning = await _isAgentRunning();
       if (!isRunning) {
-        throw Exception('Agent failed to start');
+        throw Exception('Agent process not running');
       }
 
-      debugPrint('Agent started successfully');
+      // Verify it's listening on port
+      final portCheck = await sshService.execute(
+        'sudo netstat -tuln 2>/dev/null | grep ":50051 " || sudo ss -tuln 2>/dev/null | grep ":50051 " || echo "not_listening"',
+      );
+      
+      if (portCheck.contains('not_listening')) {
+        throw Exception('Agent not listening on port 50051');
+      }
     } catch (e) {
-      debugPrint('Error starting agent: $e');
       rethrow;
     }
   }
@@ -163,7 +178,7 @@ class AgentManager {
   Future<void> _stopAgent() async {
     try {
       await sshService.execute(
-        'pkill -f "${AppConstants.agentInstallPath}" || true',
+        'sudo pkill -f "${AppConstants.agentInstallPath}" || true',
       );
       await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
@@ -191,17 +206,6 @@ class AgentManager {
     final hasSudo = !sudoTest.contains('NO_SUDO');
     debugPrint('User has sudo access: $hasSudo');
     return hasSudo;
-  }
-
-  /// Get the appropriate install path based on sudo availability
-  Future<String> _getInstallPath(bool hasSudo) async {
-    if (hasSudo) {
-      return AppConstants.agentInstallPath;
-    } else {
-      // Use home directory for non-sudo users
-      final home = await sshService.execute('echo \$HOME');
-      return '${home.trim()}/pi-control/agent';
-    }
   }
 
   /// Setup SSH tunnel for gRPC communication

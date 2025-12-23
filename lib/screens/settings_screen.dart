@@ -498,25 +498,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       debugPrint('Stopping all agent processes...');
 
-      // Stop all agent processes
+      // Stop agent and kill port
       try {
-        await sshService.execute('sudo systemctl stop pi-agent 2>/dev/null || true');
-        await sshService.execute('sudo systemctl stop pi-control 2>/dev/null || true');
-        await sshService.execute('pkill -9 -f "/opt/pi-control/agent" 2>/dev/null || true');
-        await sshService.execute('pkill -9 -f "pi-agent" 2>/dev/null || true');
-        await sshService.execute('pkill -9 agent 2>/dev/null || true');
-        await sshService.execute('fuser -k 50051/tcp 2>/dev/null || true');
+        await sshService.execute('sudo pkill -f "/opt/pi-control/agent" || true');
+        await sshService.execute('sudo fuser -k 50051/tcp 2>/dev/null || true');
         await Future.delayed(const Duration(seconds: 1));
       } catch (e) {
         debugPrint('Error stopping agent: $e');
       }
 
-      // Delete the old agent installation
-      debugPrint('Removing old agent installation...');
+      // Delete the agent installation
+      debugPrint('Removing agent installation...');
       final rmResult = await sshService.execute('sudo rm -rf /opt/pi-control 2>&1 || echo "failed"');
       debugPrint('Remove result: $rmResult');
 
-      final rmTmpResult = await sshService.execute('rm -f /tmp/pi-agent* 2>&1 || echo "done"');
+      final rmTmpResult = await sshService.execute('sudo rm -f /tmp/pi-control-agent 2>&1 || echo "done"');
       debugPrint('Remove temp result: $rmTmpResult');
 
       // Verify removal
