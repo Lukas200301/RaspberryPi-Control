@@ -10,8 +10,57 @@ Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
 
 # ============================================================================
+# Step 0: Sync version numbers from pubspec.yaml
+# ============================================================================
+Write-Host "[0/5] Syncing version numbers..." -ForegroundColor Yellow
+
+if (!(Test-Path "pubspec.yaml")) {
+    Write-Host "✗ Error: pubspec.yaml file not found!" -ForegroundColor Red
+    exit 1
+}
+
+# Read pubspec.yaml and extract agent_version
+$pubspecContent = Get-Content "pubspec.yaml" -Raw
+if ($pubspecContent -match 'agent_version:\s*([0-9]+\.[0-9]+\.[0-9]+)') {
+    $version = $matches[1]
+    Write-Host "Agent version from pubspec.yaml: $version" -ForegroundColor Cyan
+} else {
+    Write-Host "✗ Error: agent_version not found in pubspec.yaml!" -ForegroundColor Red
+    Write-Host "  Add a line like: agent_version: 3.2.0" -ForegroundColor Yellow
+    exit 1
+}
+
+# Update agent/main.go
+Write-Host "  Updating agent/main.go..."
+$goFile = "agent\main.go"
+$goContent = Get-Content $goFile -Raw
+$goContent = $goContent -replace 'Version\s*=\s*"[^"]*"', "Version = `"$version`""
+Set-Content -Path $goFile -Value $goContent -NoNewline
+
+# Update lib/constants/app_constants.dart
+Write-Host "  Updating lib/constants/app_constants.dart..."
+$constantsFile = "lib\constants\app_constants.dart"
+if (Test-Path $constantsFile) {
+    $constantsContent = Get-Content $constantsFile -Raw
+    $constantsContent = $constantsContent -replace "agentVersion\s*=\s*'[^']*'", "agentVersion = '$version'"
+    Set-Content -Path $constantsFile -Value $constantsContent -NoNewline
+}
+
+# Update lib/services/agent_version_service.dart
+Write-Host "  Updating lib/services/agent_version_service.dart..."
+$serviceFile = "lib\services\agent_version_service.dart"
+if (Test-Path $serviceFile) {
+    $serviceContent = Get-Content $serviceFile -Raw
+    $serviceContent = $serviceContent -replace "requiredAgentVersion\s*=\s*'[^']*'", "requiredAgentVersion = '$version'"
+    Set-Content -Path $serviceFile -Value $serviceContent -NoNewline
+}
+
+Write-Host "✓ All version numbers synced to $version" -ForegroundColor Green
+
+# ============================================================================
 # Step 1: Add Dart pub cache to PATH temporarily
 # ============================================================================
+Write-Host ""
 Write-Host "[1/5] Setting up environment..." -ForegroundColor Yellow
 $dartPubCache = "$env:LOCALAPPDATA\Pub\Cache\bin"
 if (Test-Path $dartPubCache) {

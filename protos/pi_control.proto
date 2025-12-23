@@ -33,6 +33,36 @@ service SystemMonitor {
 
   // Get active network connections
   rpc GetNetworkConnections (Empty) returns (NetworkConnectionList);
+
+  // List installed packages (optionally filter)
+  rpc ListPackages (PackageFilter) returns (PackageList);
+
+  // Install a package
+  rpc InstallPackage (PackageCommand) returns (ActionStatus);
+
+  // Remove a package
+  rpc RemovePackage (PackageCommand) returns (ActionStatus);
+
+  // Update a specific package
+  rpc UpdatePackage (PackageCommand) returns (ActionStatus);
+
+  // Update package list (apt update)
+  rpc UpdatePackageList (Empty) returns (ActionStatus);
+
+  // Upgrade packages (apt upgrade)
+  rpc UpgradePackages (Empty) returns (ActionStatus);
+
+  // Get agent version
+  rpc GetVersion (Empty) returns (VersionInfo);
+
+  // Get detailed package information
+  rpc GetPackageDetails (PackageDetailsRequest) returns (PackageDetails);
+
+  // Get package dependencies
+  rpc GetPackageDependencies (PackageDetailsRequest) returns (PackageDependencies);
+
+  // Stream package operation logs (install/remove/update)
+  rpc StreamPackageOperation (PackageCommand) returns (stream PackageOperationLog);
 }
 
 // ==================== Messages ====================
@@ -80,6 +110,9 @@ message LiveStats {
 
   // Timestamp of this stat snapshot
   int64 timestamp = 18;
+
+  // Disk I/O stats (bytes per second)
+  repeated DiskIOStat disk_io = 19;
 }
 
 // Process information
@@ -205,4 +238,89 @@ message NetworkConnection {
   string status = 6; // ESTABLISHED, LISTEN, TIME_WAIT, etc.
   int32 pid = 7;
   string process_name = 8;
+}
+
+// Package management
+message PackageFilter {
+  string search_term = 1; // Empty = list all installed
+  bool installed_only = 2; // If true, only show installed packages
+}
+
+message PackageInfo {
+  string name = 1;
+  string version = 2;
+  string architecture = 3;
+  string description = 4;
+  bool installed = 5;
+  string status = 6; // installed, not-installed, upgradable
+  uint64 installed_size = 7; // Size in bytes (0 if not installed)
+  string section = 8; // Package category (utils, libs, net, etc.)
+}
+
+message PackageList {
+  repeated PackageInfo packages = 1;
+}
+
+message PackageCommand {
+  string package_name = 1;
+}
+
+// Request for detailed package information
+message PackageDetailsRequest {
+  string package_name = 1;
+}
+
+// Detailed package information
+message PackageDetails {
+  string name = 1;
+  string version = 2;
+  string architecture = 3;
+  string description = 4;
+  string long_description = 5; // Full README-style description
+  bool installed = 6;
+  string status = 7;
+  uint64 installed_size = 8; // Size in bytes
+  string maintainer = 9; // Maintainer name and email
+  string homepage = 10; // Project homepage/GitHub URL
+  string section = 11; // Package category
+  int64 install_date = 12; // Unix timestamp (0 if not installed)
+  repeated string tags = 13; // Package tags/keywords
+  string source = 14; // Source package name
+  int32 priority = 15; // Package priority (required, important, standard, optional, extra)
+  string license = 16; // License type (MIT, GPL, etc.)
+}
+
+// Package dependency information
+message PackageDependencies {
+  string package_name = 1;
+  repeated string depends = 2; // Packages this one requires
+  repeated string required_by = 3; // Packages that require this one
+  repeated string recommends = 4; // Recommended packages
+  repeated string suggests = 5; // Suggested packages
+  repeated string conflicts = 6; // Conflicting packages
+}
+
+// Log entry for package operations
+message PackageOperationLog {
+  int64 timestamp = 1;
+  string level = 2; // info, warning, error
+  string message = 3;
+  double progress = 4; // 0-100 percentage
+  bool completed = 5; // True when operation is done
+  bool success = 6; // True if operation succeeded
+}
+
+// Disk I/O statistics
+message DiskIOStat {
+  string device = 1; // e.g., "sda", "nvme0n1"
+  uint64 read_bytes = 2; // Bytes read per second
+  uint64 write_bytes = 3; // Bytes written per second
+  uint64 read_count = 4; // Read operations per second
+  uint64 write_count = 5; // Write operations per second
+}
+
+// Version information
+message VersionInfo {
+  string version = 1; // Agent version string (e.g., "3.1.0")
+  bool is_root = 2; // Whether agent is running with root privileges
 }

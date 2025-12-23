@@ -160,7 +160,7 @@ class NetworkDiscoveryService {
   }
 
   /// Quick ping check to see if a host is reachable
-  Future<bool> isHostReachable(String host, {int port = 22, Duration timeout = const Duration(seconds: 2)}) async {
+  Future<bool> isHostReachable(String host, {int port = 22, Duration timeout = const Duration(milliseconds: 800)}) async {
     try {
       final socket = await Socket.connect(host, port, timeout: timeout);
       socket.destroy();

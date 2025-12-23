@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/ssh_service.dart';
 import '../services/storage_service.dart';
@@ -148,3 +149,37 @@ final diskInfoProvider = FutureProvider.autoDispose((ref) async {
 
 // App Settings Provider
 final appSettingsProvider = Provider((ref) => AppSettings());
+
+// Agent Elevation Status Provider (checks if agent is running as root)
+// Using StateNotifierProvider for better control over refresh
+class AgentElevationNotifier extends StateNotifier<AsyncValue<bool>> {
+  AgentElevationNotifier(this.grpcService) : super(const AsyncValue.loading()) {
+    _checkElevation();
+  }
+
+  final GrpcService grpcService;
+
+  Future<void> _checkElevation() async {
+    try {
+      debugPrint('Checking agent elevation status...');
+      final versionInfo = await grpcService.getVersion();
+      debugPrint('Agent elevation check: isRoot = ${versionInfo.isRoot}, version = ${versionInfo.version}');
+      state = AsyncValue.data(versionInfo.isRoot);
+    } catch (e, stackTrace) {
+      debugPrint('Agent elevation check failed: $e');
+      // If check fails, assume not root to be safe
+      state = const AsyncValue.data(false);
+    }
+  }
+
+  Future<void> refresh() async {
+    debugPrint('Refreshing agent elevation status...');
+    state = const AsyncValue.loading();
+    await _checkElevation();
+  }
+}
+
+final agentElevationProvider = StateNotifierProvider<AgentElevationNotifier, AsyncValue<bool>>((ref) {
+  final grpcService = ref.watch(grpcServiceProvider);
+  return AgentElevationNotifier(grpcService);
+});

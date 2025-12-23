@@ -133,8 +133,15 @@ class GrpcService {
 
   /// Get disk usage information
   Future<DiskInfo> getDiskInfo() async {
-    if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.getDiskInfo(Empty());
+    debugPrint('GrpcService.getDiskInfo() called');
+    if (_client == null) {
+      debugPrint('ERROR: gRPC client is null for getDiskInfo!');
+      throw Exception('gRPC not connected');
+    }
+    debugPrint('Calling _client.getDiskInfo()...');
+    final diskInfo = await _client!.getDiskInfo(Empty());
+    debugPrint('getDiskInfo() returned ${diskInfo.partitions.length} partitions');
+    return diskInfo;
   }
 
   /// Get network interface information
@@ -147,6 +154,81 @@ class GrpcService {
   Future<NetworkConnectionList> getNetworkConnections() async {
     if (_client == null) throw Exception('gRPC not connected');
     return await _client!.getNetworkConnections(Empty());
+  }
+
+  /// List packages (installed or searchable)
+  Future<PackageList> listPackages({String? searchTerm, bool installedOnly = true}) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.listPackages(
+      PackageFilter()
+        ..searchTerm = searchTerm ?? ''
+        ..installedOnly = installedOnly,
+    );
+  }
+
+  /// Install a package
+  Future<ActionStatus> installPackage(String packageName) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.installPackage(PackageCommand()..packageName = packageName);
+  }
+
+  /// Remove a package
+  Future<ActionStatus> removePackage(String packageName) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.removePackage(PackageCommand()..packageName = packageName);
+  }
+
+  /// Update a specific package
+  Future<ActionStatus> updatePackage(String packageName) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.updatePackage(PackageCommand()..packageName = packageName);
+  }
+
+  /// Update package list (apt update)
+  Future<ActionStatus> updatePackageList() async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.updatePackageList(Empty());
+  }
+
+  /// Upgrade packages (apt upgrade)
+  Future<ActionStatus> upgradePackages() async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.upgradePackages(Empty());
+  }
+
+  /// Get agent version
+  Future<VersionInfo> getVersion() async {
+    debugPrint('GrpcService.getVersion() called');
+    if (_client == null) {
+      debugPrint('ERROR: gRPC client is null!');
+      throw Exception('gRPC not connected');
+    }
+    debugPrint('Calling _client.getVersion()...');
+    final version = await _client!.getVersion(Empty());
+    debugPrint('getVersion() returned: ${version.version}');
+    return version;
+  }
+
+  /// Get detailed package information
+  Future<PackageDetails> getPackageDetails(String packageName) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.getPackageDetails(PackageDetailsRequest()..packageName = packageName);
+  }
+
+  /// Get package dependencies
+  Future<PackageDependencies> getPackageDependencies(String packageName) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.getPackageDependencies(PackageDetailsRequest()..packageName = packageName);
+  }
+
+  /// Stream package operation logs
+  Stream<PackageOperationLog> streamPackageOperation(String packageName) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+
+    final stream = _client!.streamPackageOperation(PackageCommand()..packageName = packageName);
+    await for (final log in stream) {
+      yield log;
+    }
   }
 
   /// Check if the gRPC connection is alive

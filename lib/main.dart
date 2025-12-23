@@ -14,9 +14,14 @@ void main() async {
   final storage = StorageService();
   await storage.init();
 
-  // Initialize background services
-  await SftpBackgroundService.initialize();
-  await TransferManagerService.initialize();
+  // Initialize background services in parallel (non-blocking)
+  // These are only needed when connecting to a device, not for app startup
+  Future.microtask(() async {
+    await Future.wait([
+      SftpBackgroundService.initialize(),
+      TransferManagerService.initialize(),
+    ]);
+  });
 
   runApp(const ProviderScope(child: RaspberryPiControlApp()));
 }

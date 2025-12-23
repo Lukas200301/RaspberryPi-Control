@@ -26,7 +26,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkConnectionStatus();
+    // Run connection status check asynchronously after first frame
+    // This prevents blocking the UI during startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkConnectionStatus();
+      }
+    });
   }
 
   Future<void> _checkConnectionStatus() async {
@@ -404,6 +410,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final sshService = ref.read(sshServiceProvider);
       await sshService.connect(connection);
 
+      // Check sudo access first
+      final agentManager = ref.read(agentManagerProvider);
+      try {
+        final hasSudo = await agentManager.checkSudoAccess();
+        debugPrint('Sudo access check result: $hasSudo');
+        
+        if (!hasSudo) {
+          debugPrint('User does not have sudo access - blocking connection');
+          if (mounted) {
+            Navigator.pop(context); // Close loading
+            _showRootRequiredDialog();
+          }
+          return;
+        }
+        debugPrint('✓ User has sudo access');
+      } catch (e) {
+        debugPrint('Command execution error during sudo check: $e');
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          _showRootRequiredDialog();
+        }
+        return;
+      }
+
       // Connect TransferManagerService with same credentials
       TransferManagerService.connect(
         host: connection.host,
@@ -413,10 +443,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
 
       // Check and install agent if needed
-      final agentManager = ref.read(agentManagerProvider);
       final agentInfo = await agentManager.checkAgentVersion();
 
-      if (!agentInfo.isInstalled || agentInfo.needsUpdate) {
+      if (!agentInfo.isInstalled) {
         if (mounted) {
           Navigator.pop(context); // Close loading
           final install = await _showAgentSetupDialog(connection.name);
@@ -428,6 +457,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           }
         }
       }
+      // Note: If agent just needs update, we continue connecting and show update banner on dashboard
 
       // Start the agent and connect gRPC
       if (mounted) {
@@ -575,11 +605,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
 
-      // Update connection
-      await ref.read(connectionListProvider.notifier).updateConnection(
-            connection.copyWith(lastConnected: DateTime.now()),
-          );
-      ref.read(currentConnectionProvider.notifier).setConnection(connection);
+      // Get agent version and update connection
+      var updatedConnection = connection;
+      try {
+        final grpcService = ref.read(grpcServiceProvider);
+        final versionInfo = await grpcService.getVersion();
+        debugPrint('✓ Agent version: ${versionInfo.version}');
+        updatedConnection = connection.copyWith(
+          lastConnected: DateTime.now(),
+          agentVersion: versionInfo.version,
+        );
+        debugPrint('✓ Connection updated with agent version: ${updatedConnection.agentVersion}');
+      } catch (e) {
+        debugPrint('⚠ Could not get agent version: $e');
+        // Continue anyway - just update last connected time
+        updatedConnection = connection.copyWith(lastConnected: DateTime.now());
+      }
+
+      await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
+      ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
 
       // Navigate
       if (mounted) {
@@ -705,7 +749,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         backgroundColor: AppTheme.background,
         title: const Text('Enable Real-Time Monitoring?'),
         content: Text(
-          'To visualize system stats in real-time for $deviceName, install Agent v3.0 (takes ~5 seconds).',
+          'To visualize system stats in real-time for $deviceName, install Agent (takes ~5 seconds).',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
@@ -716,6 +760,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Install Agent'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showRootRequiredDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: Row(
+          children: [
+            Icon(Icons.admin_panel_settings, color: AppTheme.errorRose),
+            const Gap(12),
+            const Text('Sudo Access Required'),
+          ],
+        ),
+        content: Text(
+          'This application requires sudo permissions to manage your Raspberry Pi.\n\nPlease reconnect using a user with sudo access (e.g., root or pi user with sudo privileges).',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
         ],
       ),

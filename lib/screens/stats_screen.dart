@@ -646,6 +646,31 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ),
           const Gap(24),
 
+          // Disk I/O Stats
+          if (stats.diskIo.isNotEmpty) ...[
+            Text(
+              'Disk I/O',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const Gap(12),
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  for (int i = 0; i < stats.diskIo.length; i++) ...[
+                    _buildDiskIOStat(stats.diskIo[i]),
+                    if (i < stats.diskIo.length - 1) ...[
+                      const Gap(12),
+                      const Divider(color: AppTheme.glassBorder),
+                      const Gap(12),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+            const Gap(24),
+          ],
+
           // Disk Usage
           diskInfoAsync.when(
             data: (diskInfo) {
@@ -786,6 +811,85 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             ),
             textAlign: TextAlign.right,
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiskIOStat(DiskIOStat diskIO) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          diskIO.device,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
+        const Gap(8),
+        Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_upward, color: AppTheme.primaryIndigo, size: 16),
+                  const Gap(4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Write: ${_formatBytes(diskIO.writeBytes.toDouble())}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.primaryIndigo,
+                          ),
+                        ),
+                        Text(
+                          '${diskIO.writeCount} ops/s',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Gap(16),
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_downward, color: AppTheme.secondaryTeal, size: 16),
+                  const Gap(4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Read: ${_formatBytes(diskIO.readBytes.toDouble())}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.secondaryTeal,
+                          ),
+                        ),
+                        Text(
+                          '${diskIO.readCount} ops/s',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -71,6 +71,14 @@ const LiveStats$json = {
       '10': 'topProcesses'
     },
     {'1': 'timestamp', '3': 18, '4': 1, '5': 3, '10': 'timestamp'},
+    {
+      '1': 'disk_io',
+      '3': 19,
+      '4': 3,
+      '5': 11,
+      '6': '.picontrol.DiskIOStat',
+      '10': 'diskIo'
+    },
   ],
 };
 
@@ -86,7 +94,8 @@ final $typed_data.Uint8List liveStatsDescriptor = $convert.base64Decode(
     'xvYWRfMTVtaW4YDiABKAFSCWxvYWQxNW1pbhIkCg5uZXRfYnl0ZXNfc2VudBgPIAEoBFIMbmV0'
     'Qnl0ZXNTZW50EiQKDm5ldF9ieXRlc19yZWN2GBAgASgEUgxuZXRCeXRlc1JlY3YSOwoNdG9wX3'
     'Byb2Nlc3NlcxgRIAMoCzIWLnBpY29udHJvbC5Qcm9jZXNzSW5mb1IMdG9wUHJvY2Vzc2VzEhwK'
-    'CXRpbWVzdGFtcBgSIAEoA1IJdGltZXN0YW1w');
+    'CXRpbWVzdGFtcBgSIAEoA1IJdGltZXN0YW1wEi4KB2Rpc2tfaW8YEyADKAsyFS5waWNvbnRyb2'
+    'wuRGlza0lPU3RhdFIGZGlza0lv');
 
 @$core.Deprecated('Use processInfoDescriptor instead')
 const ProcessInfo$json = {
@@ -376,3 +385,192 @@ final $typed_data.Uint8List networkConnectionDescriptor = $convert.base64Decode(
     'UG9ydBIlCg5yZW1vdGVfYWRkcmVzcxgEIAEoCVINcmVtb3RlQWRkcmVzcxIfCgtyZW1vdGVfcG'
     '9ydBgFIAEoBVIKcmVtb3RlUG9ydBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cxIQCgNwaWQYByAB'
     'KAVSA3BpZBIhCgxwcm9jZXNzX25hbWUYCCABKAlSC3Byb2Nlc3NOYW1l');
+
+@$core.Deprecated('Use packageFilterDescriptor instead')
+const PackageFilter$json = {
+  '1': 'PackageFilter',
+  '2': [
+    {'1': 'search_term', '3': 1, '4': 1, '5': 9, '10': 'searchTerm'},
+    {'1': 'installed_only', '3': 2, '4': 1, '5': 8, '10': 'installedOnly'},
+  ],
+};
+
+/// Descriptor for `PackageFilter`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageFilterDescriptor = $convert.base64Decode(
+    'Cg1QYWNrYWdlRmlsdGVyEh8KC3NlYXJjaF90ZXJtGAEgASgJUgpzZWFyY2hUZXJtEiUKDmluc3'
+    'RhbGxlZF9vbmx5GAIgASgIUg1pbnN0YWxsZWRPbmx5');
+
+@$core.Deprecated('Use packageInfoDescriptor instead')
+const PackageInfo$json = {
+  '1': 'PackageInfo',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'version', '3': 2, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'architecture', '3': 3, '4': 1, '5': 9, '10': 'architecture'},
+    {'1': 'description', '3': 4, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'installed', '3': 5, '4': 1, '5': 8, '10': 'installed'},
+    {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'installed_size', '3': 7, '4': 1, '5': 4, '10': 'installedSize'},
+    {'1': 'section', '3': 8, '4': 1, '5': 9, '10': 'section'},
+  ],
+};
+
+/// Descriptor for `PackageInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageInfoDescriptor = $convert.base64Decode(
+    'CgtQYWNrYWdlSW5mbxISCgRuYW1lGAEgASgJUgRuYW1lEhgKB3ZlcnNpb24YAiABKAlSB3Zlcn'
+    'Npb24SIgoMYXJjaGl0ZWN0dXJlGAMgASgJUgxhcmNoaXRlY3R1cmUSIAoLZGVzY3JpcHRpb24Y'
+    'BCABKAlSC2Rlc2NyaXB0aW9uEhwKCWluc3RhbGxlZBgFIAEoCFIJaW5zdGFsbGVkEhYKBnN0YX'
+    'R1cxgGIAEoCVIGc3RhdHVzEiUKDmluc3RhbGxlZF9zaXplGAcgASgEUg1pbnN0YWxsZWRTaXpl'
+    'EhgKB3NlY3Rpb24YCCABKAlSB3NlY3Rpb24=');
+
+@$core.Deprecated('Use packageListDescriptor instead')
+const PackageList$json = {
+  '1': 'PackageList',
+  '2': [
+    {
+      '1': 'packages',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.picontrol.PackageInfo',
+      '10': 'packages'
+    },
+  ],
+};
+
+/// Descriptor for `PackageList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageListDescriptor = $convert.base64Decode(
+    'CgtQYWNrYWdlTGlzdBIyCghwYWNrYWdlcxgBIAMoCzIWLnBpY29udHJvbC5QYWNrYWdlSW5mb1'
+    'IIcGFja2FnZXM=');
+
+@$core.Deprecated('Use packageCommandDescriptor instead')
+const PackageCommand$json = {
+  '1': 'PackageCommand',
+  '2': [
+    {'1': 'package_name', '3': 1, '4': 1, '5': 9, '10': 'packageName'},
+  ],
+};
+
+/// Descriptor for `PackageCommand`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageCommandDescriptor = $convert.base64Decode(
+    'Cg5QYWNrYWdlQ29tbWFuZBIhCgxwYWNrYWdlX25hbWUYASABKAlSC3BhY2thZ2VOYW1l');
+
+@$core.Deprecated('Use packageDetailsRequestDescriptor instead')
+const PackageDetailsRequest$json = {
+  '1': 'PackageDetailsRequest',
+  '2': [
+    {'1': 'package_name', '3': 1, '4': 1, '5': 9, '10': 'packageName'},
+  ],
+};
+
+/// Descriptor for `PackageDetailsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageDetailsRequestDescriptor = $convert.base64Decode(
+    'ChVQYWNrYWdlRGV0YWlsc1JlcXVlc3QSIQoMcGFja2FnZV9uYW1lGAEgASgJUgtwYWNrYWdlTm'
+    'FtZQ==');
+
+@$core.Deprecated('Use packageDetailsDescriptor instead')
+const PackageDetails$json = {
+  '1': 'PackageDetails',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'version', '3': 2, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'architecture', '3': 3, '4': 1, '5': 9, '10': 'architecture'},
+    {'1': 'description', '3': 4, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'long_description', '3': 5, '4': 1, '5': 9, '10': 'longDescription'},
+    {'1': 'installed', '3': 6, '4': 1, '5': 8, '10': 'installed'},
+    {'1': 'status', '3': 7, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'installed_size', '3': 8, '4': 1, '5': 4, '10': 'installedSize'},
+    {'1': 'maintainer', '3': 9, '4': 1, '5': 9, '10': 'maintainer'},
+    {'1': 'homepage', '3': 10, '4': 1, '5': 9, '10': 'homepage'},
+    {'1': 'section', '3': 11, '4': 1, '5': 9, '10': 'section'},
+    {'1': 'install_date', '3': 12, '4': 1, '5': 3, '10': 'installDate'},
+    {'1': 'tags', '3': 13, '4': 3, '5': 9, '10': 'tags'},
+    {'1': 'source', '3': 14, '4': 1, '5': 9, '10': 'source'},
+    {'1': 'priority', '3': 15, '4': 1, '5': 5, '10': 'priority'},
+    {'1': 'license', '3': 16, '4': 1, '5': 9, '10': 'license'},
+  ],
+};
+
+/// Descriptor for `PackageDetails`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageDetailsDescriptor = $convert.base64Decode(
+    'Cg5QYWNrYWdlRGV0YWlscxISCgRuYW1lGAEgASgJUgRuYW1lEhgKB3ZlcnNpb24YAiABKAlSB3'
+    'ZlcnNpb24SIgoMYXJjaGl0ZWN0dXJlGAMgASgJUgxhcmNoaXRlY3R1cmUSIAoLZGVzY3JpcHRp'
+    'b24YBCABKAlSC2Rlc2NyaXB0aW9uEikKEGxvbmdfZGVzY3JpcHRpb24YBSABKAlSD2xvbmdEZX'
+    'NjcmlwdGlvbhIcCglpbnN0YWxsZWQYBiABKAhSCWluc3RhbGxlZBIWCgZzdGF0dXMYByABKAlS'
+    'BnN0YXR1cxIlCg5pbnN0YWxsZWRfc2l6ZRgIIAEoBFINaW5zdGFsbGVkU2l6ZRIeCgptYWludG'
+    'FpbmVyGAkgASgJUgptYWludGFpbmVyEhoKCGhvbWVwYWdlGAogASgJUghob21lcGFnZRIYCgdz'
+    'ZWN0aW9uGAsgASgJUgdzZWN0aW9uEiEKDGluc3RhbGxfZGF0ZRgMIAEoA1ILaW5zdGFsbERhdG'
+    'USEgoEdGFncxgNIAMoCVIEdGFncxIWCgZzb3VyY2UYDiABKAlSBnNvdXJjZRIaCghwcmlvcml0'
+    'eRgPIAEoBVIIcHJpb3JpdHkSGAoHbGljZW5zZRgQIAEoCVIHbGljZW5zZQ==');
+
+@$core.Deprecated('Use packageDependenciesDescriptor instead')
+const PackageDependencies$json = {
+  '1': 'PackageDependencies',
+  '2': [
+    {'1': 'package_name', '3': 1, '4': 1, '5': 9, '10': 'packageName'},
+    {'1': 'depends', '3': 2, '4': 3, '5': 9, '10': 'depends'},
+    {'1': 'required_by', '3': 3, '4': 3, '5': 9, '10': 'requiredBy'},
+    {'1': 'recommends', '3': 4, '4': 3, '5': 9, '10': 'recommends'},
+    {'1': 'suggests', '3': 5, '4': 3, '5': 9, '10': 'suggests'},
+    {'1': 'conflicts', '3': 6, '4': 3, '5': 9, '10': 'conflicts'},
+  ],
+};
+
+/// Descriptor for `PackageDependencies`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageDependenciesDescriptor = $convert.base64Decode(
+    'ChNQYWNrYWdlRGVwZW5kZW5jaWVzEiEKDHBhY2thZ2VfbmFtZRgBIAEoCVILcGFja2FnZU5hbW'
+    'USGAoHZGVwZW5kcxgCIAMoCVIHZGVwZW5kcxIfCgtyZXF1aXJlZF9ieRgDIAMoCVIKcmVxdWly'
+    'ZWRCeRIeCgpyZWNvbW1lbmRzGAQgAygJUgpyZWNvbW1lbmRzEhoKCHN1Z2dlc3RzGAUgAygJUg'
+    'hzdWdnZXN0cxIcCgljb25mbGljdHMYBiADKAlSCWNvbmZsaWN0cw==');
+
+@$core.Deprecated('Use packageOperationLogDescriptor instead')
+const PackageOperationLog$json = {
+  '1': 'PackageOperationLog',
+  '2': [
+    {'1': 'timestamp', '3': 1, '4': 1, '5': 3, '10': 'timestamp'},
+    {'1': 'level', '3': 2, '4': 1, '5': 9, '10': 'level'},
+    {'1': 'message', '3': 3, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'progress', '3': 4, '4': 1, '5': 1, '10': 'progress'},
+    {'1': 'completed', '3': 5, '4': 1, '5': 8, '10': 'completed'},
+    {'1': 'success', '3': 6, '4': 1, '5': 8, '10': 'success'},
+  ],
+};
+
+/// Descriptor for `PackageOperationLog`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List packageOperationLogDescriptor = $convert.base64Decode(
+    'ChNQYWNrYWdlT3BlcmF0aW9uTG9nEhwKCXRpbWVzdGFtcBgBIAEoA1IJdGltZXN0YW1wEhQKBW'
+    'xldmVsGAIgASgJUgVsZXZlbBIYCgdtZXNzYWdlGAMgASgJUgdtZXNzYWdlEhoKCHByb2dyZXNz'
+    'GAQgASgBUghwcm9ncmVzcxIcCgljb21wbGV0ZWQYBSABKAhSCWNvbXBsZXRlZBIYCgdzdWNjZX'
+    'NzGAYgASgIUgdzdWNjZXNz');
+
+@$core.Deprecated('Use diskIOStatDescriptor instead')
+const DiskIOStat$json = {
+  '1': 'DiskIOStat',
+  '2': [
+    {'1': 'device', '3': 1, '4': 1, '5': 9, '10': 'device'},
+    {'1': 'read_bytes', '3': 2, '4': 1, '5': 4, '10': 'readBytes'},
+    {'1': 'write_bytes', '3': 3, '4': 1, '5': 4, '10': 'writeBytes'},
+    {'1': 'read_count', '3': 4, '4': 1, '5': 4, '10': 'readCount'},
+    {'1': 'write_count', '3': 5, '4': 1, '5': 4, '10': 'writeCount'},
+  ],
+};
+
+/// Descriptor for `DiskIOStat`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List diskIOStatDescriptor = $convert.base64Decode(
+    'CgpEaXNrSU9TdGF0EhYKBmRldmljZRgBIAEoCVIGZGV2aWNlEh0KCnJlYWRfYnl0ZXMYAiABKA'
+    'RSCXJlYWRCeXRlcxIfCgt3cml0ZV9ieXRlcxgDIAEoBFIKd3JpdGVCeXRlcxIdCgpyZWFkX2Nv'
+    'dW50GAQgASgEUglyZWFkQ291bnQSHwoLd3JpdGVfY291bnQYBSABKARSCndyaXRlQ291bnQ=');
+
+@$core.Deprecated('Use versionInfoDescriptor instead')
+const VersionInfo$json = {
+  '1': 'VersionInfo',
+  '2': [
+    {'1': 'version', '3': 1, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'is_root', '3': 2, '4': 1, '5': 8, '10': 'isRoot'},
+  ],
+};
+
+/// Descriptor for `VersionInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List versionInfoDescriptor = $convert.base64Decode(
+    'CgtWZXJzaW9uSW5mbxIYCgd2ZXJzaW9uGAEgASgJUgd2ZXJzaW9uEhcKB2lzX3Jvb3QYAiABKA'
+    'hSBmlzUm9vdA==');

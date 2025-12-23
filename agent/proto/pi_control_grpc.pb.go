@@ -19,15 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SystemMonitor_StreamStats_FullMethodName           = "/picontrol.SystemMonitor/StreamStats"
-	SystemMonitor_ListProcesses_FullMethodName         = "/picontrol.SystemMonitor/ListProcesses"
-	SystemMonitor_KillProcess_FullMethodName           = "/picontrol.SystemMonitor/KillProcess"
-	SystemMonitor_ListServices_FullMethodName          = "/picontrol.SystemMonitor/ListServices"
-	SystemMonitor_ManageService_FullMethodName         = "/picontrol.SystemMonitor/ManageService"
-	SystemMonitor_StreamLogs_FullMethodName            = "/picontrol.SystemMonitor/StreamLogs"
-	SystemMonitor_GetDiskInfo_FullMethodName           = "/picontrol.SystemMonitor/GetDiskInfo"
-	SystemMonitor_GetNetworkInfo_FullMethodName        = "/picontrol.SystemMonitor/GetNetworkInfo"
-	SystemMonitor_GetNetworkConnections_FullMethodName = "/picontrol.SystemMonitor/GetNetworkConnections"
+	SystemMonitor_StreamStats_FullMethodName            = "/picontrol.SystemMonitor/StreamStats"
+	SystemMonitor_ListProcesses_FullMethodName          = "/picontrol.SystemMonitor/ListProcesses"
+	SystemMonitor_KillProcess_FullMethodName            = "/picontrol.SystemMonitor/KillProcess"
+	SystemMonitor_ListServices_FullMethodName           = "/picontrol.SystemMonitor/ListServices"
+	SystemMonitor_ManageService_FullMethodName          = "/picontrol.SystemMonitor/ManageService"
+	SystemMonitor_StreamLogs_FullMethodName             = "/picontrol.SystemMonitor/StreamLogs"
+	SystemMonitor_GetDiskInfo_FullMethodName            = "/picontrol.SystemMonitor/GetDiskInfo"
+	SystemMonitor_GetNetworkInfo_FullMethodName         = "/picontrol.SystemMonitor/GetNetworkInfo"
+	SystemMonitor_GetNetworkConnections_FullMethodName  = "/picontrol.SystemMonitor/GetNetworkConnections"
+	SystemMonitor_ListPackages_FullMethodName           = "/picontrol.SystemMonitor/ListPackages"
+	SystemMonitor_InstallPackage_FullMethodName         = "/picontrol.SystemMonitor/InstallPackage"
+	SystemMonitor_RemovePackage_FullMethodName          = "/picontrol.SystemMonitor/RemovePackage"
+	SystemMonitor_UpdatePackage_FullMethodName          = "/picontrol.SystemMonitor/UpdatePackage"
+	SystemMonitor_UpdatePackageList_FullMethodName      = "/picontrol.SystemMonitor/UpdatePackageList"
+	SystemMonitor_UpgradePackages_FullMethodName        = "/picontrol.SystemMonitor/UpgradePackages"
+	SystemMonitor_GetVersion_FullMethodName             = "/picontrol.SystemMonitor/GetVersion"
+	SystemMonitor_GetPackageDetails_FullMethodName      = "/picontrol.SystemMonitor/GetPackageDetails"
+	SystemMonitor_GetPackageDependencies_FullMethodName = "/picontrol.SystemMonitor/GetPackageDependencies"
+	SystemMonitor_StreamPackageOperation_FullMethodName = "/picontrol.SystemMonitor/StreamPackageOperation"
 )
 
 // SystemMonitorClient is the client API for SystemMonitor service.
@@ -52,6 +62,26 @@ type SystemMonitorClient interface {
 	GetNetworkInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NetworkInfo, error)
 	// Get active network connections
 	GetNetworkConnections(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NetworkConnectionList, error)
+	// List installed packages (optionally filter)
+	ListPackages(ctx context.Context, in *PackageFilter, opts ...grpc.CallOption) (*PackageList, error)
+	// Install a package
+	InstallPackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Remove a package
+	RemovePackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Update a specific package
+	UpdatePackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Update package list (apt update)
+	UpdatePackageList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Upgrade packages (apt upgrade)
+	UpgradePackages(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Get agent version
+	GetVersion(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionInfo, error)
+	// Get detailed package information
+	GetPackageDetails(ctx context.Context, in *PackageDetailsRequest, opts ...grpc.CallOption) (*PackageDetails, error)
+	// Get package dependencies
+	GetPackageDependencies(ctx context.Context, in *PackageDetailsRequest, opts ...grpc.CallOption) (*PackageDependencies, error)
+	// Stream package operation logs (install/remove/update)
+	StreamPackageOperation(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PackageOperationLog], error)
 }
 
 type systemMonitorClient struct {
@@ -170,6 +200,115 @@ func (c *systemMonitorClient) GetNetworkConnections(ctx context.Context, in *Emp
 	return out, nil
 }
 
+func (c *systemMonitorClient) ListPackages(ctx context.Context, in *PackageFilter, opts ...grpc.CallOption) (*PackageList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PackageList)
+	err := c.cc.Invoke(ctx, SystemMonitor_ListPackages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) InstallPackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_InstallPackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) RemovePackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_RemovePackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) UpdatePackage(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_UpdatePackage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) UpdatePackageList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_UpdatePackageList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) UpgradePackages(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_UpgradePackages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) GetVersion(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VersionInfo)
+	err := c.cc.Invoke(ctx, SystemMonitor_GetVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) GetPackageDetails(ctx context.Context, in *PackageDetailsRequest, opts ...grpc.CallOption) (*PackageDetails, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PackageDetails)
+	err := c.cc.Invoke(ctx, SystemMonitor_GetPackageDetails_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) GetPackageDependencies(ctx context.Context, in *PackageDetailsRequest, opts ...grpc.CallOption) (*PackageDependencies, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PackageDependencies)
+	err := c.cc.Invoke(ctx, SystemMonitor_GetPackageDependencies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) StreamPackageOperation(ctx context.Context, in *PackageCommand, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PackageOperationLog], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &SystemMonitor_ServiceDesc.Streams[2], SystemMonitor_StreamPackageOperation_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[PackageCommand, PackageOperationLog]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SystemMonitor_StreamPackageOperationClient = grpc.ServerStreamingClient[PackageOperationLog]
+
 // SystemMonitorServer is the server API for SystemMonitor service.
 // All implementations must embed UnimplementedSystemMonitorServer
 // for forward compatibility.
@@ -192,6 +331,26 @@ type SystemMonitorServer interface {
 	GetNetworkInfo(context.Context, *Empty) (*NetworkInfo, error)
 	// Get active network connections
 	GetNetworkConnections(context.Context, *Empty) (*NetworkConnectionList, error)
+	// List installed packages (optionally filter)
+	ListPackages(context.Context, *PackageFilter) (*PackageList, error)
+	// Install a package
+	InstallPackage(context.Context, *PackageCommand) (*ActionStatus, error)
+	// Remove a package
+	RemovePackage(context.Context, *PackageCommand) (*ActionStatus, error)
+	// Update a specific package
+	UpdatePackage(context.Context, *PackageCommand) (*ActionStatus, error)
+	// Update package list (apt update)
+	UpdatePackageList(context.Context, *Empty) (*ActionStatus, error)
+	// Upgrade packages (apt upgrade)
+	UpgradePackages(context.Context, *Empty) (*ActionStatus, error)
+	// Get agent version
+	GetVersion(context.Context, *Empty) (*VersionInfo, error)
+	// Get detailed package information
+	GetPackageDetails(context.Context, *PackageDetailsRequest) (*PackageDetails, error)
+	// Get package dependencies
+	GetPackageDependencies(context.Context, *PackageDetailsRequest) (*PackageDependencies, error)
+	// Stream package operation logs (install/remove/update)
+	StreamPackageOperation(*PackageCommand, grpc.ServerStreamingServer[PackageOperationLog]) error
 	mustEmbedUnimplementedSystemMonitorServer()
 }
 
@@ -228,6 +387,36 @@ func (UnimplementedSystemMonitorServer) GetNetworkInfo(context.Context, *Empty) 
 }
 func (UnimplementedSystemMonitorServer) GetNetworkConnections(context.Context, *Empty) (*NetworkConnectionList, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetNetworkConnections not implemented")
+}
+func (UnimplementedSystemMonitorServer) ListPackages(context.Context, *PackageFilter) (*PackageList, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPackages not implemented")
+}
+func (UnimplementedSystemMonitorServer) InstallPackage(context.Context, *PackageCommand) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method InstallPackage not implemented")
+}
+func (UnimplementedSystemMonitorServer) RemovePackage(context.Context, *PackageCommand) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemovePackage not implemented")
+}
+func (UnimplementedSystemMonitorServer) UpdatePackage(context.Context, *PackageCommand) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdatePackage not implemented")
+}
+func (UnimplementedSystemMonitorServer) UpdatePackageList(context.Context, *Empty) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdatePackageList not implemented")
+}
+func (UnimplementedSystemMonitorServer) UpgradePackages(context.Context, *Empty) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpgradePackages not implemented")
+}
+func (UnimplementedSystemMonitorServer) GetVersion(context.Context, *Empty) (*VersionInfo, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetVersion not implemented")
+}
+func (UnimplementedSystemMonitorServer) GetPackageDetails(context.Context, *PackageDetailsRequest) (*PackageDetails, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPackageDetails not implemented")
+}
+func (UnimplementedSystemMonitorServer) GetPackageDependencies(context.Context, *PackageDetailsRequest) (*PackageDependencies, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetPackageDependencies not implemented")
+}
+func (UnimplementedSystemMonitorServer) StreamPackageOperation(*PackageCommand, grpc.ServerStreamingServer[PackageOperationLog]) error {
+	return status.Error(codes.Unimplemented, "method StreamPackageOperation not implemented")
 }
 func (UnimplementedSystemMonitorServer) mustEmbedUnimplementedSystemMonitorServer() {}
 func (UnimplementedSystemMonitorServer) testEmbeddedByValue()                       {}
@@ -398,6 +587,179 @@ func _SystemMonitor_GetNetworkConnections_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemMonitor_ListPackages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageFilter)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).ListPackages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_ListPackages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).ListPackages(ctx, req.(*PackageFilter))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_InstallPackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageCommand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).InstallPackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_InstallPackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).InstallPackage(ctx, req.(*PackageCommand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_RemovePackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageCommand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).RemovePackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_RemovePackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).RemovePackage(ctx, req.(*PackageCommand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_UpdatePackage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageCommand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).UpdatePackage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_UpdatePackage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).UpdatePackage(ctx, req.(*PackageCommand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_UpdatePackageList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).UpdatePackageList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_UpdatePackageList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).UpdatePackageList(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_UpgradePackages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).UpgradePackages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_UpgradePackages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).UpgradePackages(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).GetVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_GetVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).GetVersion(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_GetPackageDetails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).GetPackageDetails(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_GetPackageDetails_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).GetPackageDetails(ctx, req.(*PackageDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_GetPackageDependencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PackageDetailsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).GetPackageDependencies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_GetPackageDependencies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).GetPackageDependencies(ctx, req.(*PackageDetailsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_StreamPackageOperation_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PackageCommand)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SystemMonitorServer).StreamPackageOperation(m, &grpc.GenericServerStream[PackageCommand, PackageOperationLog]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SystemMonitor_StreamPackageOperationServer = grpc.ServerStreamingServer[PackageOperationLog]
+
 // SystemMonitor_ServiceDesc is the grpc.ServiceDesc for SystemMonitor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -433,6 +795,42 @@ var SystemMonitor_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetNetworkConnections",
 			Handler:    _SystemMonitor_GetNetworkConnections_Handler,
 		},
+		{
+			MethodName: "ListPackages",
+			Handler:    _SystemMonitor_ListPackages_Handler,
+		},
+		{
+			MethodName: "InstallPackage",
+			Handler:    _SystemMonitor_InstallPackage_Handler,
+		},
+		{
+			MethodName: "RemovePackage",
+			Handler:    _SystemMonitor_RemovePackage_Handler,
+		},
+		{
+			MethodName: "UpdatePackage",
+			Handler:    _SystemMonitor_UpdatePackage_Handler,
+		},
+		{
+			MethodName: "UpdatePackageList",
+			Handler:    _SystemMonitor_UpdatePackageList_Handler,
+		},
+		{
+			MethodName: "UpgradePackages",
+			Handler:    _SystemMonitor_UpgradePackages_Handler,
+		},
+		{
+			MethodName: "GetVersion",
+			Handler:    _SystemMonitor_GetVersion_Handler,
+		},
+		{
+			MethodName: "GetPackageDetails",
+			Handler:    _SystemMonitor_GetPackageDetails_Handler,
+		},
+		{
+			MethodName: "GetPackageDependencies",
+			Handler:    _SystemMonitor_GetPackageDependencies_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -443,6 +841,11 @@ var SystemMonitor_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "StreamLogs",
 			Handler:       _SystemMonitor_StreamLogs_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamPackageOperation",
+			Handler:       _SystemMonitor_StreamPackageOperation_Handler,
 			ServerStreams: true,
 		},
 	},

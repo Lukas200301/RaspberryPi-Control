@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:dartssh2/dartssh2.dart';
 import '../models/agent_info.dart';
 import '../constants/app_constants.dart';
+import 'agent_version_service.dart';
 import 'ssh_service.dart';
 
 class AgentManager {
@@ -13,6 +14,7 @@ class AgentManager {
   /// Check the agent version on the remote Pi
   Future<AgentInfo> checkAgentVersion() async {
     try {
+      // Try to get version
       final result = await sshService.execute(
         '${AppConstants.agentInstallPath} --version 2>/dev/null || echo "NOT_INSTALLED"',
       );
@@ -25,7 +27,8 @@ class AgentManager {
       final versionMatch = RegExp(r'v(\d+\.\d+\.\d+)').firstMatch(result);
       if (versionMatch != null) {
         final version = versionMatch.group(1)!;
-        final needsUpdate = version != AppConstants.agentVersion;
+        final versionStatus = AgentVersionService.checkVersion(version);
+        final needsUpdate = versionStatus == AgentVersionStatus.outdated;
 
         // Check if agent is running
         final isRunning = await _isAgentRunning();
@@ -90,7 +93,7 @@ class AgentManager {
       final bytes = binaryData.buffer.asUint8List();
 
       onProgress?.call('Creating installation directory...');
-      await sshService.execute('mkdir -p ~/.pi_control');
+      await sshService.execute('mkdir -p /opt/pi-control');
 
       onProgress?.call('Stopping old agent if running...');
       await _stopAgent();
@@ -134,10 +137,11 @@ class AgentManager {
       // Kill existing agent if running
       await _stopAgent();
 
+      // Start agent
+      final command = 'nohup ${AppConstants.agentInstallPath} --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
+
       // Start agent in background
-      await sshService.execute(
-        'nohup ${AppConstants.agentInstallPath} --port ${AppConstants.agentPort} > ~/.pi_control/agent.log 2>&1 &',
-      );
+      await sshService.execute(command);
 
       // Wait a bit for the agent to start
       await Future.delayed(const Duration(seconds: 2));
@@ -164,6 +168,39 @@ class AgentManager {
       await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       debugPrint('Error stopping agent: $e');
+    }
+  }
+
+  /// Check if the current user is root or has sudo access
+  Future<bool> checkSudoAccess() async {
+    // Check if user is root
+    final whoami = await sshService.execute('whoami');
+    debugPrint('Checking sudo access for user: ${whoami.trim()}');
+    
+    if (whoami.trim() == 'root') {
+      debugPrint('User is root - has sudo access');
+      return true;
+    }
+    
+    // Check if user can run sudo (try with groups command)
+    final sudoTest = await sshService.execute(
+      'groups | grep -E "sudo|wheel|admin" || echo "NO_SUDO"',
+    );
+    debugPrint('Sudo groups check result: $sudoTest');
+    
+    final hasSudo = !sudoTest.contains('NO_SUDO');
+    debugPrint('User has sudo access: $hasSudo');
+    return hasSudo;
+  }
+
+  /// Get the appropriate install path based on sudo availability
+  Future<String> _getInstallPath(bool hasSudo) async {
+    if (hasSudo) {
+      return AppConstants.agentInstallPath;
+    } else {
+      // Use home directory for non-sudo users
+      final home = await sshService.execute('echo \$HOME');
+      return '${home.trim()}/pi-control/agent';
     }
   }
 

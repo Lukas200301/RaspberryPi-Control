@@ -305,15 +305,18 @@ class ConnectionsScreen extends ConsumerWidget {
 
       // Handle different result types
       if (result is SuccessResult) {
-        // Update current connection state
-        ref.read(currentConnectionProvider.notifier).setConnection(
-          connection.copyWith(lastConnected: DateTime.now()),
+        // Update current connection state with agent version from result
+        debugPrint('Connection success - agent version in result: ${result.connection.agentVersion}');
+        final updatedConnection = result.connection.copyWith(
+          lastConnected: DateTime.now(),
+          agentVersion: result.connection.agentVersion, // Preserve agent version
         );
+        debugPrint('Updated connection with lastConnected - agent version: ${updatedConnection.agentVersion}');
+        ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
 
-        // Save updated connection
-        await ref.read(connectionListProvider.notifier).updateConnection(
-          connection.copyWith(lastConnected: DateTime.now()),
-        );
+        // Save updated connection with agent version
+        await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
+        debugPrint('Connection saved to storage with agent version: ${updatedConnection.agentVersion}');
 
         if (context.mounted) {
           Navigator.pop(context); // Close progress dialog
@@ -378,14 +381,61 @@ class ConnectionsScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // Close progress dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Connection failed: $e'),
-            backgroundColor: AppTheme.errorRose,
-          ),
-        );
+        
+        debugPrint('Connection error: $e');
+        
+        final errorMessage = e.toString();
+        
+        // Check if error is about sudo requirement
+        if (errorMessage.contains('SUDO_REQUIRED') || errorMessage.contains('ROOT_REQUIRED')) {
+          debugPrint('Showing sudo required dialog');
+          _showRootRequiredDialog(context);
+        } else if (errorMessage.contains('AUTH_FAILED') && !errorMessage.contains('SUDO_REQUIRED')) {
+          // Only show auth failed if it's truly an authentication issue, not a permission issue
+          debugPrint('Showing auth failed message');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Authentication failed. Please check your username and password.'),
+              backgroundColor: AppTheme.errorRose,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Connection failed: $e'),
+              backgroundColor: AppTheme.errorRose,
+            ),
+          );
+        }
       }
     }
+  }
+
+  Future<void> _showRootRequiredDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: Row(
+          children: [
+            Icon(Icons.admin_panel_settings, color: AppTheme.errorRose),
+            const Gap(12),
+            const Text('Sudo Access Required'),
+          ],
+        ),
+        content: Text(
+          'This application requires sudo permissions to manage your Raspberry Pi.\n\nPlease reconnect using a user with sudo access (e.g., root or pi user with sudo privileges).',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _continueConnection(
@@ -426,15 +476,15 @@ class ConnectionsScreen extends ConsumerWidget {
       final result = await connectionManager.continueConnection();
 
       if (result is SuccessResult) {
-        // Update current connection state
-        ref.read(currentConnectionProvider.notifier).setConnection(
-          connection.copyWith(lastConnected: DateTime.now()),
+        // Update current connection state with agent version from result
+        final updatedConnection = result.connection.copyWith(
+          lastConnected: DateTime.now(),
+          agentVersion: result.connection.agentVersion, // Preserve agent version
         );
+        ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
 
-        // Save updated connection
-        await ref.read(connectionListProvider.notifier).updateConnection(
-          connection.copyWith(lastConnected: DateTime.now()),
-        );
+        // Save updated connection with agent version
+        await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
 
         if (context.mounted) {
           Navigator.pop(context); // Close progress dialog
@@ -500,7 +550,7 @@ class ConnectionsScreen extends ConsumerWidget {
         backgroundColor: AppTheme.background,
         title: const Text('Enable Real-Time Monitoring?'),
         content: Text(
-          'To visualize system stats in real-time, the app needs to copy a small helper tool (Agent v3.0) to your Raspberry Pi. This takes about 5 seconds.',
+          'To visualize system stats in real-time, the app needs to copy a small helper tool (Agent) to your Raspberry Pi. This takes about 5 seconds.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
@@ -579,66 +629,69 @@ class ConnectionsScreen extends ConsumerWidget {
     final usernameController = TextEditingController(text: 'pi');
     final passwordController = TextEditingController();
 
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('Add Connection'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: hostController,
-                decoration: const InputDecoration(labelText: 'Host/IP'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: portController,
-                decoration: const InputDecoration(labelText: 'Port'),
-                keyboardType: TextInputType.number,
-              ),
-              const Gap(16),
-              TextField(
-                controller: usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: AppTheme.background,
+          title: const Text('Add Connection'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: hostController,
+                  decoration: const InputDecoration(labelText: 'Host/IP'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: portController,
+                  decoration: const InputDecoration(labelText: 'Port'),
+                  keyboardType: TextInputType.number,
+                ),
+                const Gap(16),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final connection = SSHConnection(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                name: nameController.text,
-                host: hostController.text,
-                port: int.tryParse(portController.text) ?? 22,
-                username: usernameController.text,
-                password: passwordController.text,
-              );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final connection = SSHConnection(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: nameController.text,
+                  host: hostController.text,
+                  port: int.tryParse(portController.text) ?? 22,
+                  username: usernameController.text,
+                  password: passwordController.text,
+                );
 
-              ref.read(connectionListProvider.notifier).addConnection(connection);
-              Navigator.pop(context);
-            },
-            child: const Text('Add'),
-          ),
-        ],
+                ref.read(connectionListProvider.notifier).addConnection(connection);
+                Navigator.pop(context);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -656,63 +709,66 @@ class ConnectionsScreen extends ConsumerWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('Edit Connection'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: hostController,
-                decoration: const InputDecoration(labelText: 'Host/IP'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: portController,
-                decoration: const InputDecoration(labelText: 'Port'),
-                keyboardType: TextInputType.number,
-              ),
-              const Gap(16),
-              TextField(
-                controller: usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-              ),
-              const Gap(16),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: AppTheme.background,
+          title: const Text('Edit Connection'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: hostController,
+                  decoration: const InputDecoration(labelText: 'Host/IP'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: portController,
+                  decoration: const InputDecoration(labelText: 'Port'),
+                  keyboardType: TextInputType.number,
+                ),
+                const Gap(16),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                ),
+                const Gap(16),
+                TextField(
+                  controller: passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updated = connection.copyWith(
-                name: nameController.text,
-                host: hostController.text,
-                port: int.tryParse(portController.text) ?? 22,
-                username: usernameController.text,
-                password: passwordController.text,
-              );
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updated = connection.copyWith(
+                  name: nameController.text,
+                  host: hostController.text,
+                  port: int.tryParse(portController.text) ?? 22,
+                  username: usernameController.text,
+                  password: passwordController.text,
 
-              ref.read(connectionListProvider.notifier).updateConnection(updated);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+                );
+
+                ref.read(connectionListProvider.notifier).updateConnection(updated);
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }

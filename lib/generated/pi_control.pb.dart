@@ -79,6 +79,7 @@ class LiveStats extends $pb.GeneratedMessage {
     $fixnum.Int64? netBytesRecv,
     $core.Iterable<ProcessInfo>? topProcesses,
     $fixnum.Int64? timestamp,
+    $core.Iterable<DiskIOStat>? diskIo,
   }) {
     final result = create();
     if (cpuUsage != null) result.cpuUsage = cpuUsage;
@@ -99,6 +100,7 @@ class LiveStats extends $pb.GeneratedMessage {
     if (netBytesRecv != null) result.netBytesRecv = netBytesRecv;
     if (topProcesses != null) result.topProcesses.addAll(topProcesses);
     if (timestamp != null) result.timestamp = timestamp;
+    if (diskIo != null) result.diskIo.addAll(diskIo);
     return result;
   }
 
@@ -150,6 +152,8 @@ class LiveStats extends $pb.GeneratedMessage {
     ..pPM<ProcessInfo>(17, _omitFieldNames ? '' : 'topProcesses',
         subBuilder: ProcessInfo.create)
     ..aInt64(18, _omitFieldNames ? '' : 'timestamp')
+    ..pPM<DiskIOStat>(19, _omitFieldNames ? '' : 'diskIo',
+        subBuilder: DiskIOStat.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -330,6 +334,10 @@ class LiveStats extends $pb.GeneratedMessage {
   $core.bool hasTimestamp() => $_has(17);
   @$pb.TagNumber(18)
   void clearTimestamp() => $_clearField(18);
+
+  /// Disk I/O stats (bytes per second)
+  @$pb.TagNumber(19)
+  $pb.PbList<DiskIOStat> get diskIo => $_getList(18);
 }
 
 /// Process information
@@ -1600,6 +1608,980 @@ class NetworkConnection extends $pb.GeneratedMessage {
   $core.bool hasProcessName() => $_has(7);
   @$pb.TagNumber(8)
   void clearProcessName() => $_clearField(8);
+}
+
+/// Package management
+class PackageFilter extends $pb.GeneratedMessage {
+  factory PackageFilter({
+    $core.String? searchTerm,
+    $core.bool? installedOnly,
+  }) {
+    final result = create();
+    if (searchTerm != null) result.searchTerm = searchTerm;
+    if (installedOnly != null) result.installedOnly = installedOnly;
+    return result;
+  }
+
+  PackageFilter._();
+
+  factory PackageFilter.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageFilter.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageFilter',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'searchTerm')
+    ..aOB(2, _omitFieldNames ? '' : 'installedOnly')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageFilter clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageFilter copyWith(void Function(PackageFilter) updates) =>
+      super.copyWith((message) => updates(message as PackageFilter))
+          as PackageFilter;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageFilter create() => PackageFilter._();
+  @$core.override
+  PackageFilter createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageFilter getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageFilter>(create);
+  static PackageFilter? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get searchTerm => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set searchTerm($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSearchTerm() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSearchTerm() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get installedOnly => $_getBF(1);
+  @$pb.TagNumber(2)
+  set installedOnly($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasInstalledOnly() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearInstalledOnly() => $_clearField(2);
+}
+
+class PackageInfo extends $pb.GeneratedMessage {
+  factory PackageInfo({
+    $core.String? name,
+    $core.String? version,
+    $core.String? architecture,
+    $core.String? description,
+    $core.bool? installed,
+    $core.String? status,
+    $fixnum.Int64? installedSize,
+    $core.String? section,
+  }) {
+    final result = create();
+    if (name != null) result.name = name;
+    if (version != null) result.version = version;
+    if (architecture != null) result.architecture = architecture;
+    if (description != null) result.description = description;
+    if (installed != null) result.installed = installed;
+    if (status != null) result.status = status;
+    if (installedSize != null) result.installedSize = installedSize;
+    if (section != null) result.section = section;
+    return result;
+  }
+
+  PackageInfo._();
+
+  factory PackageInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'version')
+    ..aOS(3, _omitFieldNames ? '' : 'architecture')
+    ..aOS(4, _omitFieldNames ? '' : 'description')
+    ..aOB(5, _omitFieldNames ? '' : 'installed')
+    ..aOS(6, _omitFieldNames ? '' : 'status')
+    ..a<$fixnum.Int64>(
+        7, _omitFieldNames ? '' : 'installedSize', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..aOS(8, _omitFieldNames ? '' : 'section')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageInfo copyWith(void Function(PackageInfo) updates) =>
+      super.copyWith((message) => updates(message as PackageInfo))
+          as PackageInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageInfo create() => PackageInfo._();
+  @$core.override
+  PackageInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageInfo>(create);
+  static PackageInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get version => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set version($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get architecture => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set architecture($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasArchitecture() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearArchitecture() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get description => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set description($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDescription() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDescription() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get installed => $_getBF(4);
+  @$pb.TagNumber(5)
+  set installed($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasInstalled() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearInstalled() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get status => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set status($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasStatus() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearStatus() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get installedSize => $_getI64(6);
+  @$pb.TagNumber(7)
+  set installedSize($fixnum.Int64 value) => $_setInt64(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasInstalledSize() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearInstalledSize() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get section => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set section($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasSection() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearSection() => $_clearField(8);
+}
+
+class PackageList extends $pb.GeneratedMessage {
+  factory PackageList({
+    $core.Iterable<PackageInfo>? packages,
+  }) {
+    final result = create();
+    if (packages != null) result.packages.addAll(packages);
+    return result;
+  }
+
+  PackageList._();
+
+  factory PackageList.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageList.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageList',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..pPM<PackageInfo>(1, _omitFieldNames ? '' : 'packages',
+        subBuilder: PackageInfo.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageList clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageList copyWith(void Function(PackageList) updates) =>
+      super.copyWith((message) => updates(message as PackageList))
+          as PackageList;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageList create() => PackageList._();
+  @$core.override
+  PackageList createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageList getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageList>(create);
+  static PackageList? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<PackageInfo> get packages => $_getList(0);
+}
+
+class PackageCommand extends $pb.GeneratedMessage {
+  factory PackageCommand({
+    $core.String? packageName,
+  }) {
+    final result = create();
+    if (packageName != null) result.packageName = packageName;
+    return result;
+  }
+
+  PackageCommand._();
+
+  factory PackageCommand.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageCommand.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageCommand',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'packageName')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageCommand clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageCommand copyWith(void Function(PackageCommand) updates) =>
+      super.copyWith((message) => updates(message as PackageCommand))
+          as PackageCommand;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageCommand create() => PackageCommand._();
+  @$core.override
+  PackageCommand createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageCommand getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageCommand>(create);
+  static PackageCommand? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get packageName => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set packageName($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPackageName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPackageName() => $_clearField(1);
+}
+
+/// Request for detailed package information
+class PackageDetailsRequest extends $pb.GeneratedMessage {
+  factory PackageDetailsRequest({
+    $core.String? packageName,
+  }) {
+    final result = create();
+    if (packageName != null) result.packageName = packageName;
+    return result;
+  }
+
+  PackageDetailsRequest._();
+
+  factory PackageDetailsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageDetailsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageDetailsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'packageName')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDetailsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDetailsRequest copyWith(
+          void Function(PackageDetailsRequest) updates) =>
+      super.copyWith((message) => updates(message as PackageDetailsRequest))
+          as PackageDetailsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageDetailsRequest create() => PackageDetailsRequest._();
+  @$core.override
+  PackageDetailsRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageDetailsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageDetailsRequest>(create);
+  static PackageDetailsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get packageName => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set packageName($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPackageName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPackageName() => $_clearField(1);
+}
+
+/// Detailed package information
+class PackageDetails extends $pb.GeneratedMessage {
+  factory PackageDetails({
+    $core.String? name,
+    $core.String? version,
+    $core.String? architecture,
+    $core.String? description,
+    $core.String? longDescription,
+    $core.bool? installed,
+    $core.String? status,
+    $fixnum.Int64? installedSize,
+    $core.String? maintainer,
+    $core.String? homepage,
+    $core.String? section,
+    $fixnum.Int64? installDate,
+    $core.Iterable<$core.String>? tags,
+    $core.String? source,
+    $core.int? priority,
+    $core.String? license,
+  }) {
+    final result = create();
+    if (name != null) result.name = name;
+    if (version != null) result.version = version;
+    if (architecture != null) result.architecture = architecture;
+    if (description != null) result.description = description;
+    if (longDescription != null) result.longDescription = longDescription;
+    if (installed != null) result.installed = installed;
+    if (status != null) result.status = status;
+    if (installedSize != null) result.installedSize = installedSize;
+    if (maintainer != null) result.maintainer = maintainer;
+    if (homepage != null) result.homepage = homepage;
+    if (section != null) result.section = section;
+    if (installDate != null) result.installDate = installDate;
+    if (tags != null) result.tags.addAll(tags);
+    if (source != null) result.source = source;
+    if (priority != null) result.priority = priority;
+    if (license != null) result.license = license;
+    return result;
+  }
+
+  PackageDetails._();
+
+  factory PackageDetails.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageDetails.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageDetails',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'version')
+    ..aOS(3, _omitFieldNames ? '' : 'architecture')
+    ..aOS(4, _omitFieldNames ? '' : 'description')
+    ..aOS(5, _omitFieldNames ? '' : 'longDescription')
+    ..aOB(6, _omitFieldNames ? '' : 'installed')
+    ..aOS(7, _omitFieldNames ? '' : 'status')
+    ..a<$fixnum.Int64>(
+        8, _omitFieldNames ? '' : 'installedSize', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..aOS(9, _omitFieldNames ? '' : 'maintainer')
+    ..aOS(10, _omitFieldNames ? '' : 'homepage')
+    ..aOS(11, _omitFieldNames ? '' : 'section')
+    ..aInt64(12, _omitFieldNames ? '' : 'installDate')
+    ..pPS(13, _omitFieldNames ? '' : 'tags')
+    ..aOS(14, _omitFieldNames ? '' : 'source')
+    ..aI(15, _omitFieldNames ? '' : 'priority')
+    ..aOS(16, _omitFieldNames ? '' : 'license')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDetails clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDetails copyWith(void Function(PackageDetails) updates) =>
+      super.copyWith((message) => updates(message as PackageDetails))
+          as PackageDetails;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageDetails create() => PackageDetails._();
+  @$core.override
+  PackageDetails createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageDetails getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageDetails>(create);
+  static PackageDetails? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get version => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set version($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get architecture => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set architecture($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasArchitecture() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearArchitecture() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get description => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set description($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDescription() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDescription() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get longDescription => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set longDescription($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLongDescription() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLongDescription() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get installed => $_getBF(5);
+  @$pb.TagNumber(6)
+  set installed($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasInstalled() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearInstalled() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get status => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set status($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasStatus() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearStatus() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get installedSize => $_getI64(7);
+  @$pb.TagNumber(8)
+  set installedSize($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasInstalledSize() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearInstalledSize() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get maintainer => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set maintainer($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasMaintainer() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearMaintainer() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get homepage => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set homepage($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasHomepage() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearHomepage() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get section => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set section($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasSection() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearSection() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $fixnum.Int64 get installDate => $_getI64(11);
+  @$pb.TagNumber(12)
+  set installDate($fixnum.Int64 value) => $_setInt64(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasInstallDate() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearInstallDate() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $pb.PbList<$core.String> get tags => $_getList(12);
+
+  @$pb.TagNumber(14)
+  $core.String get source => $_getSZ(13);
+  @$pb.TagNumber(14)
+  set source($core.String value) => $_setString(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasSource() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearSource() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.int get priority => $_getIZ(14);
+  @$pb.TagNumber(15)
+  set priority($core.int value) => $_setSignedInt32(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasPriority() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearPriority() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $core.String get license => $_getSZ(15);
+  @$pb.TagNumber(16)
+  set license($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasLicense() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearLicense() => $_clearField(16);
+}
+
+/// Package dependency information
+class PackageDependencies extends $pb.GeneratedMessage {
+  factory PackageDependencies({
+    $core.String? packageName,
+    $core.Iterable<$core.String>? depends,
+    $core.Iterable<$core.String>? requiredBy,
+    $core.Iterable<$core.String>? recommends,
+    $core.Iterable<$core.String>? suggests,
+    $core.Iterable<$core.String>? conflicts,
+  }) {
+    final result = create();
+    if (packageName != null) result.packageName = packageName;
+    if (depends != null) result.depends.addAll(depends);
+    if (requiredBy != null) result.requiredBy.addAll(requiredBy);
+    if (recommends != null) result.recommends.addAll(recommends);
+    if (suggests != null) result.suggests.addAll(suggests);
+    if (conflicts != null) result.conflicts.addAll(conflicts);
+    return result;
+  }
+
+  PackageDependencies._();
+
+  factory PackageDependencies.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageDependencies.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageDependencies',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'packageName')
+    ..pPS(2, _omitFieldNames ? '' : 'depends')
+    ..pPS(3, _omitFieldNames ? '' : 'requiredBy')
+    ..pPS(4, _omitFieldNames ? '' : 'recommends')
+    ..pPS(5, _omitFieldNames ? '' : 'suggests')
+    ..pPS(6, _omitFieldNames ? '' : 'conflicts')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDependencies clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageDependencies copyWith(void Function(PackageDependencies) updates) =>
+      super.copyWith((message) => updates(message as PackageDependencies))
+          as PackageDependencies;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageDependencies create() => PackageDependencies._();
+  @$core.override
+  PackageDependencies createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageDependencies getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageDependencies>(create);
+  static PackageDependencies? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get packageName => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set packageName($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPackageName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPackageName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get depends => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get requiredBy => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<$core.String> get recommends => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get suggests => $_getList(4);
+
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get conflicts => $_getList(5);
+}
+
+/// Log entry for package operations
+class PackageOperationLog extends $pb.GeneratedMessage {
+  factory PackageOperationLog({
+    $fixnum.Int64? timestamp,
+    $core.String? level,
+    $core.String? message,
+    $core.double? progress,
+    $core.bool? completed,
+    $core.bool? success,
+  }) {
+    final result = create();
+    if (timestamp != null) result.timestamp = timestamp;
+    if (level != null) result.level = level;
+    if (message != null) result.message = message;
+    if (progress != null) result.progress = progress;
+    if (completed != null) result.completed = completed;
+    if (success != null) result.success = success;
+    return result;
+  }
+
+  PackageOperationLog._();
+
+  factory PackageOperationLog.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PackageOperationLog.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PackageOperationLog',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aInt64(1, _omitFieldNames ? '' : 'timestamp')
+    ..aOS(2, _omitFieldNames ? '' : 'level')
+    ..aOS(3, _omitFieldNames ? '' : 'message')
+    ..aD(4, _omitFieldNames ? '' : 'progress')
+    ..aOB(5, _omitFieldNames ? '' : 'completed')
+    ..aOB(6, _omitFieldNames ? '' : 'success')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageOperationLog clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PackageOperationLog copyWith(void Function(PackageOperationLog) updates) =>
+      super.copyWith((message) => updates(message as PackageOperationLog))
+          as PackageOperationLog;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PackageOperationLog create() => PackageOperationLog._();
+  @$core.override
+  PackageOperationLog createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PackageOperationLog getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PackageOperationLog>(create);
+  static PackageOperationLog? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get timestamp => $_getI64(0);
+  @$pb.TagNumber(1)
+  set timestamp($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTimestamp() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTimestamp() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get level => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set level($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLevel() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLevel() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get message => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set message($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMessage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMessage() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get progress => $_getN(3);
+  @$pb.TagNumber(4)
+  set progress($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasProgress() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearProgress() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get completed => $_getBF(4);
+  @$pb.TagNumber(5)
+  set completed($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCompleted() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCompleted() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get success => $_getBF(5);
+  @$pb.TagNumber(6)
+  set success($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSuccess() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSuccess() => $_clearField(6);
+}
+
+/// Disk I/O statistics
+class DiskIOStat extends $pb.GeneratedMessage {
+  factory DiskIOStat({
+    $core.String? device,
+    $fixnum.Int64? readBytes,
+    $fixnum.Int64? writeBytes,
+    $fixnum.Int64? readCount,
+    $fixnum.Int64? writeCount,
+  }) {
+    final result = create();
+    if (device != null) result.device = device;
+    if (readBytes != null) result.readBytes = readBytes;
+    if (writeBytes != null) result.writeBytes = writeBytes;
+    if (readCount != null) result.readCount = readCount;
+    if (writeCount != null) result.writeCount = writeCount;
+    return result;
+  }
+
+  DiskIOStat._();
+
+  factory DiskIOStat.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory DiskIOStat.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DiskIOStat',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'device')
+    ..a<$fixnum.Int64>(
+        2, _omitFieldNames ? '' : 'readBytes', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        3, _omitFieldNames ? '' : 'writeBytes', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        4, _omitFieldNames ? '' : 'readCount', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        5, _omitFieldNames ? '' : 'writeCount', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DiskIOStat clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DiskIOStat copyWith(void Function(DiskIOStat) updates) =>
+      super.copyWith((message) => updates(message as DiskIOStat)) as DiskIOStat;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static DiskIOStat create() => DiskIOStat._();
+  @$core.override
+  DiskIOStat createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static DiskIOStat getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DiskIOStat>(create);
+  static DiskIOStat? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get device => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set device($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDevice() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDevice() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get readBytes => $_getI64(1);
+  @$pb.TagNumber(2)
+  set readBytes($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReadBytes() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReadBytes() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get writeBytes => $_getI64(2);
+  @$pb.TagNumber(3)
+  set writeBytes($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasWriteBytes() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWriteBytes() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get readCount => $_getI64(3);
+  @$pb.TagNumber(4)
+  set readCount($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasReadCount() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearReadCount() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get writeCount => $_getI64(4);
+  @$pb.TagNumber(5)
+  set writeCount($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasWriteCount() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearWriteCount() => $_clearField(5);
+}
+
+/// Version information
+class VersionInfo extends $pb.GeneratedMessage {
+  factory VersionInfo({
+    $core.String? version,
+    $core.bool? isRoot,
+  }) {
+    final result = create();
+    if (version != null) result.version = version;
+    if (isRoot != null) result.isRoot = isRoot;
+    return result;
+  }
+
+  VersionInfo._();
+
+  factory VersionInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory VersionInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'VersionInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'version')
+    ..aOB(2, _omitFieldNames ? '' : 'isRoot')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  VersionInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  VersionInfo copyWith(void Function(VersionInfo) updates) =>
+      super.copyWith((message) => updates(message as VersionInfo))
+          as VersionInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static VersionInfo create() => VersionInfo._();
+  @$core.override
+  VersionInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static VersionInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<VersionInfo>(create);
+  static VersionInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get version => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set version($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasVersion() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearVersion() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get isRoot => $_getBF(1);
+  @$pb.TagNumber(2)
+  set isRoot($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIsRoot() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIsRoot() => $_clearField(2);
 }
 
 const $core.bool _omitFieldNames =

@@ -10,6 +10,9 @@ import 'services_screen.dart';
 import 'logs_screen.dart';
 import 'network_connections_screen.dart';
 import 'processes_screen.dart';
+import 'packages_screen.dart';
+import '../widgets/agent_update_banner.dart';
+import '../services/agent_version_service.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -155,6 +158,16 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const Gap(32),
+
+            // Agent Update Banner
+            if (currentConnection != null && 
+                AgentVersionService.checkVersion(currentConnection.agentVersion) == AgentVersionStatus.outdated)
+              AgentUpdateBanner(
+                connection: currentConnection,
+                onDismiss: () {
+                  // User dismissed, could save this preference
+                },
+              ),
 
             // Quick Info
             Text(
@@ -333,6 +346,31 @@ class DashboardScreen extends ConsumerWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ProcessesScreen()),
+                );
+              },
+            ),
+            const Gap(32),
+
+            // Management Section
+            Text(
+              'Management',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const Gap(16),
+
+            // Package Management Option
+            _buildMenuCard(
+              context,
+              icon: Icons.inventory,
+              title: 'Package Manager',
+              subtitle: 'Install, update, and remove packages',
+              color: const Color(0xFF9C27B0), // Purple
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PackagesScreen()),
                 );
               },
             ),

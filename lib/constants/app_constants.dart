@@ -1,8 +1,8 @@
 class AppConstants {
   // Agent Configuration
-  static const String agentVersion = '3.0.0';
+  static const String agentVersion = '3.1.0';
   static const int agentPort = 50051;
-  static const String agentInstallPath = '.pi_control/agent';
+  static const String agentInstallPath = '/opt/pi-control/agent';
 
   // SSH Configuration
   static const int defaultSSHPort = 22;

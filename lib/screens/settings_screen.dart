@@ -9,10 +9,9 @@ import 'package:http/http.dart' as http;import 'package:open_filex/open_filex.da
 import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
 import '../providers/file_providers.dart';
-import '../constants/app_constants.dart';
 import '../services/update_service.dart';
 import '../models/app_settings.dart';
-import 'login_screen.dart';
+import 'connections_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -201,25 +200,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
           ),
           const Gap(12),
-          GlassCard(
-            child: Column(
-              children: [
-                _buildSettingTile(
-                  context,
-                  icon: Icons.info_outline,
-                  title: 'Agent Version',
-                  subtitle: AppConstants.agentVersion,
+          Consumer(
+            builder: (context, ref, child) {
+              // Check currentConnectionProvider first
+              var connection = ref.watch(currentConnectionProvider);
+              debugPrint('SettingsScreen: currentConnectionProvider connection = $connection');
+              debugPrint('SettingsScreen: connection?.agentVersion = ${connection?.agentVersion}');
+
+              // Fallback: check connection manager
+              if (connection == null) {
+                final connectionManager = ref.watch(connectionManagerProvider);
+                connection = connectionManager.currentConnection;
+                debugPrint('SettingsScreen: Using connectionManager.currentConnection');
+                debugPrint('SettingsScreen: connectionManager connection?.agentVersion = ${connection?.agentVersion}');
+              }
+
+              final agentVersion = connection?.agentVersion ?? 'Not connected';
+              debugPrint('SettingsScreen: Final agentVersion display = $agentVersion');
+
+              return GlassCard(
+                child: Column(
+                  children: [
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.info_outline,
+                      title: 'Agent Version',
+                      subtitle: agentVersion,
+                    ),
+                    const Divider(color: AppTheme.glassBorder),
+                    _buildSettingTile(
+                      context,
+                      icon: Icons.refresh,
+                      title: 'Reinstall Agent',
+                      subtitle: 'Update or fix agent installation',
+                      onTap: () => _reinstallAgent(context),
+                    ),
+                  ],
                 ),
-                const Divider(color: AppTheme.glassBorder),
-                _buildSettingTile(
-                  context,
-                  icon: Icons.refresh,
-                  title: 'Reinstall Agent',
-                  subtitle: 'Update or fix agent installation',
-                  onTap: () => _reinstallAgent(context),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const Gap(24),
 
@@ -300,7 +319,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 // Navigate immediately
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  MaterialPageRoute(builder: (context) => const ConnectionsScreen()),
                   (route) => false,
                 );
               },
@@ -441,7 +460,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
         title: const Text('Reinstall Agent?'),
-        content: const Text('This will reinstall the agent on your Raspberry Pi.'),
+        content: const Text('This will remove the current agent and prepare for a fresh installation. You will need to reconnect after this.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -457,21 +476,100 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (confirmed != true || !context.mounted) return;
 
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        backgroundColor: AppTheme.background,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppTheme.primaryIndigo),
+            Gap(16),
+            Text('Preparing agent reinstall...'),
+          ],
+        ),
+      ),
+    );
+
     try {
-      final agentManager = ref.read(agentManagerProvider);
-      await agentManager.installAgent();
-      
+      final sshService = ref.read(sshServiceProvider);
+
+      debugPrint('Stopping all agent processes...');
+
+      // Stop all agent processes
+      try {
+        await sshService.execute('sudo systemctl stop pi-agent 2>/dev/null || true');
+        await sshService.execute('sudo systemctl stop pi-control 2>/dev/null || true');
+        await sshService.execute('pkill -9 -f "/opt/pi-control/agent" 2>/dev/null || true');
+        await sshService.execute('pkill -9 -f "pi-agent" 2>/dev/null || true');
+        await sshService.execute('pkill -9 agent 2>/dev/null || true');
+        await sshService.execute('fuser -k 50051/tcp 2>/dev/null || true');
+        await Future.delayed(const Duration(seconds: 1));
+      } catch (e) {
+        debugPrint('Error stopping agent: $e');
+      }
+
+      // Delete the old agent installation
+      debugPrint('Removing old agent installation...');
+      final rmResult = await sshService.execute('sudo rm -rf /opt/pi-control 2>&1 || echo "failed"');
+      debugPrint('Remove result: $rmResult');
+
+      final rmTmpResult = await sshService.execute('rm -f /tmp/pi-agent* 2>&1 || echo "done"');
+      debugPrint('Remove temp result: $rmTmpResult');
+
+      // Verify removal
+      final checkResult = await sshService.execute('ls /opt/pi-control/agent 2>&1 || echo "NOT_FOUND"');
+      debugPrint('Verification check: $checkResult');
+
+      if (!checkResult.contains('NOT_FOUND') && !checkResult.contains('No such file')) {
+        throw Exception('Failed to remove old agent installation');
+      }
+
+      debugPrint('Agent removed successfully');
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Agent reinstalled successfully',
-                style: TextStyle(color: Colors.white)),
-            backgroundColor: AppTheme.successGreen,
+        Navigator.pop(context); // Close progress dialog
+
+        // Show success dialog with reconnect option
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.background,
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: AppTheme.successGreen),
+                Gap(12),
+                Text('Reinstall Prepared'),
+              ],
+            ),
+            content: Text(
+              'Old agent removed. The new agent v${ref.read(currentConnectionProvider)?.agentVersion ?? 'latest'} will be automatically installed on next connection.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await ref.read(connectionManagerProvider).disconnect();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/',
+                      (route) => false,
+                    );
+                  }
+                },
+                child: const Text('Disconnect & Reconnect'),
+              ),
+            ],
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
+        Navigator.pop(context); // Close progress dialog
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to reinstall agent: $e',

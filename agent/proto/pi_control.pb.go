@@ -146,7 +146,9 @@ type LiveStats struct {
 	// Top processes by CPU usage
 	TopProcesses []*ProcessInfo `protobuf:"bytes,17,rep,name=top_processes,json=topProcesses,proto3" json:"top_processes,omitempty"`
 	// Timestamp of this stat snapshot
-	Timestamp     int64 `protobuf:"varint,18,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Timestamp int64 `protobuf:"varint,18,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Disk I/O stats (bytes per second)
+	DiskIo        []*DiskIOStat `protobuf:"bytes,19,rep,name=disk_io,json=diskIo,proto3" json:"disk_io,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -305,6 +307,13 @@ func (x *LiveStats) GetTimestamp() int64 {
 		return x.Timestamp
 	}
 	return 0
+}
+
+func (x *LiveStats) GetDiskIo() []*DiskIOStat {
+	if x != nil {
+		return x.DiskIo
+	}
+	return nil
 }
 
 // Process information
@@ -1294,12 +1303,763 @@ func (x *NetworkConnection) GetProcessName() string {
 	return ""
 }
 
+// Package management
+type PackageFilter struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SearchTerm    string                 `protobuf:"bytes,1,opt,name=search_term,json=searchTerm,proto3" json:"search_term,omitempty"`           // Empty = list all installed
+	InstalledOnly bool                   `protobuf:"varint,2,opt,name=installed_only,json=installedOnly,proto3" json:"installed_only,omitempty"` // If true, only show installed packages
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageFilter) Reset() {
+	*x = PackageFilter{}
+	mi := &file_pi_control_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageFilter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageFilter) ProtoMessage() {}
+
+func (x *PackageFilter) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageFilter.ProtoReflect.Descriptor instead.
+func (*PackageFilter) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *PackageFilter) GetSearchTerm() string {
+	if x != nil {
+		return x.SearchTerm
+	}
+	return ""
+}
+
+func (x *PackageFilter) GetInstalledOnly() bool {
+	if x != nil {
+		return x.InstalledOnly
+	}
+	return false
+}
+
+type PackageInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Architecture  string                 `protobuf:"bytes,3,opt,name=architecture,proto3" json:"architecture,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	Installed     bool                   `protobuf:"varint,5,opt,name=installed,proto3" json:"installed,omitempty"`
+	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`                                     // installed, not-installed, upgradable
+	InstalledSize uint64                 `protobuf:"varint,7,opt,name=installed_size,json=installedSize,proto3" json:"installed_size,omitempty"` // Size in bytes (0 if not installed)
+	Section       string                 `protobuf:"bytes,8,opt,name=section,proto3" json:"section,omitempty"`                                   // Package category (utils, libs, net, etc.)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageInfo) Reset() {
+	*x = PackageInfo{}
+	mi := &file_pi_control_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageInfo) ProtoMessage() {}
+
+func (x *PackageInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageInfo.ProtoReflect.Descriptor instead.
+func (*PackageInfo) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PackageInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PackageInfo) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *PackageInfo) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+func (x *PackageInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PackageInfo) GetInstalled() bool {
+	if x != nil {
+		return x.Installed
+	}
+	return false
+}
+
+func (x *PackageInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *PackageInfo) GetInstalledSize() uint64 {
+	if x != nil {
+		return x.InstalledSize
+	}
+	return 0
+}
+
+func (x *PackageInfo) GetSection() string {
+	if x != nil {
+		return x.Section
+	}
+	return ""
+}
+
+type PackageList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Packages      []*PackageInfo         `protobuf:"bytes,1,rep,name=packages,proto3" json:"packages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageList) Reset() {
+	*x = PackageList{}
+	mi := &file_pi_control_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageList) ProtoMessage() {}
+
+func (x *PackageList) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageList.ProtoReflect.Descriptor instead.
+func (*PackageList) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *PackageList) GetPackages() []*PackageInfo {
+	if x != nil {
+		return x.Packages
+	}
+	return nil
+}
+
+type PackageCommand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PackageName   string                 `protobuf:"bytes,1,opt,name=package_name,json=packageName,proto3" json:"package_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageCommand) Reset() {
+	*x = PackageCommand{}
+	mi := &file_pi_control_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageCommand) ProtoMessage() {}
+
+func (x *PackageCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageCommand.ProtoReflect.Descriptor instead.
+func (*PackageCommand) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *PackageCommand) GetPackageName() string {
+	if x != nil {
+		return x.PackageName
+	}
+	return ""
+}
+
+// Request for detailed package information
+type PackageDetailsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PackageName   string                 `protobuf:"bytes,1,opt,name=package_name,json=packageName,proto3" json:"package_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageDetailsRequest) Reset() {
+	*x = PackageDetailsRequest{}
+	mi := &file_pi_control_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageDetailsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageDetailsRequest) ProtoMessage() {}
+
+func (x *PackageDetailsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageDetailsRequest.ProtoReflect.Descriptor instead.
+func (*PackageDetailsRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *PackageDetailsRequest) GetPackageName() string {
+	if x != nil {
+		return x.PackageName
+	}
+	return ""
+}
+
+// Detailed package information
+type PackageDetails struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Name            string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Version         string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Architecture    string                 `protobuf:"bytes,3,opt,name=architecture,proto3" json:"architecture,omitempty"`
+	Description     string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	LongDescription string                 `protobuf:"bytes,5,opt,name=long_description,json=longDescription,proto3" json:"long_description,omitempty"` // Full README-style description
+	Installed       bool                   `protobuf:"varint,6,opt,name=installed,proto3" json:"installed,omitempty"`
+	Status          string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	InstalledSize   uint64                 `protobuf:"varint,8,opt,name=installed_size,json=installedSize,proto3" json:"installed_size,omitempty"` // Size in bytes
+	Maintainer      string                 `protobuf:"bytes,9,opt,name=maintainer,proto3" json:"maintainer,omitempty"`                             // Maintainer name and email
+	Homepage        string                 `protobuf:"bytes,10,opt,name=homepage,proto3" json:"homepage,omitempty"`                                // Project homepage/GitHub URL
+	Section         string                 `protobuf:"bytes,11,opt,name=section,proto3" json:"section,omitempty"`                                  // Package category
+	InstallDate     int64                  `protobuf:"varint,12,opt,name=install_date,json=installDate,proto3" json:"install_date,omitempty"`      // Unix timestamp (0 if not installed)
+	Tags            []string               `protobuf:"bytes,13,rep,name=tags,proto3" json:"tags,omitempty"`                                        // Package tags/keywords
+	Source          string                 `protobuf:"bytes,14,opt,name=source,proto3" json:"source,omitempty"`                                    // Source package name
+	Priority        int32                  `protobuf:"varint,15,opt,name=priority,proto3" json:"priority,omitempty"`                               // Package priority (required, important, standard, optional, extra)
+	License         string                 `protobuf:"bytes,16,opt,name=license,proto3" json:"license,omitempty"`                                  // License type (MIT, GPL, etc.)
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PackageDetails) Reset() {
+	*x = PackageDetails{}
+	mi := &file_pi_control_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageDetails) ProtoMessage() {}
+
+func (x *PackageDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageDetails.ProtoReflect.Descriptor instead.
+func (*PackageDetails) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *PackageDetails) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetLongDescription() string {
+	if x != nil {
+		return x.LongDescription
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetInstalled() bool {
+	if x != nil {
+		return x.Installed
+	}
+	return false
+}
+
+func (x *PackageDetails) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetInstalledSize() uint64 {
+	if x != nil {
+		return x.InstalledSize
+	}
+	return 0
+}
+
+func (x *PackageDetails) GetMaintainer() string {
+	if x != nil {
+		return x.Maintainer
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetHomepage() string {
+	if x != nil {
+		return x.Homepage
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetSection() string {
+	if x != nil {
+		return x.Section
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetInstallDate() int64 {
+	if x != nil {
+		return x.InstallDate
+	}
+	return 0
+}
+
+func (x *PackageDetails) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *PackageDetails) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *PackageDetails) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *PackageDetails) GetLicense() string {
+	if x != nil {
+		return x.License
+	}
+	return ""
+}
+
+// Package dependency information
+type PackageDependencies struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PackageName   string                 `protobuf:"bytes,1,opt,name=package_name,json=packageName,proto3" json:"package_name,omitempty"`
+	Depends       []string               `protobuf:"bytes,2,rep,name=depends,proto3" json:"depends,omitempty"`                         // Packages this one requires
+	RequiredBy    []string               `protobuf:"bytes,3,rep,name=required_by,json=requiredBy,proto3" json:"required_by,omitempty"` // Packages that require this one
+	Recommends    []string               `protobuf:"bytes,4,rep,name=recommends,proto3" json:"recommends,omitempty"`                   // Recommended packages
+	Suggests      []string               `protobuf:"bytes,5,rep,name=suggests,proto3" json:"suggests,omitempty"`                       // Suggested packages
+	Conflicts     []string               `protobuf:"bytes,6,rep,name=conflicts,proto3" json:"conflicts,omitempty"`                     // Conflicting packages
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageDependencies) Reset() {
+	*x = PackageDependencies{}
+	mi := &file_pi_control_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageDependencies) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageDependencies) ProtoMessage() {}
+
+func (x *PackageDependencies) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageDependencies.ProtoReflect.Descriptor instead.
+func (*PackageDependencies) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *PackageDependencies) GetPackageName() string {
+	if x != nil {
+		return x.PackageName
+	}
+	return ""
+}
+
+func (x *PackageDependencies) GetDepends() []string {
+	if x != nil {
+		return x.Depends
+	}
+	return nil
+}
+
+func (x *PackageDependencies) GetRequiredBy() []string {
+	if x != nil {
+		return x.RequiredBy
+	}
+	return nil
+}
+
+func (x *PackageDependencies) GetRecommends() []string {
+	if x != nil {
+		return x.Recommends
+	}
+	return nil
+}
+
+func (x *PackageDependencies) GetSuggests() []string {
+	if x != nil {
+		return x.Suggests
+	}
+	return nil
+}
+
+func (x *PackageDependencies) GetConflicts() []string {
+	if x != nil {
+		return x.Conflicts
+	}
+	return nil
+}
+
+// Log entry for package operations
+type PackageOperationLog struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timestamp     int64                  `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Level         string                 `protobuf:"bytes,2,opt,name=level,proto3" json:"level,omitempty"` // info, warning, error
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Progress      float64                `protobuf:"fixed64,4,opt,name=progress,proto3" json:"progress,omitempty"`  // 0-100 percentage
+	Completed     bool                   `protobuf:"varint,5,opt,name=completed,proto3" json:"completed,omitempty"` // True when operation is done
+	Success       bool                   `protobuf:"varint,6,opt,name=success,proto3" json:"success,omitempty"`     // True if operation succeeded
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PackageOperationLog) Reset() {
+	*x = PackageOperationLog{}
+	mi := &file_pi_control_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PackageOperationLog) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PackageOperationLog) ProtoMessage() {}
+
+func (x *PackageOperationLog) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PackageOperationLog.ProtoReflect.Descriptor instead.
+func (*PackageOperationLog) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *PackageOperationLog) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *PackageOperationLog) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
+func (x *PackageOperationLog) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PackageOperationLog) GetProgress() float64 {
+	if x != nil {
+		return x.Progress
+	}
+	return 0
+}
+
+func (x *PackageOperationLog) GetCompleted() bool {
+	if x != nil {
+		return x.Completed
+	}
+	return false
+}
+
+func (x *PackageOperationLog) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+// Disk I/O statistics
+type DiskIOStat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Device        string                 `protobuf:"bytes,1,opt,name=device,proto3" json:"device,omitempty"`                            // e.g., "sda", "nvme0n1"
+	ReadBytes     uint64                 `protobuf:"varint,2,opt,name=read_bytes,json=readBytes,proto3" json:"read_bytes,omitempty"`    // Bytes read per second
+	WriteBytes    uint64                 `protobuf:"varint,3,opt,name=write_bytes,json=writeBytes,proto3" json:"write_bytes,omitempty"` // Bytes written per second
+	ReadCount     uint64                 `protobuf:"varint,4,opt,name=read_count,json=readCount,proto3" json:"read_count,omitempty"`    // Read operations per second
+	WriteCount    uint64                 `protobuf:"varint,5,opt,name=write_count,json=writeCount,proto3" json:"write_count,omitempty"` // Write operations per second
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DiskIOStat) Reset() {
+	*x = DiskIOStat{}
+	mi := &file_pi_control_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiskIOStat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiskIOStat) ProtoMessage() {}
+
+func (x *DiskIOStat) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiskIOStat.ProtoReflect.Descriptor instead.
+func (*DiskIOStat) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DiskIOStat) GetDevice() string {
+	if x != nil {
+		return x.Device
+	}
+	return ""
+}
+
+func (x *DiskIOStat) GetReadBytes() uint64 {
+	if x != nil {
+		return x.ReadBytes
+	}
+	return 0
+}
+
+func (x *DiskIOStat) GetWriteBytes() uint64 {
+	if x != nil {
+		return x.WriteBytes
+	}
+	return 0
+}
+
+func (x *DiskIOStat) GetReadCount() uint64 {
+	if x != nil {
+		return x.ReadCount
+	}
+	return 0
+}
+
+func (x *DiskIOStat) GetWriteCount() uint64 {
+	if x != nil {
+		return x.WriteCount
+	}
+	return 0
+}
+
+// Version information
+type VersionInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`              // Agent version string (e.g., "3.1.0")
+	IsRoot        bool                   `protobuf:"varint,2,opt,name=is_root,json=isRoot,proto3" json:"is_root,omitempty"` // Whether agent is running with root privileges
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VersionInfo) Reset() {
+	*x = VersionInfo{}
+	mi := &file_pi_control_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VersionInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VersionInfo) ProtoMessage() {}
+
+func (x *VersionInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VersionInfo.ProtoReflect.Descriptor instead.
+func (*VersionInfo) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *VersionInfo) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *VersionInfo) GetIsRoot() bool {
+	if x != nil {
+		return x.IsRoot
+	}
+	return false
+}
+
 var File_pi_control_proto protoreflect.FileDescriptor
 
 const file_pi_control_proto_rawDesc = "" +
 	"\n" +
 	"\x10pi_control.proto\x12\tpicontrol\"\a\n" +
-	"\x05Empty\"\xc6\x04\n" +
+	"\x05Empty\"\xf6\x04\n" +
 	"\tLiveStats\x12\x1b\n" +
 	"\tcpu_usage\x18\x01 \x01(\x01R\bcpuUsage\x12 \n" +
 	"\fcpu_per_core\x18\x02 \x03(\x01R\n" +
@@ -1323,7 +2083,8 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x0enet_bytes_sent\x18\x0f \x01(\x04R\fnetBytesSent\x12$\n" +
 	"\x0enet_bytes_recv\x18\x10 \x01(\x04R\fnetBytesRecv\x12;\n" +
 	"\rtop_processes\x18\x11 \x03(\v2\x16.picontrol.ProcessInfoR\ftopProcesses\x12\x1c\n" +
-	"\ttimestamp\x18\x12 \x01(\x03R\ttimestamp\"\xec\x01\n" +
+	"\ttimestamp\x18\x12 \x01(\x03R\ttimestamp\x12.\n" +
+	"\adisk_io\x18\x13 \x03(\v2\x15.picontrol.DiskIOStatR\x06diskIo\"\xec\x01\n" +
 	"\vProcessInfo\x12\x10\n" +
 	"\x03pid\x18\x01 \x01(\x05R\x03pid\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -1410,7 +2171,77 @@ const file_pi_control_proto_rawDesc = "" +
 	"remotePort\x12\x16\n" +
 	"\x06status\x18\x06 \x01(\tR\x06status\x12\x10\n" +
 	"\x03pid\x18\a \x01(\x05R\x03pid\x12!\n" +
-	"\fprocess_name\x18\b \x01(\tR\vprocessName*V\n" +
+	"\fprocess_name\x18\b \x01(\tR\vprocessName\"W\n" +
+	"\rPackageFilter\x12\x1f\n" +
+	"\vsearch_term\x18\x01 \x01(\tR\n" +
+	"searchTerm\x12%\n" +
+	"\x0einstalled_only\x18\x02 \x01(\bR\rinstalledOnly\"\xf8\x01\n" +
+	"\vPackageInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\"\n" +
+	"\farchitecture\x18\x03 \x01(\tR\farchitecture\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1c\n" +
+	"\tinstalled\x18\x05 \x01(\bR\tinstalled\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12%\n" +
+	"\x0einstalled_size\x18\a \x01(\x04R\rinstalledSize\x12\x18\n" +
+	"\asection\x18\b \x01(\tR\asection\"A\n" +
+	"\vPackageList\x122\n" +
+	"\bpackages\x18\x01 \x03(\v2\x16.picontrol.PackageInfoR\bpackages\"3\n" +
+	"\x0ePackageCommand\x12!\n" +
+	"\fpackage_name\x18\x01 \x01(\tR\vpackageName\":\n" +
+	"\x15PackageDetailsRequest\x12!\n" +
+	"\fpackage_name\x18\x01 \x01(\tR\vpackageName\"\xe7\x03\n" +
+	"\x0ePackageDetails\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\"\n" +
+	"\farchitecture\x18\x03 \x01(\tR\farchitecture\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12)\n" +
+	"\x10long_description\x18\x05 \x01(\tR\x0flongDescription\x12\x1c\n" +
+	"\tinstalled\x18\x06 \x01(\bR\tinstalled\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12%\n" +
+	"\x0einstalled_size\x18\b \x01(\x04R\rinstalledSize\x12\x1e\n" +
+	"\n" +
+	"maintainer\x18\t \x01(\tR\n" +
+	"maintainer\x12\x1a\n" +
+	"\bhomepage\x18\n" +
+	" \x01(\tR\bhomepage\x12\x18\n" +
+	"\asection\x18\v \x01(\tR\asection\x12!\n" +
+	"\finstall_date\x18\f \x01(\x03R\vinstallDate\x12\x12\n" +
+	"\x04tags\x18\r \x03(\tR\x04tags\x12\x16\n" +
+	"\x06source\x18\x0e \x01(\tR\x06source\x12\x1a\n" +
+	"\bpriority\x18\x0f \x01(\x05R\bpriority\x12\x18\n" +
+	"\alicense\x18\x10 \x01(\tR\alicense\"\xcd\x01\n" +
+	"\x13PackageDependencies\x12!\n" +
+	"\fpackage_name\x18\x01 \x01(\tR\vpackageName\x12\x18\n" +
+	"\adepends\x18\x02 \x03(\tR\adepends\x12\x1f\n" +
+	"\vrequired_by\x18\x03 \x03(\tR\n" +
+	"requiredBy\x12\x1e\n" +
+	"\n" +
+	"recommends\x18\x04 \x03(\tR\n" +
+	"recommends\x12\x1a\n" +
+	"\bsuggests\x18\x05 \x03(\tR\bsuggests\x12\x1c\n" +
+	"\tconflicts\x18\x06 \x03(\tR\tconflicts\"\xb7\x01\n" +
+	"\x13PackageOperationLog\x12\x1c\n" +
+	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\x12\x14\n" +
+	"\x05level\x18\x02 \x01(\tR\x05level\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12\x1a\n" +
+	"\bprogress\x18\x04 \x01(\x01R\bprogress\x12\x1c\n" +
+	"\tcompleted\x18\x05 \x01(\bR\tcompleted\x12\x18\n" +
+	"\asuccess\x18\x06 \x01(\bR\asuccess\"\xa4\x01\n" +
+	"\n" +
+	"DiskIOStat\x12\x16\n" +
+	"\x06device\x18\x01 \x01(\tR\x06device\x12\x1d\n" +
+	"\n" +
+	"read_bytes\x18\x02 \x01(\x04R\treadBytes\x12\x1f\n" +
+	"\vwrite_bytes\x18\x03 \x01(\x04R\n" +
+	"writeBytes\x12\x1d\n" +
+	"\n" +
+	"read_count\x18\x04 \x01(\x04R\treadCount\x12\x1f\n" +
+	"\vwrite_count\x18\x05 \x01(\x04R\n" +
+	"writeCount\"@\n" +
+	"\vVersionInfo\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x17\n" +
+	"\ais_root\x18\x02 \x01(\bR\x06isRoot*V\n" +
 	"\rServiceAction\x12\t\n" +
 	"\x05START\x10\x00\x12\b\n" +
 	"\x04STOP\x10\x01\x12\v\n" +
@@ -1419,7 +2250,8 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x06ENABLE\x10\x03\x12\v\n" +
 	"\aDISABLE\x10\x04\x12\n" +
 	"\n" +
-	"\x06RELOAD\x10\x052\xba\x04\n" +
+	"\x06RELOAD\x10\x052\x87\n" +
+	"\n" +
 	"\rSystemMonitor\x127\n" +
 	"\vStreamStats\x12\x10.picontrol.Empty\x1a\x14.picontrol.LiveStats0\x01\x129\n" +
 	"\rListProcesses\x12\x10.picontrol.Empty\x1a\x16.picontrol.ProcessList\x12<\n" +
@@ -1430,7 +2262,18 @@ const file_pi_control_proto_rawDesc = "" +
 	"StreamLogs\x12\x14.picontrol.LogFilter\x1a\x13.picontrol.LogEntry0\x01\x124\n" +
 	"\vGetDiskInfo\x12\x10.picontrol.Empty\x1a\x13.picontrol.DiskInfo\x12:\n" +
 	"\x0eGetNetworkInfo\x12\x10.picontrol.Empty\x1a\x16.picontrol.NetworkInfo\x12K\n" +
-	"\x15GetNetworkConnections\x12\x10.picontrol.Empty\x1a .picontrol.NetworkConnectionListB\x10Z\x0epi_agent/protob\x06proto3"
+	"\x15GetNetworkConnections\x12\x10.picontrol.Empty\x1a .picontrol.NetworkConnectionList\x12@\n" +
+	"\fListPackages\x12\x18.picontrol.PackageFilter\x1a\x16.picontrol.PackageList\x12D\n" +
+	"\x0eInstallPackage\x12\x19.picontrol.PackageCommand\x1a\x17.picontrol.ActionStatus\x12C\n" +
+	"\rRemovePackage\x12\x19.picontrol.PackageCommand\x1a\x17.picontrol.ActionStatus\x12C\n" +
+	"\rUpdatePackage\x12\x19.picontrol.PackageCommand\x1a\x17.picontrol.ActionStatus\x12>\n" +
+	"\x11UpdatePackageList\x12\x10.picontrol.Empty\x1a\x17.picontrol.ActionStatus\x12<\n" +
+	"\x0fUpgradePackages\x12\x10.picontrol.Empty\x1a\x17.picontrol.ActionStatus\x126\n" +
+	"\n" +
+	"GetVersion\x12\x10.picontrol.Empty\x1a\x16.picontrol.VersionInfo\x12P\n" +
+	"\x11GetPackageDetails\x12 .picontrol.PackageDetailsRequest\x1a\x19.picontrol.PackageDetails\x12Z\n" +
+	"\x16GetPackageDependencies\x12 .picontrol.PackageDetailsRequest\x1a\x1e.picontrol.PackageDependencies\x12U\n" +
+	"\x16StreamPackageOperation\x12\x19.picontrol.PackageCommand\x1a\x1e.picontrol.PackageOperationLog0\x01B\x10Z\x0epi_agent/protob\x06proto3"
 
 var (
 	file_pi_control_proto_rawDescOnce sync.Once
@@ -1445,7 +2288,7 @@ func file_pi_control_proto_rawDescGZIP() []byte {
 }
 
 var file_pi_control_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_pi_control_proto_goTypes = []any{
 	(ServiceAction)(0),            // 0: picontrol.ServiceAction
 	(*Empty)(nil),                 // 1: picontrol.Empty
@@ -1465,38 +2308,70 @@ var file_pi_control_proto_goTypes = []any{
 	(*NetworkInterface)(nil),      // 15: picontrol.NetworkInterface
 	(*NetworkConnectionList)(nil), // 16: picontrol.NetworkConnectionList
 	(*NetworkConnection)(nil),     // 17: picontrol.NetworkConnection
+	(*PackageFilter)(nil),         // 18: picontrol.PackageFilter
+	(*PackageInfo)(nil),           // 19: picontrol.PackageInfo
+	(*PackageList)(nil),           // 20: picontrol.PackageList
+	(*PackageCommand)(nil),        // 21: picontrol.PackageCommand
+	(*PackageDetailsRequest)(nil), // 22: picontrol.PackageDetailsRequest
+	(*PackageDetails)(nil),        // 23: picontrol.PackageDetails
+	(*PackageDependencies)(nil),   // 24: picontrol.PackageDependencies
+	(*PackageOperationLog)(nil),   // 25: picontrol.PackageOperationLog
+	(*DiskIOStat)(nil),            // 26: picontrol.DiskIOStat
+	(*VersionInfo)(nil),           // 27: picontrol.VersionInfo
 }
 var file_pi_control_proto_depIdxs = []int32{
 	3,  // 0: picontrol.LiveStats.top_processes:type_name -> picontrol.ProcessInfo
-	3,  // 1: picontrol.ProcessList.processes:type_name -> picontrol.ProcessInfo
-	6,  // 2: picontrol.ServiceList.services:type_name -> picontrol.ServiceInfo
-	0,  // 3: picontrol.ServiceCommand.action:type_name -> picontrol.ServiceAction
-	13, // 4: picontrol.DiskInfo.partitions:type_name -> picontrol.DiskPartition
-	15, // 5: picontrol.NetworkInfo.interfaces:type_name -> picontrol.NetworkInterface
-	17, // 6: picontrol.NetworkConnectionList.connections:type_name -> picontrol.NetworkConnection
-	1,  // 7: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
-	1,  // 8: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
-	5,  // 9: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
-	1,  // 10: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
-	8,  // 11: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
-	10, // 12: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
-	1,  // 13: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
-	1,  // 14: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
-	1,  // 15: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
-	2,  // 16: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
-	4,  // 17: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
-	9,  // 18: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
-	7,  // 19: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
-	9,  // 20: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
-	11, // 21: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
-	12, // 22: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
-	14, // 23: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
-	16, // 24: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
-	16, // [16:25] is the sub-list for method output_type
-	7,  // [7:16] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	26, // 1: picontrol.LiveStats.disk_io:type_name -> picontrol.DiskIOStat
+	3,  // 2: picontrol.ProcessList.processes:type_name -> picontrol.ProcessInfo
+	6,  // 3: picontrol.ServiceList.services:type_name -> picontrol.ServiceInfo
+	0,  // 4: picontrol.ServiceCommand.action:type_name -> picontrol.ServiceAction
+	13, // 5: picontrol.DiskInfo.partitions:type_name -> picontrol.DiskPartition
+	15, // 6: picontrol.NetworkInfo.interfaces:type_name -> picontrol.NetworkInterface
+	17, // 7: picontrol.NetworkConnectionList.connections:type_name -> picontrol.NetworkConnection
+	19, // 8: picontrol.PackageList.packages:type_name -> picontrol.PackageInfo
+	1,  // 9: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
+	1,  // 10: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
+	5,  // 11: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
+	1,  // 12: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
+	8,  // 13: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
+	10, // 14: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
+	1,  // 15: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
+	1,  // 16: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
+	1,  // 17: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
+	18, // 18: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
+	21, // 19: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
+	21, // 20: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
+	21, // 21: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
+	1,  // 22: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
+	1,  // 23: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
+	1,  // 24: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
+	22, // 25: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
+	22, // 26: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
+	21, // 27: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
+	2,  // 28: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
+	4,  // 29: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
+	9,  // 30: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
+	7,  // 31: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
+	9,  // 32: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
+	11, // 33: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
+	12, // 34: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
+	14, // 35: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
+	16, // 36: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
+	20, // 37: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
+	9,  // 38: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
+	9,  // 39: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
+	9,  // 40: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
+	9,  // 41: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
+	9,  // 42: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
+	27, // 43: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
+	23, // 44: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
+	24, // 45: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
+	25, // 46: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
+	28, // [28:47] is the sub-list for method output_type
+	9,  // [9:28] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_pi_control_proto_init() }
@@ -1510,7 +2385,7 @@ func file_pi_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pi_control_proto_rawDesc), len(file_pi_control_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   17,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

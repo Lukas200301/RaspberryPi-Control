@@ -7,6 +7,7 @@ class SSHConnection {
   final String password;
   final bool isFavorite;
   final DateTime? lastConnected;
+  final String? agentVersion;
 
   SSHConnection({
     required this.id,
@@ -17,6 +18,7 @@ class SSHConnection {
     required this.password,
     this.isFavorite = false,
     this.lastConnected,
+    this.agentVersion,
   });
 
   Map<String, dynamic> toJson() => {
@@ -28,6 +30,7 @@ class SSHConnection {
         'password': password,
         'isFavorite': isFavorite,
         'lastConnected': lastConnected?.toIso8601String(),
+        'agentVersion': agentVersion,
       };
 
   factory SSHConnection.fromJson(Map<String, dynamic> json) => SSHConnection(
@@ -41,6 +44,7 @@ class SSHConnection {
         lastConnected: json['lastConnected'] != null
             ? DateTime.parse(json['lastConnected'] as String)
             : null,
+        agentVersion: json['agentVersion'] as String?,
       );
 
   SSHConnection copyWith({
@@ -52,6 +56,8 @@ class SSHConnection {
     String? password,
     bool? isFavorite,
     DateTime? lastConnected,
+    String? agentVersion,
+    bool clearAgentVersion = false,
   }) {
     return SSHConnection(
       id: id ?? this.id,
@@ -62,6 +68,7 @@ class SSHConnection {
       password: password ?? this.password,
       isFavorite: isFavorite ?? this.isFavorite,
       lastConnected: lastConnected ?? this.lastConnected,
+      agentVersion: clearAgentVersion ? null : (agentVersion ?? this.agentVersion),
     );
   }
 }
