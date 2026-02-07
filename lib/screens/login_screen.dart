@@ -7,7 +7,6 @@ import '../widgets/glass_card.dart';
 import '../models/ssh_connection.dart';
 import '../providers/app_providers.dart';
 import '../services/network_discovery_service.dart';
-import '../services/transfer_manager_service.dart';
 import 'main_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -430,14 +429,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
 
-      // Connect TransferManagerService with same credentials
-      TransferManagerService.connect(
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-      );
-
       // Check and install agent if needed
       final agentInfo = await agentManager.checkAgentVersion();
 
@@ -684,14 +675,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await sshService.disconnect();
       await Future.delayed(const Duration(seconds: 1));
       await sshService.connect(connection);
-
-      // Reconnect TransferManagerService
-      TransferManagerService.connect(
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

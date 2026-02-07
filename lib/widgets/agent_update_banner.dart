@@ -1,13 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../theme/app_theme.dart';
 import '../models/ssh_connection.dart';
 import '../services/agent_version_service.dart';
 import '../providers/app_providers.dart';
-import '../providers/file_providers.dart';
 
 class AgentUpdateBanner extends ConsumerStatefulWidget {
   final SSHConnection connection;

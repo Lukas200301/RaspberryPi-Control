@@ -486,40 +486,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ),
           const Gap(24),
 
-          // Memory Details
-          Text(
-            'Memory Details',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const Gap(12),
-          GlassCard(
-            child: Column(
-              children: [
-                _buildMemoryBar(
-                  'Used',
-                  stats.ramUsed.toDouble() / 1024 / 1024 / 1024,
-                  stats.ramTotal.toDouble() / 1024 / 1024 / 1024,
-                  AppTheme.primaryIndigo,
-                ),
-                const Gap(8),
-                _buildMemoryBar(
-                  'Cached',
-                  stats.ramCached.toDouble() / 1024 / 1024 / 1024,
-                  stats.ramTotal.toDouble() / 1024 / 1024 / 1024,
-                  AppTheme.secondaryTeal,
-                ),
-                const Gap(8),
-                _buildMemoryBar(
-                  'Free',
-                  stats.ramFree.toDouble() / 1024 / 1024 / 1024,
-                  stats.ramTotal.toDouble() / 1024 / 1024 / 1024,
-                  AppTheme.successGreen,
-                ),
-              ],
-            ),
-          ),
-          const Gap(24),
-
           // Network
           Text(
             'Network',
@@ -705,7 +671,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
         ],
       ),

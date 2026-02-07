@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/file_item.dart';
@@ -11,9 +10,7 @@ import '../providers/file_providers.dart';
 import '../providers/app_providers.dart';
 import '../widgets/file_operation_dialog.dart';
 import '../widgets/file_preview_dialog.dart';
-import '../widgets/file_transfer_panel.dart';
-import '../services/transfer_service.dart';
-import '../services/transfer_manager_service.dart';
+import '../widgets/grpc_file_transfer_panel.dart';
 
 class FilesScreen extends ConsumerStatefulWidget {
   const FilesScreen({super.key});
@@ -24,60 +21,18 @@ class FilesScreen extends ConsumerStatefulWidget {
 
 class _FilesScreenState extends ConsumerState<FilesScreen> {
   final _searchController = TextEditingController();
-  final _transferService = TransferService();
   bool _isSelectionMode = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize transfer service
-    _transferService.initialize();
-    _transferService.addListener(_handleTransferEvent);
-
-    // Start and connect transfer service
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        // First, initialize the background service
-        debugPrint('Files Screen: Initializing TransferManagerService...');
-        await TransferManagerService.initialize();
-        
-        // Check if service is running
-        final service = FlutterBackgroundService();
-        bool isRunning = await service.isRunning();
-        
-        if (isRunning) {
-          // Force stop to ensure clean state
-          await TransferManagerService.stop();
-          await Future.delayed(const Duration(seconds: 1));
-          
-          isRunning = await service.isRunning();
-        }
-        
-        // Start the background service fresh
-        await service.startService();
-        
-        // Wait for service to start and initialize
-        await Future.delayed(const Duration(seconds: 2));
-        
-        isRunning = await service.isRunning();
-        
-        // Connect to SSH
-        final connection = ref.read(currentConnectionProvider);
-        if (connection != null) {
-          _transferService.connect(
-            host: connection.host,
-            port: connection.port,
-            username: connection.username,
-            password: connection.password,
-          );
-          
-          // Wait for connection to establish
-          await Future.delayed(const Duration(seconds: 2));
-        }
-      } catch (e) {
-        debugPrint('Error initializing TransferManagerService: $e');
-      }
+    // Listen to gRPC file transfer updates for UI rebuilds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final transferService = ref.read(grpcFileTransferServiceProvider);
+      transferService.addListener(() {
+        if (mounted) setState(() {});
+      });
     });
 
     // Initialize home directory
@@ -97,52 +52,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _transferService.removeListener(_handleTransferEvent);
-    _transferService.dispose();
     super.dispose();
-  }
-
-  void _handleTransferEvent(String type, Map<String, dynamic>? data) {
-    if (!mounted) return;
-
-    switch (type) {
-      case 'uploadFolderComplete':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Folder uploaded successfully!', style: TextStyle(color: Colors.black)),
-            backgroundColor: Colors.green.shade700,
-          ),
-        );
-        ref.invalidate(fileListProvider);
-        break;
-
-      case 'uploadFolderFailed':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Upload failed: ${data?['error']}', style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.red,
-          ),
-        );
-        break;
-
-      case 'folderComplete':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Folder downloaded successfully!', style: TextStyle(color: Colors.black)),
-            backgroundColor: Colors.green.shade700,
-          ),
-        );
-        break;
-
-      case 'folderFailed':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: ${data?['error']}', style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.red,
-          ),
-        );
-        break;
-    }
   }
 
   void _navigateToDirectory(String path) {
@@ -186,160 +96,62 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   Future<void> _uploadFile() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result == null) return;
-
-    final sftp = ref.read(sftpServiceProvider);
-    if (sftp == null) return;
-
-    final currentPath = ref.read(currentDirectoryProvider);
-
-    for (final file in result.files) {
-      if (file.path == null) continue;
-
-      final transferId = DateTime.now().millisecondsSinceEpoch.toString();
-      final remotePath = currentPath.endsWith('/')
-          ? '$currentPath${file.name}'
-          : '$currentPath/${file.name}';
-
-      // Add transfer to list
-      ref.read(fileTransfersProvider.notifier).addTransfer(FileTransfer(
-        id: transferId,
-        fileName: file.name,
-        localPath: file.path!,
-        remotePath: remotePath,
-        isUpload: true,
-        totalSize: file.size,
-      ));
-
-      // Start upload
-      try {
-        ref.read(fileTransfersProvider.notifier).updateTransfer(
-          transferId,
-          status: FileTransferStatus.transferring,
-        );
-
-        final fileBytes = await File(file.path!).readAsBytes();
-
-        await sftp.uploadFile(
-          localPath: file.path!,
-          remotePath: remotePath,
-          data: fileBytes,
-          onProgress: (sent, total) {
-            ref.read(fileTransfersProvider.notifier).updateTransfer(
-              transferId,
-              transferredSize: sent,
-            );
-          },
-        );
-
-        ref.read(fileTransfersProvider.notifier).updateTransfer(
-          transferId,
-          status: FileTransferStatus.completed,
-        );
-
-        // Refresh file list
-        ref.invalidate(fileListProvider);
-      } catch (e) {
-        ref.read(fileTransfersProvider.notifier).updateTransfer(
-          transferId,
-          status: FileTransferStatus.failed,
-          error: e.toString(),
-        );
-      }
-    }
-  }
-
-  Future<void> _uploadFolder() async {
-    final sftp = ref.read(sftpServiceProvider);
-    if (sftp == null) return;
-
-    final currentPath = ref.read(currentDirectoryProvider);
-
-    // Pick folder
-    final folderPath = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Select folder to upload',
-    );
-
-    if (folderPath == null) return;
-
-    final folderName = folderPath.split(Platform.pathSeparator).last;
-    final remotePath = '$currentPath/$folderName';
-    final transferId = DateTime.now().millisecondsSinceEpoch.toString();
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Counting files in $folderName...', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.blue.shade700,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
-
     try {
-      // Count total files
-      final totalFiles = await _countLocalFiles(folderPath);
-      debugPrint('Total files to upload: $totalFiles');
-      
-      // Add transfer to list
-      ref.read(fileTransfersProvider.notifier).addTransfer(FileTransfer(
-        id: transferId,
-        fileName: folderName,
-        localPath: folderPath,
-        remotePath: remotePath,
-        isUpload: true,
-        totalSize: totalFiles,
-        transferredSize: 0,
-        isFolderTransfer: true,
-      ));
+      final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+      if (result == null || result.files.isEmpty) return;
 
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.transferring,
-      );
-      
-      // Upload with progress tracking
-      int processedFiles = 0;
-      await _uploadFolderRecursive(
-        folderPath, 
-        remotePath, 
-        sftp,
-        onFileUploaded: () {
-          processedFiles++;
-          ref.read(fileTransfersProvider.notifier).updateTransfer(
-            transferId,
-            transferredSize: processedFiles,
+      final currentPath = ref.read(currentDirectoryProvider);
+      final transferService = ref.read(grpcFileTransferServiceProvider);
+
+      for (final file in result.files) {
+        if (file.path == null) continue;
+
+        final remotePath = currentPath.endsWith('/')
+            ? '$currentPath${file.name}'
+            : '$currentPath/${file.name}';
+
+        try {
+          await transferService.uploadFile(
+            localPath: file.path!,
+            remotePath: remotePath,
+            onProgress: (progress) {
+              // Progress is automatically tracked in the service
+            },
           );
-        },
-      );
-      
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.completed,
-      );
-      
+        } catch (e) {
+          debugPrint('Upload failed for ${file.name}: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Upload failed for ${file.name}: $e', 
+                    style: const TextStyle(color: Colors.white)),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+
+      // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Folder uploaded successfully!', style: TextStyle(color: Colors.black)),
+            content: Text('Uploaded ${result.files.length} file(s) successfully', 
+                style: const TextStyle(color: Colors.black)),
             backgroundColor: Colors.green.shade700,
           ),
         );
       }
-      
+
+      // Refresh file list
       ref.invalidate(fileListProvider);
-    } catch (e) {
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.failed,
-        error: e.toString(),
-      );
       
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Upload failed: $e', style: TextStyle(color: Colors.white)),
+            content: Text('Upload failed: $e', 
+                style: const TextStyle(color: Colors.white)),
             backgroundColor: Colors.red,
           ),
         );
@@ -347,141 +159,126 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     }
   }
 
-  Future<int> _countLocalFiles(String localPath) async {
-    int count = 0;
-    final localDir = Directory(localPath);
-    final items = await localDir.list().toList();
-    
-    for (final item in items) {
-      if (item is Directory) {
-        count += await _countLocalFiles(item.path);
-      } else if (item is File) {
-        count++;
-      }
-    }
-    
-    return count;
-  }
-
-  Future<void> _uploadFolderRecursive(
-    String localPath, 
-    String remotePath, 
-    dynamic sftp,
-    {Function()? onFileUploaded}
-  ) async {
-    // Create remote directory
+  Future<void> _uploadFolder() async {
     try {
-      await sftp.createDirectory(remotePath);
-    } catch (e) {
-      // Directory might already exist
-      debugPrint('Directory exists or error: $e');
-    }
+      final currentPath = ref.read(currentDirectoryProvider);
 
-    // List local directory
-    final localDir = Directory(localPath);
-    final items = await localDir.list().toList();
+      // Pick folder
+      final folderPath = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select folder to upload',
+      );
 
-    for (final item in items) {
-      final itemName = item.path.split(Platform.pathSeparator).last;
-      final itemRemotePath = '$remotePath/$itemName';
+      if (folderPath == null) return;
 
-      if (item is Directory) {
-        // Recursively upload subdirectory
-        await _uploadFolderRecursive(item.path, itemRemotePath, sftp, onFileUploaded: onFileUploaded);
-      } else if (item is File) {
-        // Upload file
-        final fileBytes = await item.readAsBytes();
-        await sftp.uploadFile(
-          localPath: item.path,
-          remotePath: itemRemotePath,
-          data: fileBytes,
+      final folderName = folderPath.split(Platform.pathSeparator).last;
+      final remotePath = '$currentPath/$folderName';
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Uploading folder $folderName...', 
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.blue.shade700,
+            duration: const Duration(seconds: 2),
+          ),
         );
-        
-        // Call progress callback
-        onFileUploaded?.call();
+      }
+
+      final transferService = ref.read(grpcFileTransferServiceProvider);
+
+      await transferService.uploadDirectory(
+        localPath: folderPath,
+        remotePath: remotePath,
+        onProgress: (filename, progress) {
+          debugPrint('$filename: ${progress.toStringAsFixed(1)}%');
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Folder "$folderName" uploaded successfully!', 
+                style: const TextStyle(color: Colors.black)),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
+      }
+
+      ref.invalidate(fileListProvider);
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: $e', 
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
 
   Future<void> _downloadFile(FileItem file) async {
-    final sftp = ref.read(sftpServiceProvider);
-    if (sftp == null) return;
-
     if (file.isDirectory) {
       // For directories, use the folder download function
       await _downloadFolder(file);
       return;
     }
 
-    // First, download the file data from the remote server
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Downloading ${file.name}...', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.blue.shade700,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-
     try {
-      // Download file data from remote server
-      final data = await sftp.downloadFile(
+      // On mobile platforms, we need to handle downloads differently
+      final transferService = ref.read(grpcFileTransferServiceProvider);
+      
+      // For mobile: use getDirectoryPath to let user pick download folder
+      final downloadFolder = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select download location',
+      );
+
+      if (downloadFolder == null) {
+        // User cancelled
+        return;
+      }
+
+      // Build the full local path
+      final localPath = '$downloadFolder${Platform.pathSeparator}${file.name}';
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Downloading ${file.name}...', 
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.blue.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      await transferService.downloadFile(
         remotePath: file.path,
-        onProgress: (received, total) {
-          // Could update a progress indicator here
+        localPath: localPath,
+        onProgress: (progress) {
+          // Progress is automatically tracked in the service
         },
       );
 
-      // Let user choose where to save the file using the system file picker
-      String? outputPath;
-
-      if (Platform.isAndroid || Platform.isIOS) {
-        // For mobile, use FilePicker to save the file
-        outputPath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save ${file.name}',
-          fileName: file.name,
-          bytes: data,
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File saved successfully!', 
+                style: const TextStyle(color: Colors.black)),
+            backgroundColor: Colors.green.shade700,
+            duration: const Duration(seconds: 3),
+          ),
         );
-      } else {
-        // For desktop, let user choose location
-        outputPath = await FilePicker.platform.saveFile(
-          dialogTitle: 'Save ${file.name}',
-          fileName: file.name,
-        );
-
-        if (outputPath != null) {
-          await File(outputPath).writeAsBytes(data);
-        }
       }
-
-      if (outputPath != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('File saved successfully!', style: TextStyle(color: Colors.black)),
-              backgroundColor: Colors.green.shade700,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        // User cancelled the save dialog
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Download cancelled', style: TextStyle(color: Colors.white)),
-              backgroundColor: Colors.orange.shade700,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
+      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: $e', style: TextStyle(color: Colors.white)),
+            content: Text('Download failed: $e', 
+                style: const TextStyle(color: Colors.white)),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -491,204 +288,113 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   Future<void> _downloadFolder(FileItem folder) async {
-    final sftp = ref.read(sftpServiceProvider);
-    if (sftp == null) return;
-
-    // Let user pick save location
-    final outputPath = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Select download location',
-    );
-
-    if (outputPath == null) {
-      debugPrint('User cancelled folder download');
-      return;
-    }
-
-    final localPath = '$outputPath${Platform.pathSeparator}${folder.name}';
-    final transferId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    debugPrint('=== FOLDER DOWNLOAD INITIATED ===');
-    debugPrint('Remote folder: ${folder.path}');
-    debugPrint('Output path: $outputPath');
-    debugPrint('Local path: $localPath');
-    debugPrint('Platform separator: ${Platform.pathSeparator}');
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Counting files in ${folder.name}...', style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.blue.shade700,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    }
-
     try {
-      // First, count total files
-      final totalFiles = await _countFilesInFolder(folder.path, sftp);
-      debugPrint('Total files to download: $totalFiles');
-      
-      // Add transfer to list with total count
-      ref.read(fileTransfersProvider.notifier).addTransfer(FileTransfer(
-        id: transferId,
-        fileName: folder.name,
-        localPath: localPath,
-        remotePath: folder.path,
-        isUpload: false,
-        totalSize: totalFiles,
-        transferredSize: 0,
-        isFolderTransfer: true,
-      ));
-
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.transferring,
-      );
-      
-      // Download with progress tracking
-      int processedFiles = 0;
-      await _downloadFolderRecursive(
-        folder.path, 
-        localPath, 
-        sftp,
-        onFileDownloaded: () {
-          processedFiles++;
-          ref.read(fileTransfersProvider.notifier).updateTransfer(
-            transferId,
-            transferredSize: processedFiles,
-          );
-        },
-      );
-      
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.completed,
+      // Let user pick a destination folder
+      final destinationPath = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'Select destination for "${folder.name}"',
       );
 
-      debugPrint('=== FOLDER DOWNLOAD COMPLETED ===');
-      debugPrint('Processed $processedFiles files');
-      debugPrint('Local path: $localPath');
-
-      // Verify the download by listing the local directory
-      final localDir = Directory(localPath);
-      if (await localDir.exists()) {
-        final items = await localDir.list(recursive: true).toList();
-        debugPrint('Verification: Found ${items.length} items in local directory');
-        for (final item in items.take(20)) {
-          if (item is File) {
-            final size = await item.length();
-            debugPrint('  FILE: ${item.path} ($size bytes)');
-          } else if (item is Directory) {
-            debugPrint('  DIR: ${item.path}');
-          }
-        }
-        if (items.length > 20) {
-          debugPrint('  ... and ${items.length - 20} more items');
-        }
-      } else {
-        debugPrint('ERROR: Local directory $localPath does not exist after download!');
+      if (destinationPath == null) {
+        // User cancelled
+        return;
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloaded $processedFiles files to: $localPath', style: TextStyle(color: Colors.white)),
+            content: Text('Downloading folder "${folder.name}"...', 
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.blue.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+
+      final sftp = ref.read(sftpServiceProvider);
+      final transferService = ref.read(grpcFileTransferServiceProvider);
+
+      if (sftp == null) {
+        throw Exception('SFTP not available');
+      }
+
+      // Recursively download all files in the folder
+      await _downloadFolderRecursive(
+        sftp: sftp,
+        transferService: transferService,
+        remotePath: folder.path,
+        localBasePath: destinationPath,
+        folderName: folder.name,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Folder "${folder.name}" downloaded successfully!', 
+                style: const TextStyle(color: Colors.black)),
             backgroundColor: Colors.green.shade700,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Folder download failed: $e', 
+                style: const TextStyle(color: Colors.white)),
+            backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
         );
       }
-    } catch (e) {
-      ref.read(fileTransfersProvider.notifier).updateTransfer(
-        transferId,
-        status: FileTransferStatus.failed,
-        error: e.toString(),
-      );
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e', style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
-  Future<int> _countFilesInFolder(String remotePath, dynamic sftp) async {
-    int count = 0;
-    final items = await sftp.listDirectory(remotePath);
+  Future<void> _downloadFolderRecursive({
+    required dynamic sftp,
+    required dynamic transferService,
+    required String remotePath,
+    required String localBasePath,
+    required String folderName,
+  }) async {
+    // Create the folder structure locally
+    final localFolderPath = '$localBasePath${Platform.pathSeparator}$folderName';
+    final localDir = Directory(localFolderPath);
     
-    for (final item in items) {
-      if (item.isDirectory) {
-        count += await _countFilesInFolder(item.path, sftp);
-      } else {
-        count++;
-      }
-    }
-    
-    return count;
-  }
-
-  Future<void> _downloadFolderRecursive(
-    String remotePath, 
-    String localPath, 
-    dynamic sftp,
-    {Function()? onFileDownloaded}
-  ) async {
-    // Create local directory
-    final localDir = Directory(localPath);
     if (!await localDir.exists()) {
       await localDir.create(recursive: true);
-      debugPrint('Created directory: $localPath');
     }
-    
-    debugPrint('Downloading folder: $remotePath -> $localPath');
 
-    // List remote directory
+    // List all items in the remote directory
     final items = await sftp.listDirectory(remotePath);
-    debugPrint('Found ${items.length} items in $remotePath');
 
     for (final item in items) {
-      final itemLocalPath = '$localPath${Platform.pathSeparator}${item.name}';
-      
-      debugPrint('Processing: ${item.name} (isDirectory: ${item.isDirectory})');
-
       if (item.isDirectory) {
-        // Recursively download subdirectory
-        debugPrint('Recursing into subdirectory: ${item.path} -> $itemLocalPath');
-        await _downloadFolderRecursive(item.path, itemLocalPath, sftp, onFileDownloaded: onFileDownloaded);
+        // Recursively download subdirectories
+        await _downloadFolderRecursive(
+          sftp: sftp,
+          transferService: transferService,
+          remotePath: item.path,
+          localBasePath: localFolderPath,
+          folderName: item.name,
+        );
       } else {
-        // Download file using readFile
+        // Download file via gRPC
+        final localFilePath = '$localFolderPath${Platform.pathSeparator}${item.name}';
+        
         try {
-          debugPrint('Downloading file: ${item.path} -> $itemLocalPath');
-          final data = await sftp.readFile(item.path);
-
-          // Ensure parent directory exists
-          final file = File(itemLocalPath);
-          final parentDir = file.parent;
-          if (!await parentDir.exists()) {
-            await parentDir.create(recursive: true);
-            debugPrint('Created parent directory: ${parentDir.path}');
-          }
-
-          // Write file and ensure it's written
-          await file.writeAsBytes(data, flush: true);
-
-          // Verify file was written
-          final exists = await file.exists();
-          final size = exists ? await file.length() : 0;
-          debugPrint('Downloaded: ${item.name} to $itemLocalPath (${data.length} bytes, exists: $exists, size on disk: $size)');
-
-          if (!exists || size != data.length) {
-            debugPrint('WARNING: File write verification failed for ${item.name} at $itemLocalPath');
-          }
-
-          // Call progress callback
-          onFileDownloaded?.call();
+          await transferService.downloadFile(
+            remotePath: item.path,
+            localPath: localFilePath,
+            onProgress: (progress) {
+              // Progress is automatically tracked in the service
+            },
+          );
+          debugPrint('Downloaded: ${item.path} -> $localFilePath');
         } catch (e) {
-          debugPrint('Error downloading ${item.name} to $itemLocalPath: $e');
+          debugPrint('Failed to download ${item.path}: $e');
+          // Continue with other files even if one fails
         }
       }
     }
@@ -754,15 +460,18 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
     if (confirmed != true) return;
 
-    final sftp = ref.read(sftpServiceProvider);
-    if (sftp == null) return;
+    final grpcService = ref.read(grpcServiceProvider);
+    if (grpcService == null) return;
 
     final fileList = await ref.read(fileListProvider.future);
     final filesToDelete = fileList.where((f) => selected.contains(f.path)).toList();
 
     for (final file in filesToDelete) {
       try {
-        await sftp.delete(file.path, isDirectory: file.isDirectory);
+        final response = await grpcService.deleteFile(file.path, isDirectory: file.isDirectory);
+        if (!response.success) {
+          throw Exception(response.error);
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -784,11 +493,6 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final currentPath = ref.watch(currentDirectoryProvider);
     final fileListAsync = ref.watch(filteredFileListProvider);
     final selectedFiles = ref.watch(selectedFilesProvider);
-    final transfers = ref.watch(fileTransfersProvider);
-    final activeTransfers = transfers.where((t) => 
-        t.status == FileTransferStatus.transferring || 
-        t.status == FileTransferStatus.pending
-    ).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -922,9 +626,8 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             ),
           ),
 
-          // Transfer panel
-          if (activeTransfers.isNotEmpty)
-            FileTransferPanel(transfers: activeTransfers),
+          // gRPC Transfer panel (auto-shows when there are active transfers)
+          const GrpcFileTransferPanel(),
         ],
       ),
     );
@@ -1118,10 +821,14 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         file: file,
         onDownload: () => _downloadFile(file),
         onDelete: () async {
-          final sftp = ref.read(sftpServiceProvider);
-          if (sftp != null) {
-            await sftp.delete(file.path, isDirectory: file.isDirectory);
-            ref.invalidate(fileListProvider);
+          final grpcService = ref.read(grpcServiceProvider);
+          if (grpcService != null) {
+            final response = await grpcService.deleteFile(file.path, isDirectory: file.isDirectory);
+            if (response.success) {
+              ref.invalidate(fileListProvider);
+            } else {
+              debugPrint('Delete failed: ${response.error}');
+            }
           }
         },
         onRename: (newName) async {

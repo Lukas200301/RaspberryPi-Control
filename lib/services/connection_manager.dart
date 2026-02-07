@@ -5,7 +5,6 @@ import '../models/agent_info.dart';
 import 'ssh_service.dart';
 import 'grpc_service.dart';
 import 'agent_manager.dart';
-import 'transfer_manager_service.dart';
 
 /// Centralized connection manager that coordinates all connection services
 /// Provides atomic connect/disconnect operations with proper cleanup
@@ -103,27 +102,7 @@ class ConnectionManager {
         throw Exception('SUDO_REQUIRED: User cannot execute commands. This app requires a user with full shell access and sudo permissions.');
       }
 
-      // Step 2: Connect Transfer Manager (SFTP) in background
-      onProgress?.call('Starting file transfer service...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.connectingSFTP,
-      ));
-
-      try {
-        TransferManagerService.connect(
-          host: connection.host,
-          port: connection.port,
-          username: connection.username,
-          password: connection.password,
-        );
-        debugPrint('✓ SFTP connected');
-      } catch (e) {
-        debugPrint('⚠ SFTP connection failed (non-critical): $e');
-        // Continue anyway - SFTP is nice to have but not essential
-      }
-
-      // Step 3: Check agent installation
+      // Step 2: Check agent installation
       onProgress?.call('Checking agent status...');
       _updateState(ConnectionManagerState.connecting(
         connection: connection,
@@ -361,12 +340,6 @@ class ConnectionManager {
     } catch (e) {
       debugPrint('Error disconnecting SSH: $e');
     }
-
-    try {
-      TransferManagerService.disconnect();
-    } catch (e) {
-      debugPrint('Error disconnecting SFTP: $e');
-    }
   }
 
   /// Disconnect from current connection
@@ -381,7 +354,6 @@ class ConnectionManager {
       // Disconnect in reverse order
       await _grpcService.disconnect();
       await _sshService.disconnect();
-      TransferManagerService.disconnect();
 
       _currentConnection = null;
       _updateState(const ConnectionManagerState.disconnected());
@@ -465,7 +437,6 @@ enum ConnectionStep {
   initializing,
   connectingSSH,
   checkingPermissions,
-  connectingSFTP,
   checkingAgent,
   installingAgent,
   checkingSSHConfig,
@@ -483,8 +454,6 @@ extension ConnectionStepName on ConnectionStep {
         return 'Connecting to SSH...';
       case ConnectionStep.checkingPermissions:
         return 'Checking user permissions...';
-      case ConnectionStep.connectingSFTP:
-        return 'Starting file transfer service...';
       case ConnectionStep.checkingAgent:
         return 'Checking agent status...';
       case ConnectionStep.installingAgent:

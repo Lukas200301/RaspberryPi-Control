@@ -2054,6 +2054,1485 @@ func (x *VersionInfo) GetIsRoot() bool {
 	return false
 }
 
+// Ping request
+type PingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`                                // Hostname or IP address to ping
+	Count         int32                  `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`                             // Number of pings (0 = continuous until cancelled)
+	Timeout       int32                  `protobuf:"varint,3,opt,name=timeout,proto3" json:"timeout,omitempty"`                         // Timeout in seconds per ping (default: 5)
+	PacketSize    int32                  `protobuf:"varint,4,opt,name=packet_size,json=packetSize,proto3" json:"packet_size,omitempty"` // Packet size in bytes (default: 56)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingRequest) Reset() {
+	*x = PingRequest{}
+	mi := &file_pi_control_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingRequest) ProtoMessage() {}
+
+func (x *PingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
+func (*PingRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *PingRequest) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *PingRequest) GetCount() int32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *PingRequest) GetTimeout() int32 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+func (x *PingRequest) GetPacketSize() int32 {
+	if x != nil {
+		return x.PacketSize
+	}
+	return 0
+}
+
+// Ping response (streamed)
+type PingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`      // Whether ping was successful
+	Host          string                 `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`             // Target host
+	Ip            string                 `protobuf:"bytes,3,opt,name=ip,proto3" json:"ip,omitempty"`                 // Resolved IP address
+	Latency       float64                `protobuf:"fixed64,4,opt,name=latency,proto3" json:"latency,omitempty"`     // Latency in milliseconds
+	Sequence      int32                  `protobuf:"varint,5,opt,name=sequence,proto3" json:"sequence,omitempty"`    // Sequence number
+	Ttl           int32                  `protobuf:"varint,6,opt,name=ttl,proto3" json:"ttl,omitempty"`              // Time to live
+	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`           // Error message if failed
+	Finished      bool                   `protobuf:"varint,8,opt,name=finished,proto3" json:"finished,omitempty"`    // True when all pings complete
+	Statistics    *PingStats             `protobuf:"bytes,9,opt,name=statistics,proto3" json:"statistics,omitempty"` // Final statistics (only in last message)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PingResponse) Reset() {
+	*x = PingResponse{}
+	mi := &file_pi_control_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingResponse) ProtoMessage() {}
+
+func (x *PingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
+func (*PingResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *PingResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *PingResponse) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *PingResponse) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *PingResponse) GetLatency() float64 {
+	if x != nil {
+		return x.Latency
+	}
+	return 0
+}
+
+func (x *PingResponse) GetSequence() int32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *PingResponse) GetTtl() int32 {
+	if x != nil {
+		return x.Ttl
+	}
+	return 0
+}
+
+func (x *PingResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *PingResponse) GetFinished() bool {
+	if x != nil {
+		return x.Finished
+	}
+	return false
+}
+
+func (x *PingResponse) GetStatistics() *PingStats {
+	if x != nil {
+		return x.Statistics
+	}
+	return nil
+}
+
+// Ping statistics
+type PingStats struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PacketsSent     int32                  `protobuf:"varint,1,opt,name=packets_sent,json=packetsSent,proto3" json:"packets_sent,omitempty"`
+	PacketsReceived int32                  `protobuf:"varint,2,opt,name=packets_received,json=packetsReceived,proto3" json:"packets_received,omitempty"`
+	PacketLoss      float64                `protobuf:"fixed64,3,opt,name=packet_loss,json=packetLoss,proto3" json:"packet_loss,omitempty"` // Percentage
+	MinLatency      float64                `protobuf:"fixed64,4,opt,name=min_latency,json=minLatency,proto3" json:"min_latency,omitempty"` // ms
+	MaxLatency      float64                `protobuf:"fixed64,5,opt,name=max_latency,json=maxLatency,proto3" json:"max_latency,omitempty"` // ms
+	AvgLatency      float64                `protobuf:"fixed64,6,opt,name=avg_latency,json=avgLatency,proto3" json:"avg_latency,omitempty"` // ms
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PingStats) Reset() {
+	*x = PingStats{}
+	mi := &file_pi_control_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PingStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PingStats) ProtoMessage() {}
+
+func (x *PingStats) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PingStats.ProtoReflect.Descriptor instead.
+func (*PingStats) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *PingStats) GetPacketsSent() int32 {
+	if x != nil {
+		return x.PacketsSent
+	}
+	return 0
+}
+
+func (x *PingStats) GetPacketsReceived() int32 {
+	if x != nil {
+		return x.PacketsReceived
+	}
+	return 0
+}
+
+func (x *PingStats) GetPacketLoss() float64 {
+	if x != nil {
+		return x.PacketLoss
+	}
+	return 0
+}
+
+func (x *PingStats) GetMinLatency() float64 {
+	if x != nil {
+		return x.MinLatency
+	}
+	return 0
+}
+
+func (x *PingStats) GetMaxLatency() float64 {
+	if x != nil {
+		return x.MaxLatency
+	}
+	return 0
+}
+
+func (x *PingStats) GetAvgLatency() float64 {
+	if x != nil {
+		return x.AvgLatency
+	}
+	return 0
+}
+
+// Port scan request
+type PortScanRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`                             // Target hostname or IP
+	Ports         []int32                `protobuf:"varint,2,rep,packed,name=ports,proto3" json:"ports,omitempty"`                   // Specific ports to scan (if empty, scan common ports)
+	StartPort     int32                  `protobuf:"varint,3,opt,name=start_port,json=startPort,proto3" json:"start_port,omitempty"` // Start of port range (alternative to ports list)
+	EndPort       int32                  `protobuf:"varint,4,opt,name=end_port,json=endPort,proto3" json:"end_port,omitempty"`       // End of port range
+	Timeout       int32                  `protobuf:"varint,5,opt,name=timeout,proto3" json:"timeout,omitempty"`                      // Timeout per port in milliseconds (default: 1000)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PortScanRequest) Reset() {
+	*x = PortScanRequest{}
+	mi := &file_pi_control_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PortScanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PortScanRequest) ProtoMessage() {}
+
+func (x *PortScanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PortScanRequest.ProtoReflect.Descriptor instead.
+func (*PortScanRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *PortScanRequest) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *PortScanRequest) GetPorts() []int32 {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+func (x *PortScanRequest) GetStartPort() int32 {
+	if x != nil {
+		return x.StartPort
+	}
+	return 0
+}
+
+func (x *PortScanRequest) GetEndPort() int32 {
+	if x != nil {
+		return x.EndPort
+	}
+	return 0
+}
+
+func (x *PortScanRequest) GetTimeout() int32 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+// Port scan response (streamed)
+type PortScanResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Port          int32                  `protobuf:"varint,1,opt,name=port,proto3" json:"port,omitempty"`
+	Open          bool                   `protobuf:"varint,2,opt,name=open,proto3" json:"open,omitempty"`
+	Service       string                 `protobuf:"bytes,3,opt,name=service,proto3" json:"service,omitempty"` // Service name if known
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	Finished      bool                   `protobuf:"varint,5,opt,name=finished,proto3" json:"finished,omitempty"` // True when scan completes
+	Progress      int32                  `protobuf:"varint,6,opt,name=progress,proto3" json:"progress,omitempty"` // Progress percentage (0-100)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PortScanResponse) Reset() {
+	*x = PortScanResponse{}
+	mi := &file_pi_control_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PortScanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PortScanResponse) ProtoMessage() {}
+
+func (x *PortScanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PortScanResponse.ProtoReflect.Descriptor instead.
+func (*PortScanResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *PortScanResponse) GetPort() int32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *PortScanResponse) GetOpen() bool {
+	if x != nil {
+		return x.Open
+	}
+	return false
+}
+
+func (x *PortScanResponse) GetService() string {
+	if x != nil {
+		return x.Service
+	}
+	return ""
+}
+
+func (x *PortScanResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *PortScanResponse) GetFinished() bool {
+	if x != nil {
+		return x.Finished
+	}
+	return false
+}
+
+func (x *PortScanResponse) GetProgress() int32 {
+	if x != nil {
+		return x.Progress
+	}
+	return 0
+}
+
+// DNS lookup request
+type DNSRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Hostname      string                 `protobuf:"bytes,1,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	RecordType    string                 `protobuf:"bytes,2,opt,name=record_type,json=recordType,proto3" json:"record_type,omitempty"` // A, AAAA, MX, TXT, NS, CNAME, etc. (default: A)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DNSRequest) Reset() {
+	*x = DNSRequest{}
+	mi := &file_pi_control_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DNSRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DNSRequest) ProtoMessage() {}
+
+func (x *DNSRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DNSRequest.ProtoReflect.Descriptor instead.
+func (*DNSRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DNSRequest) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *DNSRequest) GetRecordType() string {
+	if x != nil {
+		return x.RecordType
+	}
+	return ""
+}
+
+// DNS lookup response
+type DNSResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Hostname      string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	Addresses     []string               `protobuf:"bytes,3,rep,name=addresses,proto3" json:"addresses,omitempty"`                    // IP addresses or records
+	Records       []*DNSRecord           `protobuf:"bytes,4,rep,name=records,proto3" json:"records,omitempty"`                        // Detailed records
+	QueryTime     float64                `protobuf:"fixed64,5,opt,name=query_time,json=queryTime,proto3" json:"query_time,omitempty"` // Query time in milliseconds
+	Error         string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DNSResponse) Reset() {
+	*x = DNSResponse{}
+	mi := &file_pi_control_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DNSResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DNSResponse) ProtoMessage() {}
+
+func (x *DNSResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DNSResponse.ProtoReflect.Descriptor instead.
+func (*DNSResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DNSResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *DNSResponse) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *DNSResponse) GetAddresses() []string {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
+func (x *DNSResponse) GetRecords() []*DNSRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+func (x *DNSResponse) GetQueryTime() float64 {
+	if x != nil {
+		return x.QueryTime
+	}
+	return 0
+}
+
+func (x *DNSResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// DNS record details
+type DNSRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // A, AAAA, MX, etc.
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Ttl           int32                  `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"`           // Time to live
+	Priority      int32                  `protobuf:"varint,4,opt,name=priority,proto3" json:"priority,omitempty"` // For MX records
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DNSRecord) Reset() {
+	*x = DNSRecord{}
+	mi := &file_pi_control_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DNSRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DNSRecord) ProtoMessage() {}
+
+func (x *DNSRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DNSRecord.ProtoReflect.Descriptor instead.
+func (*DNSRecord) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *DNSRecord) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *DNSRecord) GetTtl() int32 {
+	if x != nil {
+		return x.Ttl
+	}
+	return 0
+}
+
+func (x *DNSRecord) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+// Traceroute request
+type TracerouteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	MaxHops       int32                  `protobuf:"varint,2,opt,name=max_hops,json=maxHops,proto3" json:"max_hops,omitempty"` // Maximum number of hops (default: 30)
+	Timeout       int32                  `protobuf:"varint,3,opt,name=timeout,proto3" json:"timeout,omitempty"`                // Timeout per hop in seconds (default: 5)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TracerouteRequest) Reset() {
+	*x = TracerouteRequest{}
+	mi := &file_pi_control_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TracerouteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TracerouteRequest) ProtoMessage() {}
+
+func (x *TracerouteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TracerouteRequest.ProtoReflect.Descriptor instead.
+func (*TracerouteRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *TracerouteRequest) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *TracerouteRequest) GetMaxHops() int32 {
+	if x != nil {
+		return x.MaxHops
+	}
+	return 0
+}
+
+func (x *TracerouteRequest) GetTimeout() int32 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+// Traceroute response (streamed)
+type TracerouteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Hop           int32                  `protobuf:"varint,1,opt,name=hop,proto3" json:"hop,omitempty"`           // Hop number
+	Ip            string                 `protobuf:"bytes,2,opt,name=ip,proto3" json:"ip,omitempty"`              // IP address of this hop
+	Hostname      string                 `protobuf:"bytes,3,opt,name=hostname,proto3" json:"hostname,omitempty"`  // Hostname if resolved
+	Latency       float64                `protobuf:"fixed64,4,opt,name=latency,proto3" json:"latency,omitempty"`  // Latency in milliseconds
+	Timeout       bool                   `protobuf:"varint,5,opt,name=timeout,proto3" json:"timeout,omitempty"`   // True if hop timed out
+	Finished      bool                   `protobuf:"varint,6,opt,name=finished,proto3" json:"finished,omitempty"` // True when traceroute completes
+	Error         string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TracerouteResponse) Reset() {
+	*x = TracerouteResponse{}
+	mi := &file_pi_control_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TracerouteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TracerouteResponse) ProtoMessage() {}
+
+func (x *TracerouteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TracerouteResponse.ProtoReflect.Descriptor instead.
+func (*TracerouteResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *TracerouteResponse) GetHop() int32 {
+	if x != nil {
+		return x.Hop
+	}
+	return 0
+}
+
+func (x *TracerouteResponse) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *TracerouteResponse) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *TracerouteResponse) GetLatency() float64 {
+	if x != nil {
+		return x.Latency
+	}
+	return 0
+}
+
+func (x *TracerouteResponse) GetTimeout() bool {
+	if x != nil {
+		return x.Timeout
+	}
+	return false
+}
+
+func (x *TracerouteResponse) GetFinished() bool {
+	if x != nil {
+		return x.Finished
+	}
+	return false
+}
+
+func (x *TracerouteResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// WiFi information
+type WifiInfo struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Connected         bool                   `protobuf:"varint,1,opt,name=connected,proto3" json:"connected,omitempty"`
+	Ssid              string                 `protobuf:"bytes,2,opt,name=ssid,proto3" json:"ssid,omitempty"`                                            // Network name
+	Bssid             string                 `protobuf:"bytes,3,opt,name=bssid,proto3" json:"bssid,omitempty"`                                          // MAC address of access point
+	SignalStrength    int32                  `protobuf:"varint,4,opt,name=signal_strength,json=signalStrength,proto3" json:"signal_strength,omitempty"` // Signal strength in dBm (-100 to 0)
+	SignalQuality     int32                  `protobuf:"varint,5,opt,name=signal_quality,json=signalQuality,proto3" json:"signal_quality,omitempty"`    // Signal quality percentage (0-100)
+	Frequency         float64                `protobuf:"fixed64,6,opt,name=frequency,proto3" json:"frequency,omitempty"`                                // Frequency in GHz (2.4 or 5.0)
+	Security          string                 `protobuf:"bytes,7,opt,name=security,proto3" json:"security,omitempty"`                                    // WPA2, WPA3, etc.
+	LinkSpeed         float64                `protobuf:"fixed64,8,opt,name=link_speed,json=linkSpeed,proto3" json:"link_speed,omitempty"`               // Link speed in Mbps
+	IpAddress         string                 `protobuf:"bytes,9,opt,name=ip_address,json=ipAddress,proto3" json:"ip_address,omitempty"`
+	AvailableNetworks []*WifiNetwork         `protobuf:"bytes,10,rep,name=available_networks,json=availableNetworks,proto3" json:"available_networks,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *WifiInfo) Reset() {
+	*x = WifiInfo{}
+	mi := &file_pi_control_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WifiInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WifiInfo) ProtoMessage() {}
+
+func (x *WifiInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WifiInfo.ProtoReflect.Descriptor instead.
+func (*WifiInfo) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *WifiInfo) GetConnected() bool {
+	if x != nil {
+		return x.Connected
+	}
+	return false
+}
+
+func (x *WifiInfo) GetSsid() string {
+	if x != nil {
+		return x.Ssid
+	}
+	return ""
+}
+
+func (x *WifiInfo) GetBssid() string {
+	if x != nil {
+		return x.Bssid
+	}
+	return ""
+}
+
+func (x *WifiInfo) GetSignalStrength() int32 {
+	if x != nil {
+		return x.SignalStrength
+	}
+	return 0
+}
+
+func (x *WifiInfo) GetSignalQuality() int32 {
+	if x != nil {
+		return x.SignalQuality
+	}
+	return 0
+}
+
+func (x *WifiInfo) GetFrequency() float64 {
+	if x != nil {
+		return x.Frequency
+	}
+	return 0
+}
+
+func (x *WifiInfo) GetSecurity() string {
+	if x != nil {
+		return x.Security
+	}
+	return ""
+}
+
+func (x *WifiInfo) GetLinkSpeed() float64 {
+	if x != nil {
+		return x.LinkSpeed
+	}
+	return 0
+}
+
+func (x *WifiInfo) GetIpAddress() string {
+	if x != nil {
+		return x.IpAddress
+	}
+	return ""
+}
+
+func (x *WifiInfo) GetAvailableNetworks() []*WifiNetwork {
+	if x != nil {
+		return x.AvailableNetworks
+	}
+	return nil
+}
+
+// Available WiFi network
+type WifiNetwork struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Ssid           string                 `protobuf:"bytes,1,opt,name=ssid,proto3" json:"ssid,omitempty"`
+	Bssid          string                 `protobuf:"bytes,2,opt,name=bssid,proto3" json:"bssid,omitempty"`
+	SignalStrength int32                  `protobuf:"varint,3,opt,name=signal_strength,json=signalStrength,proto3" json:"signal_strength,omitempty"`
+	SignalQuality  int32                  `protobuf:"varint,4,opt,name=signal_quality,json=signalQuality,proto3" json:"signal_quality,omitempty"`
+	Frequency      float64                `protobuf:"fixed64,5,opt,name=frequency,proto3" json:"frequency,omitempty"`
+	Security       string                 `protobuf:"bytes,6,opt,name=security,proto3" json:"security,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WifiNetwork) Reset() {
+	*x = WifiNetwork{}
+	mi := &file_pi_control_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WifiNetwork) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WifiNetwork) ProtoMessage() {}
+
+func (x *WifiNetwork) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WifiNetwork.ProtoReflect.Descriptor instead.
+func (*WifiNetwork) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *WifiNetwork) GetSsid() string {
+	if x != nil {
+		return x.Ssid
+	}
+	return ""
+}
+
+func (x *WifiNetwork) GetBssid() string {
+	if x != nil {
+		return x.Bssid
+	}
+	return ""
+}
+
+func (x *WifiNetwork) GetSignalStrength() int32 {
+	if x != nil {
+		return x.SignalStrength
+	}
+	return 0
+}
+
+func (x *WifiNetwork) GetSignalQuality() int32 {
+	if x != nil {
+		return x.SignalQuality
+	}
+	return 0
+}
+
+func (x *WifiNetwork) GetFrequency() float64 {
+	if x != nil {
+		return x.Frequency
+	}
+	return 0
+}
+
+func (x *WifiNetwork) GetSecurity() string {
+	if x != nil {
+		return x.Security
+	}
+	return ""
+}
+
+// Speed test request
+type SpeedTestRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TestDownload  bool                   `protobuf:"varint,1,opt,name=test_download,json=testDownload,proto3" json:"test_download,omitempty"` // Test download speed
+	TestUpload    bool                   `protobuf:"varint,2,opt,name=test_upload,json=testUpload,proto3" json:"test_upload,omitempty"`       // Test upload speed
+	Duration      int32                  `protobuf:"varint,3,opt,name=duration,proto3" json:"duration,omitempty"`                             // Test duration in seconds (default: 10)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpeedTestRequest) Reset() {
+	*x = SpeedTestRequest{}
+	mi := &file_pi_control_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpeedTestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpeedTestRequest) ProtoMessage() {}
+
+func (x *SpeedTestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpeedTestRequest.ProtoReflect.Descriptor instead.
+func (*SpeedTestRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *SpeedTestRequest) GetTestDownload() bool {
+	if x != nil {
+		return x.TestDownload
+	}
+	return false
+}
+
+func (x *SpeedTestRequest) GetTestUpload() bool {
+	if x != nil {
+		return x.TestUpload
+	}
+	return false
+}
+
+func (x *SpeedTestRequest) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+// Speed test response (streamed)
+type SpeedTestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Phase         string                 `protobuf:"bytes,1,opt,name=phase,proto3" json:"phase,omitempty"`                                        // "connecting", "download", "upload", "complete"
+	DownloadSpeed float64                `protobuf:"fixed64,2,opt,name=download_speed,json=downloadSpeed,proto3" json:"download_speed,omitempty"` // Current download speed in Mbps
+	UploadSpeed   float64                `protobuf:"fixed64,3,opt,name=upload_speed,json=uploadSpeed,proto3" json:"upload_speed,omitempty"`       // Current upload speed in Mbps
+	Progress      float64                `protobuf:"fixed64,4,opt,name=progress,proto3" json:"progress,omitempty"`                                // Progress percentage (0-100)
+	Latency       float64                `protobuf:"fixed64,5,opt,name=latency,proto3" json:"latency,omitempty"`                                  // Server latency in ms
+	Server        string                 `protobuf:"bytes,6,opt,name=server,proto3" json:"server,omitempty"`                                      // Test server location
+	Finished      bool                   `protobuf:"varint,7,opt,name=finished,proto3" json:"finished,omitempty"`
+	Error         string                 `protobuf:"bytes,8,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SpeedTestResponse) Reset() {
+	*x = SpeedTestResponse{}
+	mi := &file_pi_control_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SpeedTestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SpeedTestResponse) ProtoMessage() {}
+
+func (x *SpeedTestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SpeedTestResponse.ProtoReflect.Descriptor instead.
+func (*SpeedTestResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *SpeedTestResponse) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *SpeedTestResponse) GetDownloadSpeed() float64 {
+	if x != nil {
+		return x.DownloadSpeed
+	}
+	return 0
+}
+
+func (x *SpeedTestResponse) GetUploadSpeed() float64 {
+	if x != nil {
+		return x.UploadSpeed
+	}
+	return 0
+}
+
+func (x *SpeedTestResponse) GetProgress() float64 {
+	if x != nil {
+		return x.Progress
+	}
+	return 0
+}
+
+func (x *SpeedTestResponse) GetLatency() float64 {
+	if x != nil {
+		return x.Latency
+	}
+	return 0
+}
+
+func (x *SpeedTestResponse) GetServer() string {
+	if x != nil {
+		return x.Server
+	}
+	return ""
+}
+
+func (x *SpeedTestResponse) GetFinished() bool {
+	if x != nil {
+		return x.Finished
+	}
+	return false
+}
+
+func (x *SpeedTestResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// File chunk for streaming transfers
+type FileChunk struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`                             // Remote file path (relative to agent's working directory)
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`                             // Chunk data (max 256KB recommended)
+	Offset        int64                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`                        // Byte offset in the file
+	TotalSize     int64                  `protobuf:"varint,4,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"` // Total file size in bytes (set in first chunk)
+	IsFinal       bool                   `protobuf:"varint,5,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`       // True for the last chunk
+	Error         string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`                           // Error message if something went wrong
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileChunk) Reset() {
+	*x = FileChunk{}
+	mi := &file_pi_control_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileChunk) ProtoMessage() {}
+
+func (x *FileChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileChunk.ProtoReflect.Descriptor instead.
+func (*FileChunk) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *FileChunk) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileChunk) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *FileChunk) GetOffset() int64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *FileChunk) GetTotalSize() int64 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+func (x *FileChunk) GetIsFinal() bool {
+	if x != nil {
+		return x.IsFinal
+	}
+	return false
+}
+
+func (x *FileChunk) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+// Upload response (after all chunks received)
+type FileUploadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`                                      // Path where file was written
+	BytesWritten  int64                  `protobuf:"varint,3,opt,name=bytes_written,json=bytesWritten,proto3" json:"bytes_written,omitempty"` // Total bytes written
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`                                    // Error message if failed
+	Duration      float64                `protobuf:"fixed64,5,opt,name=duration,proto3" json:"duration,omitempty"`                            // Upload duration in seconds
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileUploadResponse) Reset() {
+	*x = FileUploadResponse{}
+	mi := &file_pi_control_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileUploadResponse) ProtoMessage() {}
+
+func (x *FileUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileUploadResponse.ProtoReflect.Descriptor instead.
+func (*FileUploadResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *FileUploadResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *FileUploadResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileUploadResponse) GetBytesWritten() int64 {
+	if x != nil {
+		return x.BytesWritten
+	}
+	return 0
+}
+
+func (x *FileUploadResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *FileUploadResponse) GetDuration() float64 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+// Download request
+type FileDownloadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`      // Remote file path to download
+	Offset        int64                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"` // Starting byte offset (0 for full file, >0 to resume)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileDownloadRequest) Reset() {
+	*x = FileDownloadRequest{}
+	mi := &file_pi_control_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileDownloadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileDownloadRequest) ProtoMessage() {}
+
+func (x *FileDownloadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileDownloadRequest.ProtoReflect.Descriptor instead.
+func (*FileDownloadRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *FileDownloadRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileDownloadRequest) GetOffset() int64 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+// Delete request
+type FileDeleteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`                                   // Remote file or directory path to delete
+	IsDirectory   bool                   `protobuf:"varint,2,opt,name=is_directory,json=isDirectory,proto3" json:"is_directory,omitempty"` // True if deleting a directory (will delete recursively)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileDeleteRequest) Reset() {
+	*x = FileDeleteRequest{}
+	mi := &file_pi_control_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileDeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileDeleteRequest) ProtoMessage() {}
+
+func (x *FileDeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileDeleteRequest.ProtoReflect.Descriptor instead.
+func (*FileDeleteRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *FileDeleteRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileDeleteRequest) GetIsDirectory() bool {
+	if x != nil {
+		return x.IsDirectory
+	}
+	return false
+}
+
+// Delete response
+type FileDeleteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Path          string                 `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`   // Path that was deleted
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"` // Error message if failed
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FileDeleteResponse) Reset() {
+	*x = FileDeleteResponse{}
+	mi := &file_pi_control_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FileDeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FileDeleteResponse) ProtoMessage() {}
+
+func (x *FileDeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FileDeleteResponse.ProtoReflect.Descriptor instead.
+func (*FileDeleteResponse) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *FileDeleteResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *FileDeleteResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *FileDeleteResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_pi_control_proto protoreflect.FileDescriptor
 
 const file_pi_control_proto_rawDesc = "" +
@@ -2241,7 +3720,139 @@ const file_pi_control_proto_rawDesc = "" +
 	"writeCount\"@\n" +
 	"\vVersionInfo\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x17\n" +
-	"\ais_root\x18\x02 \x01(\bR\x06isRoot*V\n" +
+	"\ais_root\x18\x02 \x01(\bR\x06isRoot\"r\n" +
+	"\vPingRequest\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x18\n" +
+	"\atimeout\x18\x03 \x01(\x05R\atimeout\x12\x1f\n" +
+	"\vpacket_size\x18\x04 \x01(\x05R\n" +
+	"packetSize\"\xfc\x01\n" +
+	"\fPingResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x12\n" +
+	"\x04host\x18\x02 \x01(\tR\x04host\x12\x0e\n" +
+	"\x02ip\x18\x03 \x01(\tR\x02ip\x12\x18\n" +
+	"\alatency\x18\x04 \x01(\x01R\alatency\x12\x1a\n" +
+	"\bsequence\x18\x05 \x01(\x05R\bsequence\x12\x10\n" +
+	"\x03ttl\x18\x06 \x01(\x05R\x03ttl\x12\x14\n" +
+	"\x05error\x18\a \x01(\tR\x05error\x12\x1a\n" +
+	"\bfinished\x18\b \x01(\bR\bfinished\x124\n" +
+	"\n" +
+	"statistics\x18\t \x01(\v2\x14.picontrol.PingStatsR\n" +
+	"statistics\"\xdd\x01\n" +
+	"\tPingStats\x12!\n" +
+	"\fpackets_sent\x18\x01 \x01(\x05R\vpacketsSent\x12)\n" +
+	"\x10packets_received\x18\x02 \x01(\x05R\x0fpacketsReceived\x12\x1f\n" +
+	"\vpacket_loss\x18\x03 \x01(\x01R\n" +
+	"packetLoss\x12\x1f\n" +
+	"\vmin_latency\x18\x04 \x01(\x01R\n" +
+	"minLatency\x12\x1f\n" +
+	"\vmax_latency\x18\x05 \x01(\x01R\n" +
+	"maxLatency\x12\x1f\n" +
+	"\vavg_latency\x18\x06 \x01(\x01R\n" +
+	"avgLatency\"\x8f\x01\n" +
+	"\x0fPortScanRequest\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
+	"\x05ports\x18\x02 \x03(\x05R\x05ports\x12\x1d\n" +
+	"\n" +
+	"start_port\x18\x03 \x01(\x05R\tstartPort\x12\x19\n" +
+	"\bend_port\x18\x04 \x01(\x05R\aendPort\x12\x18\n" +
+	"\atimeout\x18\x05 \x01(\x05R\atimeout\"\xa2\x01\n" +
+	"\x10PortScanResponse\x12\x12\n" +
+	"\x04port\x18\x01 \x01(\x05R\x04port\x12\x12\n" +
+	"\x04open\x18\x02 \x01(\bR\x04open\x12\x18\n" +
+	"\aservice\x18\x03 \x01(\tR\aservice\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\x12\x1a\n" +
+	"\bfinished\x18\x05 \x01(\bR\bfinished\x12\x1a\n" +
+	"\bprogress\x18\x06 \x01(\x05R\bprogress\"I\n" +
+	"\n" +
+	"DNSRequest\x12\x1a\n" +
+	"\bhostname\x18\x01 \x01(\tR\bhostname\x12\x1f\n" +
+	"\vrecord_type\x18\x02 \x01(\tR\n" +
+	"recordType\"\xc6\x01\n" +
+	"\vDNSResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x1a\n" +
+	"\bhostname\x18\x02 \x01(\tR\bhostname\x12\x1c\n" +
+	"\taddresses\x18\x03 \x03(\tR\taddresses\x12.\n" +
+	"\arecords\x18\x04 \x03(\v2\x14.picontrol.DNSRecordR\arecords\x12\x1d\n" +
+	"\n" +
+	"query_time\x18\x05 \x01(\x01R\tqueryTime\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\"c\n" +
+	"\tDNSRecord\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12\x10\n" +
+	"\x03ttl\x18\x03 \x01(\x05R\x03ttl\x12\x1a\n" +
+	"\bpriority\x18\x04 \x01(\x05R\bpriority\"\\\n" +
+	"\x11TracerouteRequest\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x19\n" +
+	"\bmax_hops\x18\x02 \x01(\x05R\amaxHops\x12\x18\n" +
+	"\atimeout\x18\x03 \x01(\x05R\atimeout\"\xb8\x01\n" +
+	"\x12TracerouteResponse\x12\x10\n" +
+	"\x03hop\x18\x01 \x01(\x05R\x03hop\x12\x0e\n" +
+	"\x02ip\x18\x02 \x01(\tR\x02ip\x12\x1a\n" +
+	"\bhostname\x18\x03 \x01(\tR\bhostname\x12\x18\n" +
+	"\alatency\x18\x04 \x01(\x01R\alatency\x12\x18\n" +
+	"\atimeout\x18\x05 \x01(\bR\atimeout\x12\x1a\n" +
+	"\bfinished\x18\x06 \x01(\bR\bfinished\x12\x14\n" +
+	"\x05error\x18\a \x01(\tR\x05error\"\xe1\x02\n" +
+	"\bWifiInfo\x12\x1c\n" +
+	"\tconnected\x18\x01 \x01(\bR\tconnected\x12\x12\n" +
+	"\x04ssid\x18\x02 \x01(\tR\x04ssid\x12\x14\n" +
+	"\x05bssid\x18\x03 \x01(\tR\x05bssid\x12'\n" +
+	"\x0fsignal_strength\x18\x04 \x01(\x05R\x0esignalStrength\x12%\n" +
+	"\x0esignal_quality\x18\x05 \x01(\x05R\rsignalQuality\x12\x1c\n" +
+	"\tfrequency\x18\x06 \x01(\x01R\tfrequency\x12\x1a\n" +
+	"\bsecurity\x18\a \x01(\tR\bsecurity\x12\x1d\n" +
+	"\n" +
+	"link_speed\x18\b \x01(\x01R\tlinkSpeed\x12\x1d\n" +
+	"\n" +
+	"ip_address\x18\t \x01(\tR\tipAddress\x12E\n" +
+	"\x12available_networks\x18\n" +
+	" \x03(\v2\x16.picontrol.WifiNetworkR\x11availableNetworks\"\xc1\x01\n" +
+	"\vWifiNetwork\x12\x12\n" +
+	"\x04ssid\x18\x01 \x01(\tR\x04ssid\x12\x14\n" +
+	"\x05bssid\x18\x02 \x01(\tR\x05bssid\x12'\n" +
+	"\x0fsignal_strength\x18\x03 \x01(\x05R\x0esignalStrength\x12%\n" +
+	"\x0esignal_quality\x18\x04 \x01(\x05R\rsignalQuality\x12\x1c\n" +
+	"\tfrequency\x18\x05 \x01(\x01R\tfrequency\x12\x1a\n" +
+	"\bsecurity\x18\x06 \x01(\tR\bsecurity\"t\n" +
+	"\x10SpeedTestRequest\x12#\n" +
+	"\rtest_download\x18\x01 \x01(\bR\ftestDownload\x12\x1f\n" +
+	"\vtest_upload\x18\x02 \x01(\bR\n" +
+	"testUpload\x12\x1a\n" +
+	"\bduration\x18\x03 \x01(\x05R\bduration\"\xf3\x01\n" +
+	"\x11SpeedTestResponse\x12\x14\n" +
+	"\x05phase\x18\x01 \x01(\tR\x05phase\x12%\n" +
+	"\x0edownload_speed\x18\x02 \x01(\x01R\rdownloadSpeed\x12!\n" +
+	"\fupload_speed\x18\x03 \x01(\x01R\vuploadSpeed\x12\x1a\n" +
+	"\bprogress\x18\x04 \x01(\x01R\bprogress\x12\x18\n" +
+	"\alatency\x18\x05 \x01(\x01R\alatency\x12\x16\n" +
+	"\x06server\x18\x06 \x01(\tR\x06server\x12\x1a\n" +
+	"\bfinished\x18\a \x01(\bR\bfinished\x12\x14\n" +
+	"\x05error\x18\b \x01(\tR\x05error\"\x9b\x01\n" +
+	"\tFileChunk\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x03R\x06offset\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x04 \x01(\x03R\ttotalSize\x12\x19\n" +
+	"\bis_final\x18\x05 \x01(\bR\aisFinal\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\"\x99\x01\n" +
+	"\x12FileUploadResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12#\n" +
+	"\rbytes_written\x18\x03 \x01(\x03R\fbytesWritten\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\x12\x1a\n" +
+	"\bduration\x18\x05 \x01(\x01R\bduration\"A\n" +
+	"\x13FileDownloadRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x03R\x06offset\"J\n" +
+	"\x11FileDeleteRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12!\n" +
+	"\fis_directory\x18\x02 \x01(\bR\visDirectory\"X\n" +
+	"\x12FileDeleteResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error*V\n" +
 	"\rServiceAction\x12\t\n" +
 	"\x05START\x10\x00\x12\b\n" +
 	"\x04STOP\x10\x01\x12\v\n" +
@@ -2250,8 +3861,7 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x06ENABLE\x10\x03\x12\v\n" +
 	"\aDISABLE\x10\x04\x12\n" +
 	"\n" +
-	"\x06RELOAD\x10\x052\x87\n" +
-	"\n" +
+	"\x06RELOAD\x10\x052\xf6\x0e\n" +
 	"\rSystemMonitor\x127\n" +
 	"\vStreamStats\x12\x10.picontrol.Empty\x1a\x14.picontrol.LiveStats0\x01\x129\n" +
 	"\rListProcesses\x12\x10.picontrol.Empty\x1a\x16.picontrol.ProcessList\x12<\n" +
@@ -2273,7 +3883,19 @@ const file_pi_control_proto_rawDesc = "" +
 	"GetVersion\x12\x10.picontrol.Empty\x1a\x16.picontrol.VersionInfo\x12P\n" +
 	"\x11GetPackageDetails\x12 .picontrol.PackageDetailsRequest\x1a\x19.picontrol.PackageDetails\x12Z\n" +
 	"\x16GetPackageDependencies\x12 .picontrol.PackageDetailsRequest\x1a\x1e.picontrol.PackageDependencies\x12U\n" +
-	"\x16StreamPackageOperation\x12\x19.picontrol.PackageCommand\x1a\x1e.picontrol.PackageOperationLog0\x01B\x10Z\x0epi_agent/protob\x06proto3"
+	"\x16StreamPackageOperation\x12\x19.picontrol.PackageCommand\x1a\x1e.picontrol.PackageOperationLog0\x01\x12=\n" +
+	"\bPingHost\x12\x16.picontrol.PingRequest\x1a\x17.picontrol.PingResponse0\x01\x12F\n" +
+	"\tScanPorts\x12\x1a.picontrol.PortScanRequest\x1a\x1b.picontrol.PortScanResponse0\x01\x12:\n" +
+	"\tDNSLookup\x12\x15.picontrol.DNSRequest\x1a\x16.picontrol.DNSResponse\x12K\n" +
+	"\n" +
+	"Traceroute\x12\x1c.picontrol.TracerouteRequest\x1a\x1d.picontrol.TracerouteResponse0\x01\x124\n" +
+	"\vGetWifiInfo\x12\x10.picontrol.Empty\x1a\x13.picontrol.WifiInfo\x12O\n" +
+	"\x10TestNetworkSpeed\x12\x1b.picontrol.SpeedTestRequest\x1a\x1c.picontrol.SpeedTestResponse0\x01\x12C\n" +
+	"\n" +
+	"UploadFile\x12\x14.picontrol.FileChunk\x1a\x1d.picontrol.FileUploadResponse(\x01\x12F\n" +
+	"\fDownloadFile\x12\x1e.picontrol.FileDownloadRequest\x1a\x14.picontrol.FileChunk0\x01\x12I\n" +
+	"\n" +
+	"DeleteFile\x12\x1c.picontrol.FileDeleteRequest\x1a\x1d.picontrol.FileDeleteResponseB\x10Z\x0epi_agent/protob\x06proto3"
 
 var (
 	file_pi_control_proto_rawDescOnce sync.Once
@@ -2288,7 +3910,7 @@ func file_pi_control_proto_rawDescGZIP() []byte {
 }
 
 var file_pi_control_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_pi_control_proto_goTypes = []any{
 	(ServiceAction)(0),            // 0: picontrol.ServiceAction
 	(*Empty)(nil),                 // 1: picontrol.Empty
@@ -2318,6 +3940,25 @@ var file_pi_control_proto_goTypes = []any{
 	(*PackageOperationLog)(nil),   // 25: picontrol.PackageOperationLog
 	(*DiskIOStat)(nil),            // 26: picontrol.DiskIOStat
 	(*VersionInfo)(nil),           // 27: picontrol.VersionInfo
+	(*PingRequest)(nil),           // 28: picontrol.PingRequest
+	(*PingResponse)(nil),          // 29: picontrol.PingResponse
+	(*PingStats)(nil),             // 30: picontrol.PingStats
+	(*PortScanRequest)(nil),       // 31: picontrol.PortScanRequest
+	(*PortScanResponse)(nil),      // 32: picontrol.PortScanResponse
+	(*DNSRequest)(nil),            // 33: picontrol.DNSRequest
+	(*DNSResponse)(nil),           // 34: picontrol.DNSResponse
+	(*DNSRecord)(nil),             // 35: picontrol.DNSRecord
+	(*TracerouteRequest)(nil),     // 36: picontrol.TracerouteRequest
+	(*TracerouteResponse)(nil),    // 37: picontrol.TracerouteResponse
+	(*WifiInfo)(nil),              // 38: picontrol.WifiInfo
+	(*WifiNetwork)(nil),           // 39: picontrol.WifiNetwork
+	(*SpeedTestRequest)(nil),      // 40: picontrol.SpeedTestRequest
+	(*SpeedTestResponse)(nil),     // 41: picontrol.SpeedTestResponse
+	(*FileChunk)(nil),             // 42: picontrol.FileChunk
+	(*FileUploadResponse)(nil),    // 43: picontrol.FileUploadResponse
+	(*FileDownloadRequest)(nil),   // 44: picontrol.FileDownloadRequest
+	(*FileDeleteRequest)(nil),     // 45: picontrol.FileDeleteRequest
+	(*FileDeleteResponse)(nil),    // 46: picontrol.FileDeleteResponse
 }
 var file_pi_control_proto_depIdxs = []int32{
 	3,  // 0: picontrol.LiveStats.top_processes:type_name -> picontrol.ProcessInfo
@@ -2329,49 +3970,70 @@ var file_pi_control_proto_depIdxs = []int32{
 	15, // 6: picontrol.NetworkInfo.interfaces:type_name -> picontrol.NetworkInterface
 	17, // 7: picontrol.NetworkConnectionList.connections:type_name -> picontrol.NetworkConnection
 	19, // 8: picontrol.PackageList.packages:type_name -> picontrol.PackageInfo
-	1,  // 9: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
-	1,  // 10: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
-	5,  // 11: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
-	1,  // 12: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
-	8,  // 13: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
-	10, // 14: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
-	1,  // 15: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
-	1,  // 16: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
-	1,  // 17: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
-	18, // 18: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
-	21, // 19: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
-	21, // 20: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
-	21, // 21: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
-	1,  // 22: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
-	1,  // 23: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
-	1,  // 24: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
-	22, // 25: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
-	22, // 26: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
-	21, // 27: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
-	2,  // 28: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
-	4,  // 29: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
-	9,  // 30: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
-	7,  // 31: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
-	9,  // 32: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
-	11, // 33: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
-	12, // 34: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
-	14, // 35: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
-	16, // 36: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
-	20, // 37: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
-	9,  // 38: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
-	9,  // 39: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
-	9,  // 40: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
-	9,  // 41: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
-	9,  // 42: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
-	27, // 43: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
-	23, // 44: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
-	24, // 45: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
-	25, // 46: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
-	28, // [28:47] is the sub-list for method output_type
-	9,  // [9:28] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	30, // 9: picontrol.PingResponse.statistics:type_name -> picontrol.PingStats
+	35, // 10: picontrol.DNSResponse.records:type_name -> picontrol.DNSRecord
+	39, // 11: picontrol.WifiInfo.available_networks:type_name -> picontrol.WifiNetwork
+	1,  // 12: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
+	1,  // 13: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
+	5,  // 14: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
+	1,  // 15: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
+	8,  // 16: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
+	10, // 17: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
+	1,  // 18: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
+	1,  // 19: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
+	1,  // 20: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
+	18, // 21: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
+	21, // 22: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
+	21, // 23: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
+	21, // 24: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
+	1,  // 25: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
+	1,  // 26: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
+	1,  // 27: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
+	22, // 28: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
+	22, // 29: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
+	21, // 30: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
+	28, // 31: picontrol.SystemMonitor.PingHost:input_type -> picontrol.PingRequest
+	31, // 32: picontrol.SystemMonitor.ScanPorts:input_type -> picontrol.PortScanRequest
+	33, // 33: picontrol.SystemMonitor.DNSLookup:input_type -> picontrol.DNSRequest
+	36, // 34: picontrol.SystemMonitor.Traceroute:input_type -> picontrol.TracerouteRequest
+	1,  // 35: picontrol.SystemMonitor.GetWifiInfo:input_type -> picontrol.Empty
+	40, // 36: picontrol.SystemMonitor.TestNetworkSpeed:input_type -> picontrol.SpeedTestRequest
+	42, // 37: picontrol.SystemMonitor.UploadFile:input_type -> picontrol.FileChunk
+	44, // 38: picontrol.SystemMonitor.DownloadFile:input_type -> picontrol.FileDownloadRequest
+	45, // 39: picontrol.SystemMonitor.DeleteFile:input_type -> picontrol.FileDeleteRequest
+	2,  // 40: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
+	4,  // 41: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
+	9,  // 42: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
+	7,  // 43: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
+	9,  // 44: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
+	11, // 45: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
+	12, // 46: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
+	14, // 47: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
+	16, // 48: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
+	20, // 49: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
+	9,  // 50: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
+	9,  // 51: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
+	9,  // 52: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
+	9,  // 53: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
+	9,  // 54: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
+	27, // 55: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
+	23, // 56: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
+	24, // 57: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
+	25, // 58: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
+	29, // 59: picontrol.SystemMonitor.PingHost:output_type -> picontrol.PingResponse
+	32, // 60: picontrol.SystemMonitor.ScanPorts:output_type -> picontrol.PortScanResponse
+	34, // 61: picontrol.SystemMonitor.DNSLookup:output_type -> picontrol.DNSResponse
+	37, // 62: picontrol.SystemMonitor.Traceroute:output_type -> picontrol.TracerouteResponse
+	38, // 63: picontrol.SystemMonitor.GetWifiInfo:output_type -> picontrol.WifiInfo
+	41, // 64: picontrol.SystemMonitor.TestNetworkSpeed:output_type -> picontrol.SpeedTestResponse
+	43, // 65: picontrol.SystemMonitor.UploadFile:output_type -> picontrol.FileUploadResponse
+	42, // 66: picontrol.SystemMonitor.DownloadFile:output_type -> picontrol.FileChunk
+	46, // 67: picontrol.SystemMonitor.DeleteFile:output_type -> picontrol.FileDeleteResponse
+	40, // [40:68] is the sub-list for method output_type
+	12, // [12:40] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_pi_control_proto_init() }
@@ -2385,7 +4047,7 @@ func file_pi_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pi_control_proto_rawDesc), len(file_pi_control_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   27,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

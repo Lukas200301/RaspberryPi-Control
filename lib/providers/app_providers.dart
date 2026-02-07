@@ -4,6 +4,7 @@ import '../services/ssh_service.dart';
 import '../services/storage_service.dart';
 import '../services/agent_manager.dart';
 import '../services/grpc_service.dart';
+import '../services/grpc_file_transfer_service.dart';
 import '../services/network_discovery_service.dart';
 import '../services/connection_manager.dart';
 import '../models/ssh_connection.dart';
@@ -21,6 +22,11 @@ final agentManagerProvider = Provider((ref) {
 });
 
 final grpcServiceProvider = Provider((ref) => GrpcService());
+
+final grpcFileTransferServiceProvider = ChangeNotifierProvider((ref) {
+  final grpcService = ref.watch(grpcServiceProvider);
+  return GrpcFileTransferService(grpcService);
+});
 
 final networkDiscoveryServiceProvider = Provider((ref) => NetworkDiscoveryService());
 

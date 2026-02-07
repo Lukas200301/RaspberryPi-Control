@@ -11,6 +11,7 @@ import 'logs_screen.dart';
 import 'network_connections_screen.dart';
 import 'processes_screen.dart';
 import 'packages_screen.dart';
+import 'network_tools_screen.dart';
 import '../widgets/agent_update_banner.dart';
 import '../services/agent_version_service.dart';
 
@@ -335,6 +336,22 @@ class DashboardScreen extends ConsumerWidget {
             ),
             const Gap(12),
 
+            // Network Tools Option
+            _buildMenuCard(
+              context,
+              icon: Icons.network_check,
+              title: 'Network Tools',
+              subtitle: 'Ping, Port Scan, DNS, Speed & WiFi',
+              color: const Color(0xFF06B6D4), // Cyan
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NetworkToolsScreen()),
+                );
+              },
+            ),
+            const Gap(12),
+
             // Processes Option
             _buildMenuCard(
               context,
@@ -432,40 +449,6 @@ class DashboardScreen extends ConsumerWidget {
             Icons.arrow_forward_ios,
             color: AppTheme.textTertiary,
             size: 20,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GlassCard(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color.withValues(alpha: 0.2),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
-          ),
-          const Gap(12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium,
           ),
         ],
       ),

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
 import 'services/storage_service.dart';
-import 'services/sftp_background_service.dart';
-import 'services/transfer_manager_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/connections_screen.dart';
 
@@ -13,15 +11,6 @@ void main() async {
   // Initialize storage
   final storage = StorageService();
   await storage.init();
-
-  // Initialize background services in parallel (non-blocking)
-  // These are only needed when connecting to a device, not for app startup
-  Future.microtask(() async {
-    await Future.wait([
-      SftpBackgroundService.initialize(),
-      TransferManagerService.initialize(),
-    ]);
-  });
 
   runApp(const ProviderScope(child: RaspberryPiControlApp()));
 }

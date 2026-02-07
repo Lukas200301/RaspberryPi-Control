@@ -191,6 +191,90 @@ class SystemMonitorClient extends $grpc.Client {
         options: options);
   }
 
+  /// Network Tools
+  /// Ping a host and stream results
+  $grpc.ResponseStream<$0.PingResponse> pingHost(
+    $0.PingRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$pingHost, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Scan ports on a target host
+  $grpc.ResponseStream<$0.PortScanResponse> scanPorts(
+    $0.PortScanRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$scanPorts, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// DNS lookup
+  $grpc.ResponseFuture<$0.DNSResponse> dNSLookup(
+    $0.DNSRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$dNSLookup, request, options: options);
+  }
+
+  /// Traceroute to a host
+  $grpc.ResponseStream<$0.TracerouteResponse> traceroute(
+    $0.TracerouteRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$traceroute, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Get WiFi information
+  $grpc.ResponseFuture<$0.WifiInfo> getWifiInfo(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getWifiInfo, request, options: options);
+  }
+
+  /// Test network speed (download/upload)
+  $grpc.ResponseStream<$0.SpeedTestResponse> testNetworkSpeed(
+    $0.SpeedTestRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$testNetworkSpeed, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// File Transfer
+  /// Upload a file using streaming chunks
+  $grpc.ResponseFuture<$0.FileUploadResponse> uploadFile(
+    $async.Stream<$0.FileChunk> request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(_$uploadFile, request, options: options).single;
+  }
+
+  /// Download a file as streaming chunks
+  $grpc.ResponseStream<$0.FileChunk> downloadFile(
+    $0.FileDownloadRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$downloadFile, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Delete a file or directory
+  $grpc.ResponseFuture<$0.FileDeleteResponse> deleteFile(
+    $0.FileDeleteRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$deleteFile, request, options: options);
+  }
+
   // method descriptors
 
   static final _$streamStats = $grpc.ClientMethod<$0.Empty, $0.LiveStats>(
@@ -281,6 +365,48 @@ class SystemMonitorClient extends $grpc.Client {
           '/picontrol.SystemMonitor/StreamPackageOperation',
           ($0.PackageCommand value) => value.writeToBuffer(),
           $0.PackageOperationLog.fromBuffer);
+  static final _$pingHost = $grpc.ClientMethod<$0.PingRequest, $0.PingResponse>(
+      '/picontrol.SystemMonitor/PingHost',
+      ($0.PingRequest value) => value.writeToBuffer(),
+      $0.PingResponse.fromBuffer);
+  static final _$scanPorts =
+      $grpc.ClientMethod<$0.PortScanRequest, $0.PortScanResponse>(
+          '/picontrol.SystemMonitor/ScanPorts',
+          ($0.PortScanRequest value) => value.writeToBuffer(),
+          $0.PortScanResponse.fromBuffer);
+  static final _$dNSLookup = $grpc.ClientMethod<$0.DNSRequest, $0.DNSResponse>(
+      '/picontrol.SystemMonitor/DNSLookup',
+      ($0.DNSRequest value) => value.writeToBuffer(),
+      $0.DNSResponse.fromBuffer);
+  static final _$traceroute =
+      $grpc.ClientMethod<$0.TracerouteRequest, $0.TracerouteResponse>(
+          '/picontrol.SystemMonitor/Traceroute',
+          ($0.TracerouteRequest value) => value.writeToBuffer(),
+          $0.TracerouteResponse.fromBuffer);
+  static final _$getWifiInfo = $grpc.ClientMethod<$0.Empty, $0.WifiInfo>(
+      '/picontrol.SystemMonitor/GetWifiInfo',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.WifiInfo.fromBuffer);
+  static final _$testNetworkSpeed =
+      $grpc.ClientMethod<$0.SpeedTestRequest, $0.SpeedTestResponse>(
+          '/picontrol.SystemMonitor/TestNetworkSpeed',
+          ($0.SpeedTestRequest value) => value.writeToBuffer(),
+          $0.SpeedTestResponse.fromBuffer);
+  static final _$uploadFile =
+      $grpc.ClientMethod<$0.FileChunk, $0.FileUploadResponse>(
+          '/picontrol.SystemMonitor/UploadFile',
+          ($0.FileChunk value) => value.writeToBuffer(),
+          $0.FileUploadResponse.fromBuffer);
+  static final _$downloadFile =
+      $grpc.ClientMethod<$0.FileDownloadRequest, $0.FileChunk>(
+          '/picontrol.SystemMonitor/DownloadFile',
+          ($0.FileDownloadRequest value) => value.writeToBuffer(),
+          $0.FileChunk.fromBuffer);
+  static final _$deleteFile =
+      $grpc.ClientMethod<$0.FileDeleteRequest, $0.FileDeleteResponse>(
+          '/picontrol.SystemMonitor/DeleteFile',
+          ($0.FileDeleteRequest value) => value.writeToBuffer(),
+          $0.FileDeleteResponse.fromBuffer);
 }
 
 @$pb.GrpcServiceName('picontrol.SystemMonitor')
@@ -424,6 +550,70 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
         true,
         ($core.List<$core.int> value) => $0.PackageCommand.fromBuffer(value),
         ($0.PackageOperationLog value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.PingRequest, $0.PingResponse>(
+        'PingHost',
+        pingHost_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.PingRequest.fromBuffer(value),
+        ($0.PingResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.PortScanRequest, $0.PortScanResponse>(
+        'ScanPorts',
+        scanPorts_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.PortScanRequest.fromBuffer(value),
+        ($0.PortScanResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.DNSRequest, $0.DNSResponse>(
+        'DNSLookup',
+        dNSLookup_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.DNSRequest.fromBuffer(value),
+        ($0.DNSResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.TracerouteRequest, $0.TracerouteResponse>(
+        'Traceroute',
+        traceroute_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.TracerouteRequest.fromBuffer(value),
+        ($0.TracerouteResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.WifiInfo>(
+        'GetWifiInfo',
+        getWifiInfo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.WifiInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.SpeedTestRequest, $0.SpeedTestResponse>(
+        'TestNetworkSpeed',
+        testNetworkSpeed_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.SpeedTestRequest.fromBuffer(value),
+        ($0.SpeedTestResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.FileChunk, $0.FileUploadResponse>(
+        'UploadFile',
+        uploadFile,
+        true,
+        false,
+        ($core.List<$core.int> value) => $0.FileChunk.fromBuffer(value),
+        ($0.FileUploadResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.FileDownloadRequest, $0.FileChunk>(
+        'DownloadFile',
+        downloadFile_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) =>
+            $0.FileDownloadRequest.fromBuffer(value),
+        ($0.FileChunk value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.FileDeleteRequest, $0.FileDeleteResponse>(
+        'DeleteFile',
+        deleteFile_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.FileDeleteRequest.fromBuffer(value),
+        ($0.FileDeleteResponse value) => value.writeToBuffer()));
   }
 
   $async.Stream<$0.LiveStats> streamStats_Pre(
@@ -580,4 +770,72 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
 
   $async.Stream<$0.PackageOperationLog> streamPackageOperation(
       $grpc.ServiceCall call, $0.PackageCommand request);
+
+  $async.Stream<$0.PingResponse> pingHost_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.PingRequest> $request) async* {
+    yield* pingHost($call, await $request);
+  }
+
+  $async.Stream<$0.PingResponse> pingHost(
+      $grpc.ServiceCall call, $0.PingRequest request);
+
+  $async.Stream<$0.PortScanResponse> scanPorts_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.PortScanRequest> $request) async* {
+    yield* scanPorts($call, await $request);
+  }
+
+  $async.Stream<$0.PortScanResponse> scanPorts(
+      $grpc.ServiceCall call, $0.PortScanRequest request);
+
+  $async.Future<$0.DNSResponse> dNSLookup_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.DNSRequest> $request) async {
+    return dNSLookup($call, await $request);
+  }
+
+  $async.Future<$0.DNSResponse> dNSLookup(
+      $grpc.ServiceCall call, $0.DNSRequest request);
+
+  $async.Stream<$0.TracerouteResponse> traceroute_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.TracerouteRequest> $request) async* {
+    yield* traceroute($call, await $request);
+  }
+
+  $async.Stream<$0.TracerouteResponse> traceroute(
+      $grpc.ServiceCall call, $0.TracerouteRequest request);
+
+  $async.Future<$0.WifiInfo> getWifiInfo_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getWifiInfo($call, await $request);
+  }
+
+  $async.Future<$0.WifiInfo> getWifiInfo(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Stream<$0.SpeedTestResponse> testNetworkSpeed_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.SpeedTestRequest> $request) async* {
+    yield* testNetworkSpeed($call, await $request);
+  }
+
+  $async.Stream<$0.SpeedTestResponse> testNetworkSpeed(
+      $grpc.ServiceCall call, $0.SpeedTestRequest request);
+
+  $async.Future<$0.FileUploadResponse> uploadFile(
+      $grpc.ServiceCall call, $async.Stream<$0.FileChunk> request);
+
+  $async.Stream<$0.FileChunk> downloadFile_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.FileDownloadRequest> $request) async* {
+    yield* downloadFile($call, await $request);
+  }
+
+  $async.Stream<$0.FileChunk> downloadFile(
+      $grpc.ServiceCall call, $0.FileDownloadRequest request);
+
+  $async.Future<$0.FileDeleteResponse> deleteFile_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.FileDeleteRequest> $request) async {
+    return deleteFile($call, await $request);
+  }
+
+  $async.Future<$0.FileDeleteResponse> deleteFile(
+      $grpc.ServiceCall call, $0.FileDeleteRequest request);
 }

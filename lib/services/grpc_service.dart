@@ -1,5 +1,6 @@
 import 'package:grpc/grpc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fixnum/fixnum.dart';
 import '../generated/pi_control.pbgrpc.dart';
 
 /// Service for communicating with the Go agent via gRPC
@@ -233,6 +234,90 @@ class GrpcService {
 
   /// Check if the gRPC connection is alive
   bool get isConnected => _client != null && _channel != null;
+
+  // ==================== Network Tools ====================
+
+  /// Ping a host and stream results
+  Stream<PingResponse> pingHost(PingRequest request) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final stream = _client!.pingHost(request);
+    await for (final response in stream) {
+      yield response;
+    }
+  }
+
+  /// Scan ports on a target host
+  Stream<PortScanResponse> scanPorts(PortScanRequest request) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final stream = _client!.scanPorts(request);
+    await for (final response in stream) {
+      yield response;
+    }
+  }
+
+  /// DNS lookup
+  Future<DNSResponse> dnsLookup(DNSRequest request) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.dNSLookup(request);
+  }
+
+  /// Traceroute to a host
+  Stream<TracerouteResponse> traceroute(TracerouteRequest request) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final stream = _client!.traceroute(request);
+    await for (final response in stream) {
+      yield response;
+    }
+  }
+
+  /// Get WiFi information
+  Future<WifiInfo> getWifiInfo() async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.getWifiInfo(Empty());
+  }
+
+  /// Test network speed (download/upload)
+  Stream<SpeedTestResponse> testNetworkSpeed(SpeedTestRequest request) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final stream = _client!.testNetworkSpeed(request);
+    await for (final response in stream) {
+      yield response;
+    }
+  }
+
+  // ==================== File Transfer ====================
+
+  /// Upload a file via streaming chunks
+  /// Returns the upload response with success status and bytes written
+  Future<FileUploadResponse> uploadFileStream(Stream<FileChunk> chunkStream) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.uploadFile(chunkStream);
+  }
+
+  /// Download a file as streaming chunks
+  /// Use offset > 0 to resume a partial download
+  Stream<FileChunk> downloadFileStream(String remotePath, {int offset = 0}) async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final request = FileDownloadRequest()
+      ..path = remotePath
+      ..offset = Int64(offset);
+    
+    final stream = _client!.downloadFile(request);
+    await for (final chunk in stream) {
+      yield chunk;
+    }
+  }
+
+  /// Delete a file or directory
+  /// Set isDirectory to true to recursively delete a directory
+  Future<FileDeleteResponse> deleteFile(String remotePath, {bool isDirectory = false}) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    final request = FileDeleteRequest()
+      ..path = remotePath
+      ..isDirectory = isDirectory;
+    
+    return await _client!.deleteFile(request);
+  }
 
   /// Disconnect from gRPC server
   Future<void> disconnect() async {

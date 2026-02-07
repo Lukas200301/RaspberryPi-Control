@@ -2584,6 +2584,1965 @@ class VersionInfo extends $pb.GeneratedMessage {
   void clearIsRoot() => $_clearField(2);
 }
 
+/// Ping request
+class PingRequest extends $pb.GeneratedMessage {
+  factory PingRequest({
+    $core.String? host,
+    $core.int? count,
+    $core.int? timeout,
+    $core.int? packetSize,
+  }) {
+    final result = create();
+    if (host != null) result.host = host;
+    if (count != null) result.count = count;
+    if (timeout != null) result.timeout = timeout;
+    if (packetSize != null) result.packetSize = packetSize;
+    return result;
+  }
+
+  PingRequest._();
+
+  factory PingRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PingRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PingRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aI(2, _omitFieldNames ? '' : 'count')
+    ..aI(3, _omitFieldNames ? '' : 'timeout')
+    ..aI(4, _omitFieldNames ? '' : 'packetSize')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingRequest copyWith(void Function(PingRequest) updates) =>
+      super.copyWith((message) => updates(message as PingRequest))
+          as PingRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingRequest create() => PingRequest._();
+  @$core.override
+  PingRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PingRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PingRequest>(create);
+  static PingRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get count => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set count($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCount() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCount() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get timeout => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set timeout($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTimeout() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTimeout() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get packetSize => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set packetSize($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPacketSize() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPacketSize() => $_clearField(4);
+}
+
+/// Ping response (streamed)
+class PingResponse extends $pb.GeneratedMessage {
+  factory PingResponse({
+    $core.bool? success,
+    $core.String? host,
+    $core.String? ip,
+    $core.double? latency,
+    $core.int? sequence,
+    $core.int? ttl,
+    $core.String? error,
+    $core.bool? finished,
+    PingStats? statistics,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (host != null) result.host = host;
+    if (ip != null) result.ip = ip;
+    if (latency != null) result.latency = latency;
+    if (sequence != null) result.sequence = sequence;
+    if (ttl != null) result.ttl = ttl;
+    if (error != null) result.error = error;
+    if (finished != null) result.finished = finished;
+    if (statistics != null) result.statistics = statistics;
+    return result;
+  }
+
+  PingResponse._();
+
+  factory PingResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PingResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PingResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'host')
+    ..aOS(3, _omitFieldNames ? '' : 'ip')
+    ..aD(4, _omitFieldNames ? '' : 'latency')
+    ..aI(5, _omitFieldNames ? '' : 'sequence')
+    ..aI(6, _omitFieldNames ? '' : 'ttl')
+    ..aOS(7, _omitFieldNames ? '' : 'error')
+    ..aOB(8, _omitFieldNames ? '' : 'finished')
+    ..aOM<PingStats>(9, _omitFieldNames ? '' : 'statistics',
+        subBuilder: PingStats.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingResponse copyWith(void Function(PingResponse) updates) =>
+      super.copyWith((message) => updates(message as PingResponse))
+          as PingResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingResponse create() => PingResponse._();
+  @$core.override
+  PingResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PingResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PingResponse>(create);
+  static PingResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get host => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set host($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasHost() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearHost() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get ip => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set ip($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIp() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIp() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get latency => $_getN(3);
+  @$pb.TagNumber(4)
+  set latency($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLatency() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLatency() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get sequence => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set sequence($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSequence() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSequence() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get ttl => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set ttl($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasTtl() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearTtl() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get error => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set error($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasError() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearError() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get finished => $_getBF(7);
+  @$pb.TagNumber(8)
+  set finished($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasFinished() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearFinished() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  PingStats get statistics => $_getN(8);
+  @$pb.TagNumber(9)
+  set statistics(PingStats value) => $_setField(9, value);
+  @$pb.TagNumber(9)
+  $core.bool hasStatistics() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearStatistics() => $_clearField(9);
+  @$pb.TagNumber(9)
+  PingStats ensureStatistics() => $_ensure(8);
+}
+
+/// Ping statistics
+class PingStats extends $pb.GeneratedMessage {
+  factory PingStats({
+    $core.int? packetsSent,
+    $core.int? packetsReceived,
+    $core.double? packetLoss,
+    $core.double? minLatency,
+    $core.double? maxLatency,
+    $core.double? avgLatency,
+  }) {
+    final result = create();
+    if (packetsSent != null) result.packetsSent = packetsSent;
+    if (packetsReceived != null) result.packetsReceived = packetsReceived;
+    if (packetLoss != null) result.packetLoss = packetLoss;
+    if (minLatency != null) result.minLatency = minLatency;
+    if (maxLatency != null) result.maxLatency = maxLatency;
+    if (avgLatency != null) result.avgLatency = avgLatency;
+    return result;
+  }
+
+  PingStats._();
+
+  factory PingStats.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PingStats.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PingStats',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'packetsSent')
+    ..aI(2, _omitFieldNames ? '' : 'packetsReceived')
+    ..aD(3, _omitFieldNames ? '' : 'packetLoss')
+    ..aD(4, _omitFieldNames ? '' : 'minLatency')
+    ..aD(5, _omitFieldNames ? '' : 'maxLatency')
+    ..aD(6, _omitFieldNames ? '' : 'avgLatency')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingStats clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PingStats copyWith(void Function(PingStats) updates) =>
+      super.copyWith((message) => updates(message as PingStats)) as PingStats;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingStats create() => PingStats._();
+  @$core.override
+  PingStats createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PingStats getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingStats>(create);
+  static PingStats? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get packetsSent => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set packetsSent($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPacketsSent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPacketsSent() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get packetsReceived => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set packetsReceived($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPacketsReceived() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPacketsReceived() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get packetLoss => $_getN(2);
+  @$pb.TagNumber(3)
+  set packetLoss($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPacketLoss() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPacketLoss() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get minLatency => $_getN(3);
+  @$pb.TagNumber(4)
+  set minLatency($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMinLatency() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMinLatency() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.double get maxLatency => $_getN(4);
+  @$pb.TagNumber(5)
+  set maxLatency($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasMaxLatency() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearMaxLatency() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.double get avgLatency => $_getN(5);
+  @$pb.TagNumber(6)
+  set avgLatency($core.double value) => $_setDouble(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasAvgLatency() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearAvgLatency() => $_clearField(6);
+}
+
+/// Port scan request
+class PortScanRequest extends $pb.GeneratedMessage {
+  factory PortScanRequest({
+    $core.String? host,
+    $core.Iterable<$core.int>? ports,
+    $core.int? startPort,
+    $core.int? endPort,
+    $core.int? timeout,
+  }) {
+    final result = create();
+    if (host != null) result.host = host;
+    if (ports != null) result.ports.addAll(ports);
+    if (startPort != null) result.startPort = startPort;
+    if (endPort != null) result.endPort = endPort;
+    if (timeout != null) result.timeout = timeout;
+    return result;
+  }
+
+  PortScanRequest._();
+
+  factory PortScanRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PortScanRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PortScanRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..p<$core.int>(2, _omitFieldNames ? '' : 'ports', $pb.PbFieldType.K3)
+    ..aI(3, _omitFieldNames ? '' : 'startPort')
+    ..aI(4, _omitFieldNames ? '' : 'endPort')
+    ..aI(5, _omitFieldNames ? '' : 'timeout')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PortScanRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PortScanRequest copyWith(void Function(PortScanRequest) updates) =>
+      super.copyWith((message) => updates(message as PortScanRequest))
+          as PortScanRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PortScanRequest create() => PortScanRequest._();
+  @$core.override
+  PortScanRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PortScanRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PortScanRequest>(create);
+  static PortScanRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.int> get ports => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $core.int get startPort => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set startPort($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStartPort() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStartPort() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get endPort => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set endPort($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEndPort() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEndPort() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get timeout => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set timeout($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasTimeout() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearTimeout() => $_clearField(5);
+}
+
+/// Port scan response (streamed)
+class PortScanResponse extends $pb.GeneratedMessage {
+  factory PortScanResponse({
+    $core.int? port,
+    $core.bool? open,
+    $core.String? service,
+    $core.String? error,
+    $core.bool? finished,
+    $core.int? progress,
+  }) {
+    final result = create();
+    if (port != null) result.port = port;
+    if (open != null) result.open = open;
+    if (service != null) result.service = service;
+    if (error != null) result.error = error;
+    if (finished != null) result.finished = finished;
+    if (progress != null) result.progress = progress;
+    return result;
+  }
+
+  PortScanResponse._();
+
+  factory PortScanResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory PortScanResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PortScanResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'port')
+    ..aOB(2, _omitFieldNames ? '' : 'open')
+    ..aOS(3, _omitFieldNames ? '' : 'service')
+    ..aOS(4, _omitFieldNames ? '' : 'error')
+    ..aOB(5, _omitFieldNames ? '' : 'finished')
+    ..aI(6, _omitFieldNames ? '' : 'progress')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PortScanResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PortScanResponse copyWith(void Function(PortScanResponse) updates) =>
+      super.copyWith((message) => updates(message as PortScanResponse))
+          as PortScanResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PortScanResponse create() => PortScanResponse._();
+  @$core.override
+  PortScanResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static PortScanResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PortScanResponse>(create);
+  static PortScanResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get port => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set port($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPort() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPort() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get open => $_getBF(1);
+  @$pb.TagNumber(2)
+  set open($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOpen() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOpen() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get service => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set service($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasService() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearService() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get error => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set error($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasError() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearError() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get finished => $_getBF(4);
+  @$pb.TagNumber(5)
+  set finished($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasFinished() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearFinished() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get progress => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set progress($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasProgress() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearProgress() => $_clearField(6);
+}
+
+/// DNS lookup request
+class DNSRequest extends $pb.GeneratedMessage {
+  factory DNSRequest({
+    $core.String? hostname,
+    $core.String? recordType,
+  }) {
+    final result = create();
+    if (hostname != null) result.hostname = hostname;
+    if (recordType != null) result.recordType = recordType;
+    return result;
+  }
+
+  DNSRequest._();
+
+  factory DNSRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory DNSRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DNSRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'hostname')
+    ..aOS(2, _omitFieldNames ? '' : 'recordType')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSRequest copyWith(void Function(DNSRequest) updates) =>
+      super.copyWith((message) => updates(message as DNSRequest)) as DNSRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static DNSRequest create() => DNSRequest._();
+  @$core.override
+  DNSRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static DNSRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DNSRequest>(create);
+  static DNSRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get hostname => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set hostname($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHostname() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHostname() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get recordType => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set recordType($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRecordType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRecordType() => $_clearField(2);
+}
+
+/// DNS lookup response
+class DNSResponse extends $pb.GeneratedMessage {
+  factory DNSResponse({
+    $core.bool? success,
+    $core.String? hostname,
+    $core.Iterable<$core.String>? addresses,
+    $core.Iterable<DNSRecord>? records,
+    $core.double? queryTime,
+    $core.String? error,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (hostname != null) result.hostname = hostname;
+    if (addresses != null) result.addresses.addAll(addresses);
+    if (records != null) result.records.addAll(records);
+    if (queryTime != null) result.queryTime = queryTime;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  DNSResponse._();
+
+  factory DNSResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory DNSResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DNSResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'hostname')
+    ..pPS(3, _omitFieldNames ? '' : 'addresses')
+    ..pPM<DNSRecord>(4, _omitFieldNames ? '' : 'records',
+        subBuilder: DNSRecord.create)
+    ..aD(5, _omitFieldNames ? '' : 'queryTime')
+    ..aOS(6, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSResponse copyWith(void Function(DNSResponse) updates) =>
+      super.copyWith((message) => updates(message as DNSResponse))
+          as DNSResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static DNSResponse create() => DNSResponse._();
+  @$core.override
+  DNSResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static DNSResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DNSResponse>(create);
+  static DNSResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get hostname => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set hostname($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasHostname() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearHostname() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get addresses => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<DNSRecord> get records => $_getList(3);
+
+  @$pb.TagNumber(5)
+  $core.double get queryTime => $_getN(4);
+  @$pb.TagNumber(5)
+  set queryTime($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasQueryTime() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearQueryTime() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get error => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set error($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasError() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearError() => $_clearField(6);
+}
+
+/// DNS record details
+class DNSRecord extends $pb.GeneratedMessage {
+  factory DNSRecord({
+    $core.String? type,
+    $core.String? value,
+    $core.int? ttl,
+    $core.int? priority,
+  }) {
+    final result = create();
+    if (type != null) result.type = type;
+    if (value != null) result.value = value;
+    if (ttl != null) result.ttl = ttl;
+    if (priority != null) result.priority = priority;
+    return result;
+  }
+
+  DNSRecord._();
+
+  factory DNSRecord.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory DNSRecord.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DNSRecord',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'type')
+    ..aOS(2, _omitFieldNames ? '' : 'value')
+    ..aI(3, _omitFieldNames ? '' : 'ttl')
+    ..aI(4, _omitFieldNames ? '' : 'priority')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSRecord clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DNSRecord copyWith(void Function(DNSRecord) updates) =>
+      super.copyWith((message) => updates(message as DNSRecord)) as DNSRecord;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static DNSRecord create() => DNSRecord._();
+  @$core.override
+  DNSRecord createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static DNSRecord getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<DNSRecord>(create);
+  static DNSRecord? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get type => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set type($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get value => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set value($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasValue() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearValue() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get ttl => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set ttl($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTtl() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTtl() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get priority => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set priority($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPriority() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPriority() => $_clearField(4);
+}
+
+/// Traceroute request
+class TracerouteRequest extends $pb.GeneratedMessage {
+  factory TracerouteRequest({
+    $core.String? host,
+    $core.int? maxHops,
+    $core.int? timeout,
+  }) {
+    final result = create();
+    if (host != null) result.host = host;
+    if (maxHops != null) result.maxHops = maxHops;
+    if (timeout != null) result.timeout = timeout;
+    return result;
+  }
+
+  TracerouteRequest._();
+
+  factory TracerouteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TracerouteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TracerouteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aI(2, _omitFieldNames ? '' : 'maxHops')
+    ..aI(3, _omitFieldNames ? '' : 'timeout')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TracerouteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TracerouteRequest copyWith(void Function(TracerouteRequest) updates) =>
+      super.copyWith((message) => updates(message as TracerouteRequest))
+          as TracerouteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TracerouteRequest create() => TracerouteRequest._();
+  @$core.override
+  TracerouteRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TracerouteRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TracerouteRequest>(create);
+  static TracerouteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get maxHops => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set maxHops($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMaxHops() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMaxHops() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get timeout => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set timeout($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTimeout() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTimeout() => $_clearField(3);
+}
+
+/// Traceroute response (streamed)
+class TracerouteResponse extends $pb.GeneratedMessage {
+  factory TracerouteResponse({
+    $core.int? hop,
+    $core.String? ip,
+    $core.String? hostname,
+    $core.double? latency,
+    $core.bool? timeout,
+    $core.bool? finished,
+    $core.String? error,
+  }) {
+    final result = create();
+    if (hop != null) result.hop = hop;
+    if (ip != null) result.ip = ip;
+    if (hostname != null) result.hostname = hostname;
+    if (latency != null) result.latency = latency;
+    if (timeout != null) result.timeout = timeout;
+    if (finished != null) result.finished = finished;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  TracerouteResponse._();
+
+  factory TracerouteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory TracerouteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TracerouteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aI(1, _omitFieldNames ? '' : 'hop')
+    ..aOS(2, _omitFieldNames ? '' : 'ip')
+    ..aOS(3, _omitFieldNames ? '' : 'hostname')
+    ..aD(4, _omitFieldNames ? '' : 'latency')
+    ..aOB(5, _omitFieldNames ? '' : 'timeout')
+    ..aOB(6, _omitFieldNames ? '' : 'finished')
+    ..aOS(7, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TracerouteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TracerouteResponse copyWith(void Function(TracerouteResponse) updates) =>
+      super.copyWith((message) => updates(message as TracerouteResponse))
+          as TracerouteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TracerouteResponse create() => TracerouteResponse._();
+  @$core.override
+  TracerouteResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static TracerouteResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TracerouteResponse>(create);
+  static TracerouteResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get hop => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set hop($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHop() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHop() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get ip => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set ip($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIp() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIp() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get hostname => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set hostname($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHostname() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHostname() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get latency => $_getN(3);
+  @$pb.TagNumber(4)
+  set latency($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLatency() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLatency() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get timeout => $_getBF(4);
+  @$pb.TagNumber(5)
+  set timeout($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasTimeout() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearTimeout() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get finished => $_getBF(5);
+  @$pb.TagNumber(6)
+  set finished($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFinished() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearFinished() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get error => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set error($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasError() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearError() => $_clearField(7);
+}
+
+/// WiFi information
+class WifiInfo extends $pb.GeneratedMessage {
+  factory WifiInfo({
+    $core.bool? connected,
+    $core.String? ssid,
+    $core.String? bssid,
+    $core.int? signalStrength,
+    $core.int? signalQuality,
+    $core.double? frequency,
+    $core.String? security,
+    $core.double? linkSpeed,
+    $core.String? ipAddress,
+    $core.Iterable<WifiNetwork>? availableNetworks,
+  }) {
+    final result = create();
+    if (connected != null) result.connected = connected;
+    if (ssid != null) result.ssid = ssid;
+    if (bssid != null) result.bssid = bssid;
+    if (signalStrength != null) result.signalStrength = signalStrength;
+    if (signalQuality != null) result.signalQuality = signalQuality;
+    if (frequency != null) result.frequency = frequency;
+    if (security != null) result.security = security;
+    if (linkSpeed != null) result.linkSpeed = linkSpeed;
+    if (ipAddress != null) result.ipAddress = ipAddress;
+    if (availableNetworks != null)
+      result.availableNetworks.addAll(availableNetworks);
+    return result;
+  }
+
+  WifiInfo._();
+
+  factory WifiInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory WifiInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WifiInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'connected')
+    ..aOS(2, _omitFieldNames ? '' : 'ssid')
+    ..aOS(3, _omitFieldNames ? '' : 'bssid')
+    ..aI(4, _omitFieldNames ? '' : 'signalStrength')
+    ..aI(5, _omitFieldNames ? '' : 'signalQuality')
+    ..aD(6, _omitFieldNames ? '' : 'frequency')
+    ..aOS(7, _omitFieldNames ? '' : 'security')
+    ..aD(8, _omitFieldNames ? '' : 'linkSpeed')
+    ..aOS(9, _omitFieldNames ? '' : 'ipAddress')
+    ..pPM<WifiNetwork>(10, _omitFieldNames ? '' : 'availableNetworks',
+        subBuilder: WifiNetwork.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WifiInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WifiInfo copyWith(void Function(WifiInfo) updates) =>
+      super.copyWith((message) => updates(message as WifiInfo)) as WifiInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static WifiInfo create() => WifiInfo._();
+  @$core.override
+  WifiInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static WifiInfo getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WifiInfo>(create);
+  static WifiInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get connected => $_getBF(0);
+  @$pb.TagNumber(1)
+  set connected($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasConnected() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearConnected() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get ssid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set ssid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSsid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSsid() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get bssid => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set bssid($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBssid() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBssid() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get signalStrength => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set signalStrength($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSignalStrength() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSignalStrength() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get signalQuality => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set signalQuality($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSignalQuality() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSignalQuality() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.double get frequency => $_getN(5);
+  @$pb.TagNumber(6)
+  set frequency($core.double value) => $_setDouble(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFrequency() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearFrequency() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get security => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set security($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasSecurity() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearSecurity() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.double get linkSpeed => $_getN(7);
+  @$pb.TagNumber(8)
+  set linkSpeed($core.double value) => $_setDouble(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasLinkSpeed() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearLinkSpeed() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get ipAddress => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set ipAddress($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasIpAddress() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearIpAddress() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $pb.PbList<WifiNetwork> get availableNetworks => $_getList(9);
+}
+
+/// Available WiFi network
+class WifiNetwork extends $pb.GeneratedMessage {
+  factory WifiNetwork({
+    $core.String? ssid,
+    $core.String? bssid,
+    $core.int? signalStrength,
+    $core.int? signalQuality,
+    $core.double? frequency,
+    $core.String? security,
+  }) {
+    final result = create();
+    if (ssid != null) result.ssid = ssid;
+    if (bssid != null) result.bssid = bssid;
+    if (signalStrength != null) result.signalStrength = signalStrength;
+    if (signalQuality != null) result.signalQuality = signalQuality;
+    if (frequency != null) result.frequency = frequency;
+    if (security != null) result.security = security;
+    return result;
+  }
+
+  WifiNetwork._();
+
+  factory WifiNetwork.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory WifiNetwork.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WifiNetwork',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'ssid')
+    ..aOS(2, _omitFieldNames ? '' : 'bssid')
+    ..aI(3, _omitFieldNames ? '' : 'signalStrength')
+    ..aI(4, _omitFieldNames ? '' : 'signalQuality')
+    ..aD(5, _omitFieldNames ? '' : 'frequency')
+    ..aOS(6, _omitFieldNames ? '' : 'security')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WifiNetwork clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WifiNetwork copyWith(void Function(WifiNetwork) updates) =>
+      super.copyWith((message) => updates(message as WifiNetwork))
+          as WifiNetwork;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static WifiNetwork create() => WifiNetwork._();
+  @$core.override
+  WifiNetwork createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static WifiNetwork getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WifiNetwork>(create);
+  static WifiNetwork? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get ssid => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set ssid($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSsid() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSsid() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get bssid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set bssid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBssid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBssid() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get signalStrength => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set signalStrength($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSignalStrength() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSignalStrength() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get signalQuality => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set signalQuality($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSignalQuality() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSignalQuality() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.double get frequency => $_getN(4);
+  @$pb.TagNumber(5)
+  set frequency($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasFrequency() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearFrequency() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get security => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set security($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSecurity() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSecurity() => $_clearField(6);
+}
+
+/// Speed test request
+class SpeedTestRequest extends $pb.GeneratedMessage {
+  factory SpeedTestRequest({
+    $core.bool? testDownload,
+    $core.bool? testUpload,
+    $core.int? duration,
+  }) {
+    final result = create();
+    if (testDownload != null) result.testDownload = testDownload;
+    if (testUpload != null) result.testUpload = testUpload;
+    if (duration != null) result.duration = duration;
+    return result;
+  }
+
+  SpeedTestRequest._();
+
+  factory SpeedTestRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SpeedTestRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SpeedTestRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'testDownload')
+    ..aOB(2, _omitFieldNames ? '' : 'testUpload')
+    ..aI(3, _omitFieldNames ? '' : 'duration')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SpeedTestRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SpeedTestRequest copyWith(void Function(SpeedTestRequest) updates) =>
+      super.copyWith((message) => updates(message as SpeedTestRequest))
+          as SpeedTestRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SpeedTestRequest create() => SpeedTestRequest._();
+  @$core.override
+  SpeedTestRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SpeedTestRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SpeedTestRequest>(create);
+  static SpeedTestRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get testDownload => $_getBF(0);
+  @$pb.TagNumber(1)
+  set testDownload($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTestDownload() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTestDownload() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get testUpload => $_getBF(1);
+  @$pb.TagNumber(2)
+  set testUpload($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTestUpload() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTestUpload() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get duration => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set duration($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDuration() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDuration() => $_clearField(3);
+}
+
+/// Speed test response (streamed)
+class SpeedTestResponse extends $pb.GeneratedMessage {
+  factory SpeedTestResponse({
+    $core.String? phase,
+    $core.double? downloadSpeed,
+    $core.double? uploadSpeed,
+    $core.double? progress,
+    $core.double? latency,
+    $core.String? server,
+    $core.bool? finished,
+    $core.String? error,
+  }) {
+    final result = create();
+    if (phase != null) result.phase = phase;
+    if (downloadSpeed != null) result.downloadSpeed = downloadSpeed;
+    if (uploadSpeed != null) result.uploadSpeed = uploadSpeed;
+    if (progress != null) result.progress = progress;
+    if (latency != null) result.latency = latency;
+    if (server != null) result.server = server;
+    if (finished != null) result.finished = finished;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  SpeedTestResponse._();
+
+  factory SpeedTestResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SpeedTestResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SpeedTestResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'phase')
+    ..aD(2, _omitFieldNames ? '' : 'downloadSpeed')
+    ..aD(3, _omitFieldNames ? '' : 'uploadSpeed')
+    ..aD(4, _omitFieldNames ? '' : 'progress')
+    ..aD(5, _omitFieldNames ? '' : 'latency')
+    ..aOS(6, _omitFieldNames ? '' : 'server')
+    ..aOB(7, _omitFieldNames ? '' : 'finished')
+    ..aOS(8, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SpeedTestResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SpeedTestResponse copyWith(void Function(SpeedTestResponse) updates) =>
+      super.copyWith((message) => updates(message as SpeedTestResponse))
+          as SpeedTestResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SpeedTestResponse create() => SpeedTestResponse._();
+  @$core.override
+  SpeedTestResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SpeedTestResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SpeedTestResponse>(create);
+  static SpeedTestResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get phase => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set phase($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPhase() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPhase() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.double get downloadSpeed => $_getN(1);
+  @$pb.TagNumber(2)
+  set downloadSpeed($core.double value) => $_setDouble(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDownloadSpeed() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDownloadSpeed() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get uploadSpeed => $_getN(2);
+  @$pb.TagNumber(3)
+  set uploadSpeed($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasUploadSpeed() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearUploadSpeed() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.double get progress => $_getN(3);
+  @$pb.TagNumber(4)
+  set progress($core.double value) => $_setDouble(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasProgress() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearProgress() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.double get latency => $_getN(4);
+  @$pb.TagNumber(5)
+  set latency($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLatency() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLatency() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get server => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set server($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasServer() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearServer() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.bool get finished => $_getBF(6);
+  @$pb.TagNumber(7)
+  set finished($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasFinished() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearFinished() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get error => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set error($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasError() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearError() => $_clearField(8);
+}
+
+/// File chunk for streaming transfers
+class FileChunk extends $pb.GeneratedMessage {
+  factory FileChunk({
+    $core.String? path,
+    $core.List<$core.int>? data,
+    $fixnum.Int64? offset,
+    $fixnum.Int64? totalSize,
+    $core.bool? isFinal,
+    $core.String? error,
+  }) {
+    final result = create();
+    if (path != null) result.path = path;
+    if (data != null) result.data = data;
+    if (offset != null) result.offset = offset;
+    if (totalSize != null) result.totalSize = totalSize;
+    if (isFinal != null) result.isFinal = isFinal;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  FileChunk._();
+
+  factory FileChunk.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FileChunk.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileChunk',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aInt64(3, _omitFieldNames ? '' : 'offset')
+    ..aInt64(4, _omitFieldNames ? '' : 'totalSize')
+    ..aOB(5, _omitFieldNames ? '' : 'isFinal')
+    ..aOS(6, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileChunk clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileChunk copyWith(void Function(FileChunk) updates) =>
+      super.copyWith((message) => updates(message as FileChunk)) as FileChunk;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FileChunk create() => FileChunk._();
+  @$core.override
+  FileChunk createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FileChunk getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FileChunk>(create);
+  static FileChunk? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get offset => $_getI64(2);
+  @$pb.TagNumber(3)
+  set offset($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOffset() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOffset() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get totalSize => $_getI64(3);
+  @$pb.TagNumber(4)
+  set totalSize($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTotalSize() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTotalSize() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get isFinal => $_getBF(4);
+  @$pb.TagNumber(5)
+  set isFinal($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasIsFinal() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearIsFinal() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get error => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set error($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasError() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearError() => $_clearField(6);
+}
+
+/// Upload response (after all chunks received)
+class FileUploadResponse extends $pb.GeneratedMessage {
+  factory FileUploadResponse({
+    $core.bool? success,
+    $core.String? path,
+    $fixnum.Int64? bytesWritten,
+    $core.String? error,
+    $core.double? duration,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (path != null) result.path = path;
+    if (bytesWritten != null) result.bytesWritten = bytesWritten;
+    if (error != null) result.error = error;
+    if (duration != null) result.duration = duration;
+    return result;
+  }
+
+  FileUploadResponse._();
+
+  factory FileUploadResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FileUploadResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileUploadResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aInt64(3, _omitFieldNames ? '' : 'bytesWritten')
+    ..aOS(4, _omitFieldNames ? '' : 'error')
+    ..aD(5, _omitFieldNames ? '' : 'duration')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileUploadResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileUploadResponse copyWith(void Function(FileUploadResponse) updates) =>
+      super.copyWith((message) => updates(message as FileUploadResponse))
+          as FileUploadResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FileUploadResponse create() => FileUploadResponse._();
+  @$core.override
+  FileUploadResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FileUploadResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileUploadResponse>(create);
+  static FileUploadResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get bytesWritten => $_getI64(2);
+  @$pb.TagNumber(3)
+  set bytesWritten($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBytesWritten() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBytesWritten() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get error => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set error($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasError() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearError() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.double get duration => $_getN(4);
+  @$pb.TagNumber(5)
+  set duration($core.double value) => $_setDouble(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDuration() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDuration() => $_clearField(5);
+}
+
+/// Download request
+class FileDownloadRequest extends $pb.GeneratedMessage {
+  factory FileDownloadRequest({
+    $core.String? path,
+    $fixnum.Int64? offset,
+  }) {
+    final result = create();
+    if (path != null) result.path = path;
+    if (offset != null) result.offset = offset;
+    return result;
+  }
+
+  FileDownloadRequest._();
+
+  factory FileDownloadRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FileDownloadRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileDownloadRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aInt64(2, _omitFieldNames ? '' : 'offset')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDownloadRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDownloadRequest copyWith(void Function(FileDownloadRequest) updates) =>
+      super.copyWith((message) => updates(message as FileDownloadRequest))
+          as FileDownloadRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FileDownloadRequest create() => FileDownloadRequest._();
+  @$core.override
+  FileDownloadRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FileDownloadRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileDownloadRequest>(create);
+  static FileDownloadRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get offset => $_getI64(1);
+  @$pb.TagNumber(2)
+  set offset($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOffset() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOffset() => $_clearField(2);
+}
+
+/// Delete request
+class FileDeleteRequest extends $pb.GeneratedMessage {
+  factory FileDeleteRequest({
+    $core.String? path,
+    $core.bool? isDirectory,
+  }) {
+    final result = create();
+    if (path != null) result.path = path;
+    if (isDirectory != null) result.isDirectory = isDirectory;
+    return result;
+  }
+
+  FileDeleteRequest._();
+
+  factory FileDeleteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FileDeleteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileDeleteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOB(2, _omitFieldNames ? '' : 'isDirectory')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDeleteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDeleteRequest copyWith(void Function(FileDeleteRequest) updates) =>
+      super.copyWith((message) => updates(message as FileDeleteRequest))
+          as FileDeleteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FileDeleteRequest create() => FileDeleteRequest._();
+  @$core.override
+  FileDeleteRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FileDeleteRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileDeleteRequest>(create);
+  static FileDeleteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get isDirectory => $_getBF(1);
+  @$pb.TagNumber(2)
+  set isDirectory($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIsDirectory() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIsDirectory() => $_clearField(2);
+}
+
+/// Delete response
+class FileDeleteResponse extends $pb.GeneratedMessage {
+  factory FileDeleteResponse({
+    $core.bool? success,
+    $core.String? path,
+    $core.String? error,
+  }) {
+    final result = create();
+    if (success != null) result.success = success;
+    if (path != null) result.path = path;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  FileDeleteResponse._();
+
+  factory FileDeleteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory FileDeleteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileDeleteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'success')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDeleteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileDeleteResponse copyWith(void Function(FileDeleteResponse) updates) =>
+      super.copyWith((message) => updates(message as FileDeleteResponse))
+          as FileDeleteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static FileDeleteResponse create() => FileDeleteResponse._();
+  @$core.override
+  FileDeleteResponse createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static FileDeleteResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileDeleteResponse>(create);
+  static FileDeleteResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get success => $_getBF(0);
+  @$pb.TagNumber(1)
+  set success($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSuccess() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSuccess() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get error => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set error($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasError() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearError() => $_clearField(3);
+}
+
 const $core.bool _omitFieldNames =
     $core.bool.fromEnvironment('protobuf.omit_field_names');
 const $core.bool _omitMessageNames =

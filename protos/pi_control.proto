@@ -63,6 +63,35 @@ service SystemMonitor {
 
   // Stream package operation logs (install/remove/update)
   rpc StreamPackageOperation (PackageCommand) returns (stream PackageOperationLog);
+
+  // Network Tools
+  // Ping a host and stream results
+  rpc PingHost (PingRequest) returns (stream PingResponse);
+
+  // Scan ports on a target host
+  rpc ScanPorts (PortScanRequest) returns (stream PortScanResponse);
+
+  // DNS lookup
+  rpc DNSLookup (DNSRequest) returns (DNSResponse);
+
+  // Traceroute to a host
+  rpc Traceroute (TracerouteRequest) returns (stream TracerouteResponse);
+
+  // Get WiFi information
+  rpc GetWifiInfo (Empty) returns (WifiInfo);
+
+  // Test network speed (download/upload)
+  rpc TestNetworkSpeed (SpeedTestRequest) returns (stream SpeedTestResponse);
+
+  // File Transfer
+  // Upload a file using streaming chunks
+  rpc UploadFile (stream FileChunk) returns (FileUploadResponse);
+
+  // Download a file as streaming chunks
+  rpc DownloadFile (FileDownloadRequest) returns (stream FileChunk);
+
+  // Delete a file or directory
+  rpc DeleteFile (FileDeleteRequest) returns (FileDeleteResponse);
 }
 
 // ==================== Messages ====================
@@ -323,4 +352,181 @@ message DiskIOStat {
 message VersionInfo {
   string version = 1; // Agent version string (e.g., "3.1.0")
   bool is_root = 2; // Whether agent is running with root privileges
+}
+
+// ==================== Network Tools Messages ====================
+
+// Ping request
+message PingRequest {
+  string host = 1; // Hostname or IP address to ping
+  int32 count = 2; // Number of pings (0 = continuous until cancelled)
+  int32 timeout = 3; // Timeout in seconds per ping (default: 5)
+  int32 packet_size = 4; // Packet size in bytes (default: 56)
+}
+
+// Ping response (streamed)
+message PingResponse {
+  bool success = 1; // Whether ping was successful
+  string host = 2; // Target host
+  string ip = 3; // Resolved IP address
+  double latency = 4; // Latency in milliseconds
+  int32 sequence = 5; // Sequence number
+  int32 ttl = 6; // Time to live
+  string error = 7; // Error message if failed
+  bool finished = 8; // True when all pings complete
+  PingStats statistics = 9; // Final statistics (only in last message)
+}
+
+// Ping statistics
+message PingStats {
+  int32 packets_sent = 1;
+  int32 packets_received = 2;
+  double packet_loss = 3; // Percentage
+  double min_latency = 4; // ms
+  double max_latency = 5; // ms
+  double avg_latency = 6; // ms
+}
+
+// Port scan request
+message PortScanRequest {
+  string host = 1; // Target hostname or IP
+  repeated int32 ports = 2; // Specific ports to scan (if empty, scan common ports)
+  int32 start_port = 3; // Start of port range (alternative to ports list)
+  int32 end_port = 4; // End of port range
+  int32 timeout = 5; // Timeout per port in milliseconds (default: 1000)
+}
+
+// Port scan response (streamed)
+message PortScanResponse {
+  int32 port = 1;
+  bool open = 2;
+  string service = 3; // Service name if known
+  string error = 4;
+  bool finished = 5; // True when scan completes
+  int32 progress = 6; // Progress percentage (0-100)
+}
+
+// DNS lookup request
+message DNSRequest {
+  string hostname = 1;
+  string record_type = 2; // A, AAAA, MX, TXT, NS, CNAME, etc. (default: A)
+}
+
+// DNS lookup response
+message DNSResponse {
+  bool success = 1;
+  string hostname = 2;
+  repeated string addresses = 3; // IP addresses or records
+  repeated DNSRecord records = 4; // Detailed records
+  double query_time = 5; // Query time in milliseconds
+  string error = 6;
+}
+
+// DNS record details
+message DNSRecord {
+  string type = 1; // A, AAAA, MX, etc.
+  string value = 2;
+  int32 ttl = 3; // Time to live
+  int32 priority = 4; // For MX records
+}
+
+// Traceroute request
+message TracerouteRequest {
+  string host = 1;
+  int32 max_hops = 2; // Maximum number of hops (default: 30)
+  int32 timeout = 3; // Timeout per hop in seconds (default: 5)
+}
+
+// Traceroute response (streamed)
+message TracerouteResponse {
+  int32 hop = 1; // Hop number
+  string ip = 2; // IP address of this hop
+  string hostname = 3; // Hostname if resolved
+  double latency = 4; // Latency in milliseconds
+  bool timeout = 5; // True if hop timed out
+  bool finished = 6; // True when traceroute completes
+  string error = 7;
+}
+
+// WiFi information
+message WifiInfo {
+  bool connected = 1;
+  string ssid = 2; // Network name
+  string bssid = 3; // MAC address of access point
+  int32 signal_strength = 4; // Signal strength in dBm (-100 to 0)
+  int32 signal_quality = 5; // Signal quality percentage (0-100)
+  double frequency = 6; // Frequency in GHz (2.4 or 5.0)
+  string security = 7; // WPA2, WPA3, etc.
+  double link_speed = 8; // Link speed in Mbps
+  string ip_address = 9;
+  repeated WifiNetwork available_networks = 10;
+}
+
+// Available WiFi network
+message WifiNetwork {
+  string ssid = 1;
+  string bssid = 2;
+  int32 signal_strength = 3;
+  int32 signal_quality = 4;
+  double frequency = 5;
+  string security = 6;
+}
+
+// Speed test request
+message SpeedTestRequest {
+  bool test_download = 1; // Test download speed
+  bool test_upload = 2; // Test upload speed
+  int32 duration = 3; // Test duration in seconds (default: 10)
+}
+
+// Speed test response (streamed)
+message SpeedTestResponse {
+  string phase = 1; // "connecting", "download", "upload", "complete"
+  double download_speed = 2; // Current download speed in Mbps
+  double upload_speed = 3; // Current upload speed in Mbps
+  double progress = 4; // Progress percentage (0-100)
+  double latency = 5; // Server latency in ms
+  string server = 6; // Test server location
+  bool finished = 7;
+  string error = 8;
+}
+
+// ==================== File Transfer Messages ====================
+
+// File chunk for streaming transfers
+message FileChunk {
+  string path = 1; // Remote file path (relative to agent's working directory)
+  bytes data = 2; // Chunk data (max 256KB recommended)
+  int64 offset = 3; // Byte offset in the file
+  int64 total_size = 4; // Total file size in bytes (set in first chunk)
+  bool is_final = 5; // True for the last chunk
+  string error = 6; // Error message if something went wrong
+}
+
+// Upload response (after all chunks received)
+message FileUploadResponse {
+  bool success = 1;
+  string path = 2; // Path where file was written
+  int64 bytes_written = 3; // Total bytes written
+  string error = 4; // Error message if failed
+  double duration = 5; // Upload duration in seconds
+}
+
+// Download request
+message FileDownloadRequest {
+  string path = 1; // Remote file path to download
+  int64 offset = 2; // Starting byte offset (0 for full file, >0 to resume)
+}
+
+// Delete request
+message FileDeleteRequest {
+  string path = 1; // Remote file or directory path to delete
+  bool is_directory = 2; // True if deleting a directory (will delete recursively)
+}
+
+// Delete response
+message FileDeleteResponse {
+  bool success = 1;
+  string path = 2; // Path that was deleted
+  string error = 3; // Error message if failed
 }

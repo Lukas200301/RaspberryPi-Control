@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "3.1.0"
+	Version = "3.2.0"
 	Port    = 50051
 )
 
@@ -39,7 +39,12 @@ func main() {
 		log.Fatalf("Failed to listen on %s: %v", listenAddr, err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.MaxRecvMsgSize(100*1024*1024), // 100MB max receive for large file chunks
+		grpc.MaxSendMsgSize(100*1024*1024), // 100MB max send for large file chunks
+		grpc.WriteBufferSize(1024*1024),    // 1MB write buffer
+		grpc.ReadBufferSize(1024*1024),     // 1MB read buffer
+	)
 	pb.RegisterSystemMonitorServer(grpcServer, &systemMonitorServer{})
 
 	// Enable reflection for debugging
