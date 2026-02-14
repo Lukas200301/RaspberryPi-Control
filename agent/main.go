@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Version = "3.2.0"
+	Version = "3.3.0"
 	Port    = 50051
 )
 
@@ -46,6 +46,15 @@ func main() {
 		grpc.ReadBufferSize(1024*1024),     // 1MB read buffer
 	)
 	pb.RegisterSystemMonitorServer(grpcServer, &systemMonitorServer{})
+
+	// Initialize and register Docker service
+	dockerService, err := newDockerService()
+	if err != nil {
+		log.Printf("Warning: Failed to initialize Docker service: %v", err)
+	} else {
+		pb.RegisterDockerServiceServer(grpcServer, dockerService)
+		log.Println("Docker service initialized successfully")
+	}
 
 	// Enable reflection for debugging
 	reflection.Register(grpcServer)

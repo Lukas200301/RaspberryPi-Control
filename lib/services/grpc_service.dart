@@ -8,6 +8,8 @@ class GrpcService {
   ClientChannel? _channel;
   SystemMonitorClient? _client;
 
+  ClientChannel? get channel => _channel;
+
   /// Connect to the gRPC server (via SSH tunnel on localhost)
   Future<void> connect(int port) async {
     try {
@@ -236,6 +238,25 @@ class GrpcService {
   bool get isConnected => _client != null && _channel != null;
 
   // ==================== Network Tools ====================
+
+  // ==================== System Updates ====================
+
+  /// Get system update status (OS info, kernel, upgradable packages)
+  Future<SystemUpdateStatus> getSystemUpdateStatus() async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.getSystemUpdateStatus(Empty());
+  }
+
+  /// Stream system upgrade progress (apt update + apt upgrade)
+  Stream<UpgradeProgress> streamSystemUpgrade() async* {
+    if (_client == null) throw Exception('gRPC not connected');
+    final stream = _client!.streamSystemUpgrade(Empty());
+    await for (final progress in stream) {
+      yield progress;
+    }
+  }
+
+  // ==================== Network Tools (continued) ====================
 
   /// Ping a host and stream results
   Stream<PingResponse> pingHost(PingRequest request) async* {

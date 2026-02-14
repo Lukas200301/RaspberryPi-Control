@@ -10,6 +10,7 @@ A high-performance, real-time monitoring and control application for Raspberry P
 ## ✨ Features
 
 ### 📊 Real-Time Dashboard
+
 - **Live System Stats**: CPU, RAM, Temperature, Uptime updated every 500ms
 - **CPU Charts**: Smooth vector graphs showing 60-second history
 - **Memory Visualization**: Detailed breakdown of Used/Free/Cached/Swap
@@ -17,34 +18,60 @@ A high-performance, real-time monitoring and control application for Raspberry P
 - **Top Processes**: View and manage resource-intensive processes
 
 ### 📁 File Explorer (SFTP)
+
 - Browse remote directories with intuitive navigation
 - Upload/Download files with progress tracking
 - File previews with syntax highlighting
 - Rename, delete, create folders, change permissions
 
 ### 💻 Terminal Emulator
+
 - Full `xterm-256color` compatible SSH shell
 - Custom accessory keyboard (Esc, Tab, Ctrl, Alt, Arrows)
 - Command history support
 
 ### ⚙️ Service Manager
+
 - List all systemd services (Active/Inactive/Failed)
 - Start, Stop, Restart, Enable, Disable services
 - Search and filter by service name
 
 ### 📜 System Logs
+
 - Real-time log streaming via journalctl
 - Filter by log level (Error/Warning/Info)
 - Service-specific filtering
 
 ### 🔌 Connection Manager
+
 - Save multiple Pi connections securely
 - Favorite connections for quick access
 - Auto-reconnect with configurable retry logic
 
+### 🐳 Docker Manager
+
+- View all Docker containers with real-time status
+- Start, Stop, Restart containers with one tap
+- Live container log streaming with auto-scroll
+- Container details: image, ports, creation date
+
+### 🔄 System Update Center
+
+- System information overview (OS, kernel, architecture, uptime)
+- Check for available package updates
+- Per-package or bulk system upgrade
+- Real-time streaming upgrade progress log
+
+### 📦 Package Manager
+
+- Search, install, remove, and update packages
+- Detailed package information and dependencies
+- Streaming operation logs
+
 ## 🎨 Design
 
 **Cyberpunk / Sci-Fi Glassmorphism Theme**
+
 - Pure AMOLED Black background (#000000) for battery efficiency
 - Frosted glass cards with blur effects
 - Electric Indigo (#6366F1) and Teal (#14B8A6) accents
@@ -54,12 +81,12 @@ A high-performance, real-time monitoring and control application for Raspberry P
 
 ### Technology Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Mobile App** | Flutter 3.10+ | Cross-platform UI (iOS/Android) |
-| **Backend Agent** | Go 1.25+ | Zero-dependency binary for Pi |
-| **Communication** | gRPC + Protobuf | High-speed binary streaming |
-| **Security** | SSH Tunnel | All traffic encrypted via SSH |
+| Component         | Technology      | Purpose                         |
+| ----------------- | --------------- | ------------------------------- |
+| **Mobile App**    | Flutter 3.10+   | Cross-platform UI (iOS/Android) |
+| **Backend Agent** | Go 1.25+        | Zero-dependency binary for Pi   |
+| **Communication** | gRPC + Protobuf | High-speed binary streaming     |
+| **Security**      | SSH Tunnel      | All traffic encrypted via SSH   |
 
 ### How It Works
 
@@ -74,11 +101,13 @@ A high-performance, real-time monitoring and control application for Raspberry P
 ### Prerequisites
 
 1. **Flutter SDK** 3.10 or higher
+
    ```bash
    flutter doctor
    ```
 
 2. **Go** 1.25 or higher (for building agent)
+
    ```bash
    go version
    ```
@@ -91,46 +120,26 @@ A high-performance, real-time monitoring and control application for Raspberry P
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
-   git clone https://github.com/yourusername/raspberrypi-control.git
-   cd raspberrypi-control
+   git clone https://github.com/Lukas200301/RaspberryPi-Control.git
+   cd RaspberryPi-Control
    ```
 
-2. **Generate Protobuf files**
-   ```bash
-   # Install Dart protobuf plugin
-   dart pub global activate protoc_plugin
+2. **Build everything** (generates protobuf code + compiles agent binaries)
 
-   # Generate code
-   # Windows:
-   generate_protos.bat
-
-   # Linux/macOS:
-   chmod +x generate_protos.sh
-   ./generate_protos.sh
+   ```powershell
+   .\build_all.ps1
    ```
 
-3. **Build the Go agent**
-   ```bash
-   cd agent
+3. **Run the app**
 
-   # Windows:
-   build.bat
-
-   # Linux/macOS:
-   chmod +x build.sh
-   ./build.sh
-   ```
-
-4. **Install Flutter dependencies**
    ```bash
    flutter pub get
-   ```
-
-5. **Run the app**
-   ```bash
    flutter run
    ```
+
+See [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for manual build steps and troubleshooting.
 
 ## 📱 Usage
 
@@ -166,7 +175,7 @@ raspberrypi-control/
 ├── agent/                  # Go agent source
 │   ├── main.go            # Entry point
 │   ├── server.go          # gRPC server implementation
-│   ├── build.sh           # Cross-compilation script
+│   ├── docker.go          # Docker service implementation
 │   └── proto/             # Generated Go protobuf code
 │
 ├── lib/                   # Flutter app source
@@ -185,12 +194,14 @@ raspberrypi-control/
 ├── assets/
 │   └── bin/               # Compiled Go agent binaries
 │
+├── build_all.ps1          # Unified build script (proto + agent)
 └── README.md
 ```
 
 ### Building for Production
 
 #### Android
+
 ```bash
 flutter build apk --release
 # or
@@ -198,6 +209,7 @@ flutter build appbundle --release
 ```
 
 #### iOS
+
 ```bash
 flutter build ios --release
 ```
@@ -207,12 +219,13 @@ flutter build ios --release
 The Go agent runs on the Raspberry Pi and provides system information via gRPC.
 
 **Rebuild agent after changes:**
-```bash
-cd agent
-./build.sh  # Creates binaries for all Pi architectures
+
+```powershell
+.\build_all.ps1
 ```
 
 **Test agent locally:**
+
 ```bash
 cd agent
 go run . --version
@@ -237,6 +250,7 @@ go run . --port 50051
 ### SSH Connection Failed
 
 **Possible causes**:
+
 1. SSH not enabled on Pi: `sudo raspi-config` → Interface Options → SSH
 2. Wrong credentials: Double-check username/password
 3. Firewall blocking: Ensure port 22 is accessible
@@ -268,6 +282,14 @@ See [protos/pi_control.proto](protos/pi_control.proto) for the complete gRPC API
 - `StreamLogs`: Real-time log streaming
 - `GetDiskInfo`: Disk usage information
 - `GetNetworkInfo`: Network interface details
+- `GetSystemUpdateStatus`: OS info, kernel, upgradable packages
+- `StreamSystemUpgrade`: Stream apt update + upgrade progress
+
+### Docker Service
+
+- `ListContainers`: List all Docker containers
+- `StartContainer` / `StopContainer` / `RestartContainer`: Container lifecycle
+- `GetContainerLogs`: Stream container logs in real-time
 
 ## 🤝 Contributing
 

@@ -1,6 +1,6 @@
 class AppConstants {
   // Agent Configuration
-  static const String agentVersion = '3.2.0';
+  static const String agentVersion = '3.3.0';
   static const int agentPort = 50051;
   static const String agentInstallPath = '/opt/pi-control/agent';
 

@@ -15,22 +15,26 @@ Before you begin, ensure you have:
 Choose your operating system:
 
 **Windows (using Chocolatey):**
+
 ```powershell
 choco install protobuf
 ```
 
 **macOS:**
+
 ```bash
 brew install protobuf
 ```
 
 **Linux (Ubuntu/Debian):**
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y protobuf-compiler
 ```
 
 Verify installation:
+
 ```bash
 protoc --version
 ```
@@ -48,14 +52,11 @@ dart pub global activate protoc_plugin
 
 # Generate Dart code
 # Windows:
-generate_protos.bat
-
-# Linux/macOS:
-chmod +x generate_protos.sh
-./generate_protos.sh
+build_all.ps1
 ```
 
 You should see files created in `lib/generated/`:
+
 - `pi_control.pb.dart`
 - `pi_control.pbenum.dart`
 - `pi_control.pbgrpc.dart`
@@ -70,9 +71,6 @@ cd agent
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
-# Generate Go code
-chmod +x generate_proto.sh
-./generate_proto.sh
 ```
 
 You should see a `proto/` directory created with generated Go files.
@@ -91,6 +89,7 @@ chmod +x build.sh
 ```
 
 This creates binaries in `assets/bin/`:
+
 - `pi_agent_arm6` (Pi Zero)
 - `pi_agent_arm7` (Pi 2/3)
 - `pi_agent_arm64` (Pi 3/4/5 64-bit)
@@ -111,6 +110,7 @@ flutter run
 ```
 
 Or use your IDE:
+
 - **VS Code**: Press F5
 - **Android Studio**: Click Run
 
@@ -134,23 +134,30 @@ Or use your IDE:
 ## Troubleshooting
 
 ### "protoc: command not found"
+
 → Install protoc (see Step 1)
 
 ### "Undefined name 'LiveStats'"
+
 → Generate protobuf files (see Step 2)
 
 ### "No such file: assets/bin/pi_agent_arm64"
+
 → Build Go agent (see Step 3)
 
 ### "SSH Connection Failed"
+
 → Check:
+
 - Pi is powered on and connected to network
 - SSH is enabled: `sudo raspi-config` → Interface → SSH
 - Correct IP address: run `hostname -I` on Pi
 - Correct username/password
 
 ### "Agent Installation Failed"
+
 → Check:
+
 - SSH user has write permissions to home directory
 - Pi has internet connection (for first-time dependencies)
 
@@ -173,8 +180,7 @@ Once connected, explore:
 
 ## Need Help?
 
-- Check [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md) for detailed setup
-- Check [PROJECT_STATUS.md](PROJECT_STATUS.md) for implementation status
+- Check [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md) for detailed setup
 - Check [README.md](README.md) for full documentation
 
 ---

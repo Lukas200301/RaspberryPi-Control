@@ -3533,6 +3533,526 @@ func (x *FileDeleteResponse) GetError() string {
 	return ""
 }
 
+type DockerFilter struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	All           bool                   `protobuf:"varint,1,opt,name=all,proto3" json:"all,omitempty"` // Show all containers (default shows just running)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DockerFilter) Reset() {
+	*x = DockerFilter{}
+	mi := &file_pi_control_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DockerFilter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DockerFilter) ProtoMessage() {}
+
+func (x *DockerFilter) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DockerFilter.ProtoReflect.Descriptor instead.
+func (*DockerFilter) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *DockerFilter) GetAll() bool {
+	if x != nil {
+		return x.All
+	}
+	return false
+}
+
+type ContainerId struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContainerId) Reset() {
+	*x = ContainerId{}
+	mi := &file_pi_control_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerId) ProtoMessage() {}
+
+func (x *ContainerId) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContainerId.ProtoReflect.Descriptor instead.
+func (*ContainerId) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *ContainerId) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ContainerList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Containers    []*ContainerInfo       `protobuf:"bytes,1,rep,name=containers,proto3" json:"containers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContainerList) Reset() {
+	*x = ContainerList{}
+	mi := &file_pi_control_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerList) ProtoMessage() {}
+
+func (x *ContainerList) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContainerList.ProtoReflect.Descriptor instead.
+func (*ContainerList) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *ContainerList) GetContainers() []*ContainerInfo {
+	if x != nil {
+		return x.Containers
+	}
+	return nil
+}
+
+type ContainerInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Names         []string               `protobuf:"bytes,2,rep,name=names,proto3" json:"names,omitempty"`
+	Image         string                 `protobuf:"bytes,3,opt,name=image,proto3" json:"image,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`   // created, restarting, running, removing, paused, exited, dead
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"` // Human readable status
+	Created       int64                  `protobuf:"varint,6,opt,name=created,proto3" json:"created,omitempty"`
+	Ports         []string               `protobuf:"bytes,7,rep,name=ports,proto3" json:"ports,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContainerInfo) Reset() {
+	*x = ContainerInfo{}
+	mi := &file_pi_control_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContainerInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContainerInfo) ProtoMessage() {}
+
+func (x *ContainerInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContainerInfo.ProtoReflect.Descriptor instead.
+func (*ContainerInfo) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ContainerInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ContainerInfo) GetNames() []string {
+	if x != nil {
+		return x.Names
+	}
+	return nil
+}
+
+func (x *ContainerInfo) GetImage() string {
+	if x != nil {
+		return x.Image
+	}
+	return ""
+}
+
+func (x *ContainerInfo) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ContainerInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ContainerInfo) GetCreated() int64 {
+	if x != nil {
+		return x.Created
+	}
+	return 0
+}
+
+func (x *ContainerInfo) GetPorts() []string {
+	if x != nil {
+		return x.Ports
+	}
+	return nil
+}
+
+type LogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ContainerId   string                 `protobuf:"bytes,1,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	Follow        bool                   `protobuf:"varint,2,opt,name=follow,proto3" json:"follow,omitempty"` // Stream logs
+	Tail          int32                  `protobuf:"varint,3,opt,name=tail,proto3" json:"tail,omitempty"`     // Number of lines to show from the end
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogRequest) Reset() {
+	*x = LogRequest{}
+	mi := &file_pi_control_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogRequest) ProtoMessage() {}
+
+func (x *LogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
+func (*LogRequest) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *LogRequest) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
+}
+
+func (x *LogRequest) GetFollow() bool {
+	if x != nil {
+		return x.Follow
+	}
+	return false
+}
+
+func (x *LogRequest) GetTail() int32 {
+	if x != nil {
+		return x.Tail
+	}
+	return 0
+}
+
+type SystemUpdateStatus struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	OsName             string                 `protobuf:"bytes,1,opt,name=os_name,json=osName,proto3" json:"os_name,omitempty"`                             // e.g. "Debian GNU/Linux 12 (bookworm)"
+	KernelVersion      string                 `protobuf:"bytes,2,opt,name=kernel_version,json=kernelVersion,proto3" json:"kernel_version,omitempty"`        // e.g. "6.1.0-rpi7-rpi-v8"
+	Architecture       string                 `protobuf:"bytes,3,opt,name=architecture,proto3" json:"architecture,omitempty"`                               // e.g. "aarch64"
+	UpgradableCount    int32                  `protobuf:"varint,4,opt,name=upgradable_count,json=upgradableCount,proto3" json:"upgradable_count,omitempty"` // Number of packages that can be upgraded
+	UpgradablePackages []*UpgradablePackage   `protobuf:"bytes,5,rep,name=upgradable_packages,json=upgradablePackages,proto3" json:"upgradable_packages,omitempty"`
+	LastUpdate         string                 `protobuf:"bytes,6,opt,name=last_update,json=lastUpdate,proto3" json:"last_update,omitempty"` // Timestamp of last apt update
+	Uptime             string                 `protobuf:"bytes,7,opt,name=uptime,proto3" json:"uptime,omitempty"`                           // System uptime string
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SystemUpdateStatus) Reset() {
+	*x = SystemUpdateStatus{}
+	mi := &file_pi_control_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SystemUpdateStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SystemUpdateStatus) ProtoMessage() {}
+
+func (x *SystemUpdateStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SystemUpdateStatus.ProtoReflect.Descriptor instead.
+func (*SystemUpdateStatus) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *SystemUpdateStatus) GetOsName() string {
+	if x != nil {
+		return x.OsName
+	}
+	return ""
+}
+
+func (x *SystemUpdateStatus) GetKernelVersion() string {
+	if x != nil {
+		return x.KernelVersion
+	}
+	return ""
+}
+
+func (x *SystemUpdateStatus) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+func (x *SystemUpdateStatus) GetUpgradableCount() int32 {
+	if x != nil {
+		return x.UpgradableCount
+	}
+	return 0
+}
+
+func (x *SystemUpdateStatus) GetUpgradablePackages() []*UpgradablePackage {
+	if x != nil {
+		return x.UpgradablePackages
+	}
+	return nil
+}
+
+func (x *SystemUpdateStatus) GetLastUpdate() string {
+	if x != nil {
+		return x.LastUpdate
+	}
+	return ""
+}
+
+func (x *SystemUpdateStatus) GetUptime() string {
+	if x != nil {
+		return x.Uptime
+	}
+	return ""
+}
+
+type UpgradablePackage struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	CurrentVersion string                 `protobuf:"bytes,2,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
+	NewVersion     string                 `protobuf:"bytes,3,opt,name=new_version,json=newVersion,proto3" json:"new_version,omitempty"`
+	Architecture   string                 `protobuf:"bytes,4,opt,name=architecture,proto3" json:"architecture,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpgradablePackage) Reset() {
+	*x = UpgradablePackage{}
+	mi := &file_pi_control_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpgradablePackage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpgradablePackage) ProtoMessage() {}
+
+func (x *UpgradablePackage) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpgradablePackage.ProtoReflect.Descriptor instead.
+func (*UpgradablePackage) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *UpgradablePackage) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpgradablePackage) GetCurrentVersion() string {
+	if x != nil {
+		return x.CurrentVersion
+	}
+	return ""
+}
+
+func (x *UpgradablePackage) GetNewVersion() string {
+	if x != nil {
+		return x.NewVersion
+	}
+	return ""
+}
+
+func (x *UpgradablePackage) GetArchitecture() string {
+	if x != nil {
+		return x.Architecture
+	}
+	return ""
+}
+
+type UpgradeProgress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Line          string                 `protobuf:"bytes,1,opt,name=line,proto3" json:"line,omitempty"`                                // Output line from apt
+	Phase         string                 `protobuf:"bytes,2,opt,name=phase,proto3" json:"phase,omitempty"`                              // "update", "upgrade", "done", "error"
+	Percent       int32                  `protobuf:"varint,3,opt,name=percent,proto3" json:"percent,omitempty"`                         // Progress percentage (0-100) if available
+	IsComplete    bool                   `protobuf:"varint,4,opt,name=is_complete,json=isComplete,proto3" json:"is_complete,omitempty"` // Whether the entire operation is done
+	Success       bool                   `protobuf:"varint,5,opt,name=success,proto3" json:"success,omitempty"`                         // Whether it completed successfully
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpgradeProgress) Reset() {
+	*x = UpgradeProgress{}
+	mi := &file_pi_control_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpgradeProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpgradeProgress) ProtoMessage() {}
+
+func (x *UpgradeProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_pi_control_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpgradeProgress.ProtoReflect.Descriptor instead.
+func (*UpgradeProgress) Descriptor() ([]byte, []int) {
+	return file_pi_control_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *UpgradeProgress) GetLine() string {
+	if x != nil {
+		return x.Line
+	}
+	return ""
+}
+
+func (x *UpgradeProgress) GetPhase() string {
+	if x != nil {
+		return x.Phase
+	}
+	return ""
+}
+
+func (x *UpgradeProgress) GetPercent() int32 {
+	if x != nil {
+		return x.Percent
+	}
+	return 0
+}
+
+func (x *UpgradeProgress) GetIsComplete() bool {
+	if x != nil {
+		return x.IsComplete
+	}
+	return false
+}
+
+func (x *UpgradeProgress) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_pi_control_proto protoreflect.FileDescriptor
 
 const file_pi_control_proto_rawDesc = "" +
@@ -3852,7 +4372,50 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x12FileDeleteResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error*V\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\" \n" +
+	"\fDockerFilter\x12\x10\n" +
+	"\x03all\x18\x01 \x01(\bR\x03all\"\x1d\n" +
+	"\vContainerId\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"I\n" +
+	"\rContainerList\x128\n" +
+	"\n" +
+	"containers\x18\x01 \x03(\v2\x18.picontrol.ContainerInfoR\n" +
+	"containers\"\xa9\x01\n" +
+	"\rContainerInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05names\x18\x02 \x03(\tR\x05names\x12\x14\n" +
+	"\x05image\x18\x03 \x01(\tR\x05image\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x18\n" +
+	"\acreated\x18\x06 \x01(\x03R\acreated\x12\x14\n" +
+	"\x05ports\x18\a \x03(\tR\x05ports\"[\n" +
+	"\n" +
+	"LogRequest\x12!\n" +
+	"\fcontainer_id\x18\x01 \x01(\tR\vcontainerId\x12\x16\n" +
+	"\x06follow\x18\x02 \x01(\bR\x06follow\x12\x12\n" +
+	"\x04tail\x18\x03 \x01(\x05R\x04tail\"\xab\x02\n" +
+	"\x12SystemUpdateStatus\x12\x17\n" +
+	"\aos_name\x18\x01 \x01(\tR\x06osName\x12%\n" +
+	"\x0ekernel_version\x18\x02 \x01(\tR\rkernelVersion\x12\"\n" +
+	"\farchitecture\x18\x03 \x01(\tR\farchitecture\x12)\n" +
+	"\x10upgradable_count\x18\x04 \x01(\x05R\x0fupgradableCount\x12M\n" +
+	"\x13upgradable_packages\x18\x05 \x03(\v2\x1c.picontrol.UpgradablePackageR\x12upgradablePackages\x12\x1f\n" +
+	"\vlast_update\x18\x06 \x01(\tR\n" +
+	"lastUpdate\x12\x16\n" +
+	"\x06uptime\x18\a \x01(\tR\x06uptime\"\x95\x01\n" +
+	"\x11UpgradablePackage\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12'\n" +
+	"\x0fcurrent_version\x18\x02 \x01(\tR\x0ecurrentVersion\x12\x1f\n" +
+	"\vnew_version\x18\x03 \x01(\tR\n" +
+	"newVersion\x12\"\n" +
+	"\farchitecture\x18\x04 \x01(\tR\farchitecture\"\x90\x01\n" +
+	"\x0fUpgradeProgress\x12\x12\n" +
+	"\x04line\x18\x01 \x01(\tR\x04line\x12\x14\n" +
+	"\x05phase\x18\x02 \x01(\tR\x05phase\x12\x18\n" +
+	"\apercent\x18\x03 \x01(\x05R\apercent\x12\x1f\n" +
+	"\vis_complete\x18\x04 \x01(\bR\n" +
+	"isComplete\x12\x18\n" +
+	"\asuccess\x18\x05 \x01(\bR\asuccess*V\n" +
 	"\rServiceAction\x12\t\n" +
 	"\x05START\x10\x00\x12\b\n" +
 	"\x04STOP\x10\x01\x12\v\n" +
@@ -3861,7 +4424,7 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x06ENABLE\x10\x03\x12\v\n" +
 	"\aDISABLE\x10\x04\x12\n" +
 	"\n" +
-	"\x06RELOAD\x10\x052\xf6\x0e\n" +
+	"\x06RELOAD\x10\x052\x87\x10\n" +
 	"\rSystemMonitor\x127\n" +
 	"\vStreamStats\x12\x10.picontrol.Empty\x1a\x14.picontrol.LiveStats0\x01\x129\n" +
 	"\rListProcesses\x12\x10.picontrol.Empty\x1a\x16.picontrol.ProcessList\x12<\n" +
@@ -3895,7 +4458,15 @@ const file_pi_control_proto_rawDesc = "" +
 	"UploadFile\x12\x14.picontrol.FileChunk\x1a\x1d.picontrol.FileUploadResponse(\x01\x12F\n" +
 	"\fDownloadFile\x12\x1e.picontrol.FileDownloadRequest\x1a\x14.picontrol.FileChunk0\x01\x12I\n" +
 	"\n" +
-	"DeleteFile\x12\x1c.picontrol.FileDeleteRequest\x1a\x1d.picontrol.FileDeleteResponseB\x10Z\x0epi_agent/protob\x06proto3"
+	"DeleteFile\x12\x1c.picontrol.FileDeleteRequest\x1a\x1d.picontrol.FileDeleteResponse\x12H\n" +
+	"\x15GetSystemUpdateStatus\x12\x10.picontrol.Empty\x1a\x1d.picontrol.SystemUpdateStatus\x12E\n" +
+	"\x13StreamSystemUpgrade\x12\x10.picontrol.Empty\x1a\x1a.picontrol.UpgradeProgress0\x012\xe0\x02\n" +
+	"\rDockerService\x12C\n" +
+	"\x0eListContainers\x12\x17.picontrol.DockerFilter\x1a\x18.picontrol.ContainerList\x12A\n" +
+	"\x0eStartContainer\x12\x16.picontrol.ContainerId\x1a\x17.picontrol.ActionStatus\x12@\n" +
+	"\rStopContainer\x12\x16.picontrol.ContainerId\x1a\x17.picontrol.ActionStatus\x12C\n" +
+	"\x10RestartContainer\x12\x16.picontrol.ContainerId\x1a\x17.picontrol.ActionStatus\x12@\n" +
+	"\x10GetContainerLogs\x12\x15.picontrol.LogRequest\x1a\x13.picontrol.LogEntry0\x01B\x10Z\x0epi_agent/protob\x06proto3"
 
 var (
 	file_pi_control_proto_rawDescOnce sync.Once
@@ -3910,7 +4481,7 @@ func file_pi_control_proto_rawDescGZIP() []byte {
 }
 
 var file_pi_control_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
+var file_pi_control_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_pi_control_proto_goTypes = []any{
 	(ServiceAction)(0),            // 0: picontrol.ServiceAction
 	(*Empty)(nil),                 // 1: picontrol.Empty
@@ -3959,6 +4530,14 @@ var file_pi_control_proto_goTypes = []any{
 	(*FileDownloadRequest)(nil),   // 44: picontrol.FileDownloadRequest
 	(*FileDeleteRequest)(nil),     // 45: picontrol.FileDeleteRequest
 	(*FileDeleteResponse)(nil),    // 46: picontrol.FileDeleteResponse
+	(*DockerFilter)(nil),          // 47: picontrol.DockerFilter
+	(*ContainerId)(nil),           // 48: picontrol.ContainerId
+	(*ContainerList)(nil),         // 49: picontrol.ContainerList
+	(*ContainerInfo)(nil),         // 50: picontrol.ContainerInfo
+	(*LogRequest)(nil),            // 51: picontrol.LogRequest
+	(*SystemUpdateStatus)(nil),    // 52: picontrol.SystemUpdateStatus
+	(*UpgradablePackage)(nil),     // 53: picontrol.UpgradablePackage
+	(*UpgradeProgress)(nil),       // 54: picontrol.UpgradeProgress
 }
 var file_pi_control_proto_depIdxs = []int32{
 	3,  // 0: picontrol.LiveStats.top_processes:type_name -> picontrol.ProcessInfo
@@ -3973,67 +4552,83 @@ var file_pi_control_proto_depIdxs = []int32{
 	30, // 9: picontrol.PingResponse.statistics:type_name -> picontrol.PingStats
 	35, // 10: picontrol.DNSResponse.records:type_name -> picontrol.DNSRecord
 	39, // 11: picontrol.WifiInfo.available_networks:type_name -> picontrol.WifiNetwork
-	1,  // 12: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
-	1,  // 13: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
-	5,  // 14: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
-	1,  // 15: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
-	8,  // 16: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
-	10, // 17: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
-	1,  // 18: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
-	1,  // 19: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
-	1,  // 20: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
-	18, // 21: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
-	21, // 22: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
-	21, // 23: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
-	21, // 24: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
-	1,  // 25: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
-	1,  // 26: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
-	1,  // 27: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
-	22, // 28: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
-	22, // 29: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
-	21, // 30: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
-	28, // 31: picontrol.SystemMonitor.PingHost:input_type -> picontrol.PingRequest
-	31, // 32: picontrol.SystemMonitor.ScanPorts:input_type -> picontrol.PortScanRequest
-	33, // 33: picontrol.SystemMonitor.DNSLookup:input_type -> picontrol.DNSRequest
-	36, // 34: picontrol.SystemMonitor.Traceroute:input_type -> picontrol.TracerouteRequest
-	1,  // 35: picontrol.SystemMonitor.GetWifiInfo:input_type -> picontrol.Empty
-	40, // 36: picontrol.SystemMonitor.TestNetworkSpeed:input_type -> picontrol.SpeedTestRequest
-	42, // 37: picontrol.SystemMonitor.UploadFile:input_type -> picontrol.FileChunk
-	44, // 38: picontrol.SystemMonitor.DownloadFile:input_type -> picontrol.FileDownloadRequest
-	45, // 39: picontrol.SystemMonitor.DeleteFile:input_type -> picontrol.FileDeleteRequest
-	2,  // 40: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
-	4,  // 41: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
-	9,  // 42: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
-	7,  // 43: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
-	9,  // 44: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
-	11, // 45: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
-	12, // 46: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
-	14, // 47: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
-	16, // 48: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
-	20, // 49: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
-	9,  // 50: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
-	9,  // 51: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
-	9,  // 52: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
-	9,  // 53: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
-	9,  // 54: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
-	27, // 55: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
-	23, // 56: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
-	24, // 57: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
-	25, // 58: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
-	29, // 59: picontrol.SystemMonitor.PingHost:output_type -> picontrol.PingResponse
-	32, // 60: picontrol.SystemMonitor.ScanPorts:output_type -> picontrol.PortScanResponse
-	34, // 61: picontrol.SystemMonitor.DNSLookup:output_type -> picontrol.DNSResponse
-	37, // 62: picontrol.SystemMonitor.Traceroute:output_type -> picontrol.TracerouteResponse
-	38, // 63: picontrol.SystemMonitor.GetWifiInfo:output_type -> picontrol.WifiInfo
-	41, // 64: picontrol.SystemMonitor.TestNetworkSpeed:output_type -> picontrol.SpeedTestResponse
-	43, // 65: picontrol.SystemMonitor.UploadFile:output_type -> picontrol.FileUploadResponse
-	42, // 66: picontrol.SystemMonitor.DownloadFile:output_type -> picontrol.FileChunk
-	46, // 67: picontrol.SystemMonitor.DeleteFile:output_type -> picontrol.FileDeleteResponse
-	40, // [40:68] is the sub-list for method output_type
-	12, // [12:40] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	50, // 12: picontrol.ContainerList.containers:type_name -> picontrol.ContainerInfo
+	53, // 13: picontrol.SystemUpdateStatus.upgradable_packages:type_name -> picontrol.UpgradablePackage
+	1,  // 14: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
+	1,  // 15: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
+	5,  // 16: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
+	1,  // 17: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
+	8,  // 18: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
+	10, // 19: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
+	1,  // 20: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
+	1,  // 21: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
+	1,  // 22: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
+	18, // 23: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
+	21, // 24: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
+	21, // 25: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
+	21, // 26: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
+	1,  // 27: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
+	1,  // 28: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
+	1,  // 29: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
+	22, // 30: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
+	22, // 31: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
+	21, // 32: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
+	28, // 33: picontrol.SystemMonitor.PingHost:input_type -> picontrol.PingRequest
+	31, // 34: picontrol.SystemMonitor.ScanPorts:input_type -> picontrol.PortScanRequest
+	33, // 35: picontrol.SystemMonitor.DNSLookup:input_type -> picontrol.DNSRequest
+	36, // 36: picontrol.SystemMonitor.Traceroute:input_type -> picontrol.TracerouteRequest
+	1,  // 37: picontrol.SystemMonitor.GetWifiInfo:input_type -> picontrol.Empty
+	40, // 38: picontrol.SystemMonitor.TestNetworkSpeed:input_type -> picontrol.SpeedTestRequest
+	42, // 39: picontrol.SystemMonitor.UploadFile:input_type -> picontrol.FileChunk
+	44, // 40: picontrol.SystemMonitor.DownloadFile:input_type -> picontrol.FileDownloadRequest
+	45, // 41: picontrol.SystemMonitor.DeleteFile:input_type -> picontrol.FileDeleteRequest
+	1,  // 42: picontrol.SystemMonitor.GetSystemUpdateStatus:input_type -> picontrol.Empty
+	1,  // 43: picontrol.SystemMonitor.StreamSystemUpgrade:input_type -> picontrol.Empty
+	47, // 44: picontrol.DockerService.ListContainers:input_type -> picontrol.DockerFilter
+	48, // 45: picontrol.DockerService.StartContainer:input_type -> picontrol.ContainerId
+	48, // 46: picontrol.DockerService.StopContainer:input_type -> picontrol.ContainerId
+	48, // 47: picontrol.DockerService.RestartContainer:input_type -> picontrol.ContainerId
+	51, // 48: picontrol.DockerService.GetContainerLogs:input_type -> picontrol.LogRequest
+	2,  // 49: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
+	4,  // 50: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
+	9,  // 51: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
+	7,  // 52: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
+	9,  // 53: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
+	11, // 54: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
+	12, // 55: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
+	14, // 56: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
+	16, // 57: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
+	20, // 58: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
+	9,  // 59: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
+	9,  // 60: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
+	9,  // 61: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
+	9,  // 62: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
+	9,  // 63: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
+	27, // 64: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
+	23, // 65: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
+	24, // 66: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
+	25, // 67: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
+	29, // 68: picontrol.SystemMonitor.PingHost:output_type -> picontrol.PingResponse
+	32, // 69: picontrol.SystemMonitor.ScanPorts:output_type -> picontrol.PortScanResponse
+	34, // 70: picontrol.SystemMonitor.DNSLookup:output_type -> picontrol.DNSResponse
+	37, // 71: picontrol.SystemMonitor.Traceroute:output_type -> picontrol.TracerouteResponse
+	38, // 72: picontrol.SystemMonitor.GetWifiInfo:output_type -> picontrol.WifiInfo
+	41, // 73: picontrol.SystemMonitor.TestNetworkSpeed:output_type -> picontrol.SpeedTestResponse
+	43, // 74: picontrol.SystemMonitor.UploadFile:output_type -> picontrol.FileUploadResponse
+	42, // 75: picontrol.SystemMonitor.DownloadFile:output_type -> picontrol.FileChunk
+	46, // 76: picontrol.SystemMonitor.DeleteFile:output_type -> picontrol.FileDeleteResponse
+	52, // 77: picontrol.SystemMonitor.GetSystemUpdateStatus:output_type -> picontrol.SystemUpdateStatus
+	54, // 78: picontrol.SystemMonitor.StreamSystemUpgrade:output_type -> picontrol.UpgradeProgress
+	49, // 79: picontrol.DockerService.ListContainers:output_type -> picontrol.ContainerList
+	9,  // 80: picontrol.DockerService.StartContainer:output_type -> picontrol.ActionStatus
+	9,  // 81: picontrol.DockerService.StopContainer:output_type -> picontrol.ActionStatus
+	9,  // 82: picontrol.DockerService.RestartContainer:output_type -> picontrol.ActionStatus
+	11, // 83: picontrol.DockerService.GetContainerLogs:output_type -> picontrol.LogEntry
+	49, // [49:84] is the sub-list for method output_type
+	14, // [14:49] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_pi_control_proto_init() }
@@ -4047,9 +4642,9 @@ func file_pi_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pi_control_proto_rawDesc), len(file_pi_control_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   46,
+			NumMessages:   54,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_pi_control_proto_goTypes,
 		DependencyIndexes: file_pi_control_proto_depIdxs,

@@ -275,6 +275,25 @@ class SystemMonitorClient extends $grpc.Client {
     return $createUnaryCall(_$deleteFile, request, options: options);
   }
 
+  /// System Updates
+  /// Get system update status (OS info, kernel, upgradable packages)
+  $grpc.ResponseFuture<$0.SystemUpdateStatus> getSystemUpdateStatus(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getSystemUpdateStatus, request, options: options);
+  }
+
+  /// Stream system upgrade progress (apt update + apt upgrade)
+  $grpc.ResponseStream<$0.UpgradeProgress> streamSystemUpgrade(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$streamSystemUpgrade, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
   // method descriptors
 
   static final _$streamStats = $grpc.ClientMethod<$0.Empty, $0.LiveStats>(
@@ -407,6 +426,16 @@ class SystemMonitorClient extends $grpc.Client {
           '/picontrol.SystemMonitor/DeleteFile',
           ($0.FileDeleteRequest value) => value.writeToBuffer(),
           $0.FileDeleteResponse.fromBuffer);
+  static final _$getSystemUpdateStatus =
+      $grpc.ClientMethod<$0.Empty, $0.SystemUpdateStatus>(
+          '/picontrol.SystemMonitor/GetSystemUpdateStatus',
+          ($0.Empty value) => value.writeToBuffer(),
+          $0.SystemUpdateStatus.fromBuffer);
+  static final _$streamSystemUpgrade =
+      $grpc.ClientMethod<$0.Empty, $0.UpgradeProgress>(
+          '/picontrol.SystemMonitor/StreamSystemUpgrade',
+          ($0.Empty value) => value.writeToBuffer(),
+          $0.UpgradeProgress.fromBuffer);
 }
 
 @$pb.GrpcServiceName('picontrol.SystemMonitor')
@@ -614,6 +643,20 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.FileDeleteRequest.fromBuffer(value),
         ($0.FileDeleteResponse value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.SystemUpdateStatus>(
+        'GetSystemUpdateStatus',
+        getSystemUpdateStatus_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.SystemUpdateStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.UpgradeProgress>(
+        'StreamSystemUpgrade',
+        streamSystemUpgrade_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.UpgradeProgress value) => value.writeToBuffer()));
   }
 
   $async.Stream<$0.LiveStats> streamStats_Pre(
@@ -838,4 +881,186 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
 
   $async.Future<$0.FileDeleteResponse> deleteFile(
       $grpc.ServiceCall call, $0.FileDeleteRequest request);
+
+  $async.Future<$0.SystemUpdateStatus> getSystemUpdateStatus_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getSystemUpdateStatus($call, await $request);
+  }
+
+  $async.Future<$0.SystemUpdateStatus> getSystemUpdateStatus(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Stream<$0.UpgradeProgress> streamSystemUpgrade_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async* {
+    yield* streamSystemUpgrade($call, await $request);
+  }
+
+  $async.Stream<$0.UpgradeProgress> streamSystemUpgrade(
+      $grpc.ServiceCall call, $0.Empty request);
+}
+
+@$pb.GrpcServiceName('picontrol.DockerService')
+class DockerServiceClient extends $grpc.Client {
+  /// The hostname for this service.
+  static const $core.String defaultHost = '';
+
+  /// OAuth scopes needed for the client.
+  static const $core.List<$core.String> oauthScopes = [
+    '',
+  ];
+
+  DockerServiceClient(super.channel, {super.options, super.interceptors});
+
+  /// List containers
+  $grpc.ResponseFuture<$0.ContainerList> listContainers(
+    $0.DockerFilter request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listContainers, request, options: options);
+  }
+
+  /// Start a container
+  $grpc.ResponseFuture<$0.ActionStatus> startContainer(
+    $0.ContainerId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$startContainer, request, options: options);
+  }
+
+  /// Stop a container
+  $grpc.ResponseFuture<$0.ActionStatus> stopContainer(
+    $0.ContainerId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$stopContainer, request, options: options);
+  }
+
+  /// Restart a container
+  $grpc.ResponseFuture<$0.ActionStatus> restartContainer(
+    $0.ContainerId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$restartContainer, request, options: options);
+  }
+
+  /// Get container logs
+  $grpc.ResponseStream<$0.LogEntry> getContainerLogs(
+    $0.LogRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$getContainerLogs, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  // method descriptors
+
+  static final _$listContainers =
+      $grpc.ClientMethod<$0.DockerFilter, $0.ContainerList>(
+          '/picontrol.DockerService/ListContainers',
+          ($0.DockerFilter value) => value.writeToBuffer(),
+          $0.ContainerList.fromBuffer);
+  static final _$startContainer =
+      $grpc.ClientMethod<$0.ContainerId, $0.ActionStatus>(
+          '/picontrol.DockerService/StartContainer',
+          ($0.ContainerId value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$stopContainer =
+      $grpc.ClientMethod<$0.ContainerId, $0.ActionStatus>(
+          '/picontrol.DockerService/StopContainer',
+          ($0.ContainerId value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$restartContainer =
+      $grpc.ClientMethod<$0.ContainerId, $0.ActionStatus>(
+          '/picontrol.DockerService/RestartContainer',
+          ($0.ContainerId value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$getContainerLogs =
+      $grpc.ClientMethod<$0.LogRequest, $0.LogEntry>(
+          '/picontrol.DockerService/GetContainerLogs',
+          ($0.LogRequest value) => value.writeToBuffer(),
+          $0.LogEntry.fromBuffer);
+}
+
+@$pb.GrpcServiceName('picontrol.DockerService')
+abstract class DockerServiceBase extends $grpc.Service {
+  $core.String get $name => 'picontrol.DockerService';
+
+  DockerServiceBase() {
+    $addMethod($grpc.ServiceMethod<$0.DockerFilter, $0.ContainerList>(
+        'ListContainers',
+        listContainers_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.DockerFilter.fromBuffer(value),
+        ($0.ContainerList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerId, $0.ActionStatus>(
+        'StartContainer',
+        startContainer_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ContainerId.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerId, $0.ActionStatus>(
+        'StopContainer',
+        stopContainer_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ContainerId.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerId, $0.ActionStatus>(
+        'RestartContainer',
+        restartContainer_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ContainerId.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.LogRequest, $0.LogEntry>(
+        'GetContainerLogs',
+        getContainerLogs_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.LogRequest.fromBuffer(value),
+        ($0.LogEntry value) => value.writeToBuffer()));
+  }
+
+  $async.Future<$0.ContainerList> listContainers_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.DockerFilter> $request) async {
+    return listContainers($call, await $request);
+  }
+
+  $async.Future<$0.ContainerList> listContainers(
+      $grpc.ServiceCall call, $0.DockerFilter request);
+
+  $async.Future<$0.ActionStatus> startContainer_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ContainerId> $request) async {
+    return startContainer($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> startContainer(
+      $grpc.ServiceCall call, $0.ContainerId request);
+
+  $async.Future<$0.ActionStatus> stopContainer_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ContainerId> $request) async {
+    return stopContainer($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> stopContainer(
+      $grpc.ServiceCall call, $0.ContainerId request);
+
+  $async.Future<$0.ActionStatus> restartContainer_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ContainerId> $request) async {
+    return restartContainer($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> restartContainer(
+      $grpc.ServiceCall call, $0.ContainerId request);
+
+  $async.Stream<$0.LogEntry> getContainerLogs_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.LogRequest> $request) async* {
+    yield* getContainerLogs($call, await $request);
+  }
+
+  $async.Stream<$0.LogEntry> getContainerLogs(
+      $grpc.ServiceCall call, $0.LogRequest request);
 }

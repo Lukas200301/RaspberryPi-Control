@@ -945,3 +945,148 @@ const FileDeleteResponse$json = {
 final $typed_data.Uint8List fileDeleteResponseDescriptor = $convert.base64Decode(
     'ChJGaWxlRGVsZXRlUmVzcG9uc2USGAoHc3VjY2VzcxgBIAEoCFIHc3VjY2VzcxISCgRwYXRoGA'
     'IgASgJUgRwYXRoEhQKBWVycm9yGAMgASgJUgVlcnJvcg==');
+
+@$core.Deprecated('Use dockerFilterDescriptor instead')
+const DockerFilter$json = {
+  '1': 'DockerFilter',
+  '2': [
+    {'1': 'all', '3': 1, '4': 1, '5': 8, '10': 'all'},
+  ],
+};
+
+/// Descriptor for `DockerFilter`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List dockerFilterDescriptor =
+    $convert.base64Decode('CgxEb2NrZXJGaWx0ZXISEAoDYWxsGAEgASgIUgNhbGw=');
+
+@$core.Deprecated('Use containerIdDescriptor instead')
+const ContainerId$json = {
+  '1': 'ContainerId',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `ContainerId`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List containerIdDescriptor =
+    $convert.base64Decode('CgtDb250YWluZXJJZBIOCgJpZBgBIAEoCVICaWQ=');
+
+@$core.Deprecated('Use containerListDescriptor instead')
+const ContainerList$json = {
+  '1': 'ContainerList',
+  '2': [
+    {
+      '1': 'containers',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.picontrol.ContainerInfo',
+      '10': 'containers'
+    },
+  ],
+};
+
+/// Descriptor for `ContainerList`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List containerListDescriptor = $convert.base64Decode(
+    'Cg1Db250YWluZXJMaXN0EjgKCmNvbnRhaW5lcnMYASADKAsyGC5waWNvbnRyb2wuQ29udGFpbm'
+    'VySW5mb1IKY29udGFpbmVycw==');
+
+@$core.Deprecated('Use containerInfoDescriptor instead')
+const ContainerInfo$json = {
+  '1': 'ContainerInfo',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'names', '3': 2, '4': 3, '5': 9, '10': 'names'},
+    {'1': 'image', '3': 3, '4': 1, '5': 9, '10': 'image'},
+    {'1': 'state', '3': 4, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'status', '3': 5, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'created', '3': 6, '4': 1, '5': 3, '10': 'created'},
+    {'1': 'ports', '3': 7, '4': 3, '5': 9, '10': 'ports'},
+  ],
+};
+
+/// Descriptor for `ContainerInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List containerInfoDescriptor = $convert.base64Decode(
+    'Cg1Db250YWluZXJJbmZvEg4KAmlkGAEgASgJUgJpZBIUCgVuYW1lcxgCIAMoCVIFbmFtZXMSFA'
+    'oFaW1hZ2UYAyABKAlSBWltYWdlEhQKBXN0YXRlGAQgASgJUgVzdGF0ZRIWCgZzdGF0dXMYBSAB'
+    'KAlSBnN0YXR1cxIYCgdjcmVhdGVkGAYgASgDUgdjcmVhdGVkEhQKBXBvcnRzGAcgAygJUgVwb3'
+    'J0cw==');
+
+@$core.Deprecated('Use logRequestDescriptor instead')
+const LogRequest$json = {
+  '1': 'LogRequest',
+  '2': [
+    {'1': 'container_id', '3': 1, '4': 1, '5': 9, '10': 'containerId'},
+    {'1': 'follow', '3': 2, '4': 1, '5': 8, '10': 'follow'},
+    {'1': 'tail', '3': 3, '4': 1, '5': 5, '10': 'tail'},
+  ],
+};
+
+/// Descriptor for `LogRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logRequestDescriptor = $convert.base64Decode(
+    'CgpMb2dSZXF1ZXN0EiEKDGNvbnRhaW5lcl9pZBgBIAEoCVILY29udGFpbmVySWQSFgoGZm9sbG'
+    '93GAIgASgIUgZmb2xsb3cSEgoEdGFpbBgDIAEoBVIEdGFpbA==');
+
+@$core.Deprecated('Use systemUpdateStatusDescriptor instead')
+const SystemUpdateStatus$json = {
+  '1': 'SystemUpdateStatus',
+  '2': [
+    {'1': 'os_name', '3': 1, '4': 1, '5': 9, '10': 'osName'},
+    {'1': 'kernel_version', '3': 2, '4': 1, '5': 9, '10': 'kernelVersion'},
+    {'1': 'architecture', '3': 3, '4': 1, '5': 9, '10': 'architecture'},
+    {'1': 'upgradable_count', '3': 4, '4': 1, '5': 5, '10': 'upgradableCount'},
+    {
+      '1': 'upgradable_packages',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.picontrol.UpgradablePackage',
+      '10': 'upgradablePackages'
+    },
+    {'1': 'last_update', '3': 6, '4': 1, '5': 9, '10': 'lastUpdate'},
+    {'1': 'uptime', '3': 7, '4': 1, '5': 9, '10': 'uptime'},
+  ],
+};
+
+/// Descriptor for `SystemUpdateStatus`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List systemUpdateStatusDescriptor = $convert.base64Decode(
+    'ChJTeXN0ZW1VcGRhdGVTdGF0dXMSFwoHb3NfbmFtZRgBIAEoCVIGb3NOYW1lEiUKDmtlcm5lbF'
+    '92ZXJzaW9uGAIgASgJUg1rZXJuZWxWZXJzaW9uEiIKDGFyY2hpdGVjdHVyZRgDIAEoCVIMYXJj'
+    'aGl0ZWN0dXJlEikKEHVwZ3JhZGFibGVfY291bnQYBCABKAVSD3VwZ3JhZGFibGVDb3VudBJNCh'
+    'N1cGdyYWRhYmxlX3BhY2thZ2VzGAUgAygLMhwucGljb250cm9sLlVwZ3JhZGFibGVQYWNrYWdl'
+    'UhJ1cGdyYWRhYmxlUGFja2FnZXMSHwoLbGFzdF91cGRhdGUYBiABKAlSCmxhc3RVcGRhdGUSFg'
+    'oGdXB0aW1lGAcgASgJUgZ1cHRpbWU=');
+
+@$core.Deprecated('Use upgradablePackageDescriptor instead')
+const UpgradablePackage$json = {
+  '1': 'UpgradablePackage',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'current_version', '3': 2, '4': 1, '5': 9, '10': 'currentVersion'},
+    {'1': 'new_version', '3': 3, '4': 1, '5': 9, '10': 'newVersion'},
+    {'1': 'architecture', '3': 4, '4': 1, '5': 9, '10': 'architecture'},
+  ],
+};
+
+/// Descriptor for `UpgradablePackage`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List upgradablePackageDescriptor = $convert.base64Decode(
+    'ChFVcGdyYWRhYmxlUGFja2FnZRISCgRuYW1lGAEgASgJUgRuYW1lEicKD2N1cnJlbnRfdmVyc2'
+    'lvbhgCIAEoCVIOY3VycmVudFZlcnNpb24SHwoLbmV3X3ZlcnNpb24YAyABKAlSCm5ld1ZlcnNp'
+    'b24SIgoMYXJjaGl0ZWN0dXJlGAQgASgJUgxhcmNoaXRlY3R1cmU=');
+
+@$core.Deprecated('Use upgradeProgressDescriptor instead')
+const UpgradeProgress$json = {
+  '1': 'UpgradeProgress',
+  '2': [
+    {'1': 'line', '3': 1, '4': 1, '5': 9, '10': 'line'},
+    {'1': 'phase', '3': 2, '4': 1, '5': 9, '10': 'phase'},
+    {'1': 'percent', '3': 3, '4': 1, '5': 5, '10': 'percent'},
+    {'1': 'is_complete', '3': 4, '4': 1, '5': 8, '10': 'isComplete'},
+    {'1': 'success', '3': 5, '4': 1, '5': 8, '10': 'success'},
+  ],
+};
+
+/// Descriptor for `UpgradeProgress`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List upgradeProgressDescriptor = $convert.base64Decode(
+    'Cg9VcGdyYWRlUHJvZ3Jlc3MSEgoEbGluZRgBIAEoCVIEbGluZRIUCgVwaGFzZRgCIAEoCVIFcG'
+    'hhc2USGAoHcGVyY2VudBgDIAEoBVIHcGVyY2VudBIfCgtpc19jb21wbGV0ZRgEIAEoCFIKaXND'
+    'b21wbGV0ZRIYCgdzdWNjZXNzGAUgASgIUgdzdWNjZXNz');

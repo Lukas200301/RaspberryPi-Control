@@ -92,6 +92,13 @@ service SystemMonitor {
 
   // Delete a file or directory
   rpc DeleteFile (FileDeleteRequest) returns (FileDeleteResponse);
+
+  // System Updates
+  // Get system update status (OS info, kernel, upgradable packages)
+  rpc GetSystemUpdateStatus (Empty) returns (SystemUpdateStatus);
+
+  // Stream system upgrade progress (apt update + apt upgrade)
+  rpc StreamSystemUpgrade (Empty) returns (stream UpgradeProgress);
 }
 
 // ==================== Messages ====================
@@ -529,4 +536,80 @@ message FileDeleteResponse {
   bool success = 1;
   string path = 2; // Path that was deleted
   string error = 3; // Error message if failed
+}
+
+// ==================== Docker Management Services ====================
+
+service DockerService {
+  // List containers
+  rpc ListContainers (DockerFilter) returns (ContainerList);
+
+  // Start a container
+  rpc StartContainer (ContainerId) returns (ActionStatus);
+
+  // Stop a container
+  rpc StopContainer (ContainerId) returns (ActionStatus);
+
+  // Restart a container
+  rpc RestartContainer (ContainerId) returns (ActionStatus);
+
+  // Get container logs
+  rpc GetContainerLogs (LogRequest) returns (stream LogEntry);
+}
+
+// ==================== Docker Messages ====================
+
+message DockerFilter {
+  bool all = 1; // Show all containers (default shows just running)
+}
+
+message ContainerId {
+  string id = 1;
+}
+
+message ContainerList {
+  repeated ContainerInfo containers = 1;
+}
+
+message ContainerInfo {
+  string id = 1;
+  repeated string names = 2;
+  string image = 3;
+  string state = 4; // created, restarting, running, removing, paused, exited, dead
+  string status = 5; // Human readable status
+  int64 created = 6;
+  repeated string ports = 7;
+}
+
+message LogRequest {
+  string container_id = 1;
+  bool follow = 2; // Stream logs
+  int32 tail = 3; // Number of lines to show from the end
+}
+
+// ==================== System Update Messages ====================
+
+message SystemUpdateStatus {
+  string os_name = 1;          // e.g. "Debian GNU/Linux 12 (bookworm)"
+  string kernel_version = 2;   // e.g. "6.1.0-rpi7-rpi-v8"
+  string architecture = 3;     // e.g. "aarch64"
+  int32 upgradable_count = 4;  // Number of packages that can be upgraded
+  repeated UpgradablePackage upgradable_packages = 5;
+  string last_update = 6;      // Timestamp of last apt update
+  string uptime = 7;           // System uptime string
+}
+
+message UpgradablePackage {
+  string name = 1;
+  string current_version = 2;
+  string new_version = 3;
+  string architecture = 4;
+}
+
+message UpgradeProgress {
+  string line = 1;        // Output line from apt
+  string phase = 2;       // "update", "upgrade", "done", "error"
+  int32 percent = 3;      // Progress percentage (0-100) if available
+  bool is_complete = 4;   // Whether the entire operation is done
+  bool success = 5;       // Whether it completed successfully
 }

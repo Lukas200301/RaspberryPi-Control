@@ -47,6 +47,8 @@ const (
 	SystemMonitor_UploadFile_FullMethodName             = "/picontrol.SystemMonitor/UploadFile"
 	SystemMonitor_DownloadFile_FullMethodName           = "/picontrol.SystemMonitor/DownloadFile"
 	SystemMonitor_DeleteFile_FullMethodName             = "/picontrol.SystemMonitor/DeleteFile"
+	SystemMonitor_GetSystemUpdateStatus_FullMethodName  = "/picontrol.SystemMonitor/GetSystemUpdateStatus"
+	SystemMonitor_StreamSystemUpgrade_FullMethodName    = "/picontrol.SystemMonitor/StreamSystemUpgrade"
 )
 
 // SystemMonitorClient is the client API for SystemMonitor service.
@@ -111,6 +113,11 @@ type SystemMonitorClient interface {
 	DownloadFile(ctx context.Context, in *FileDownloadRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[FileChunk], error)
 	// Delete a file or directory
 	DeleteFile(ctx context.Context, in *FileDeleteRequest, opts ...grpc.CallOption) (*FileDeleteResponse, error)
+	// System Updates
+	// Get system update status (OS info, kernel, upgradable packages)
+	GetSystemUpdateStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemUpdateStatus, error)
+	// Stream system upgrade progress (apt update + apt upgrade)
+	StreamSystemUpgrade(ctx context.Context, in *Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UpgradeProgress], error)
 }
 
 type systemMonitorClient struct {
@@ -476,6 +483,35 @@ func (c *systemMonitorClient) DeleteFile(ctx context.Context, in *FileDeleteRequ
 	return out, nil
 }
 
+func (c *systemMonitorClient) GetSystemUpdateStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemUpdateStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SystemUpdateStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_GetSystemUpdateStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) StreamSystemUpgrade(ctx context.Context, in *Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UpgradeProgress], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &SystemMonitor_ServiceDesc.Streams[9], SystemMonitor_StreamSystemUpgrade_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[Empty, UpgradeProgress]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SystemMonitor_StreamSystemUpgradeClient = grpc.ServerStreamingClient[UpgradeProgress]
+
 // SystemMonitorServer is the server API for SystemMonitor service.
 // All implementations must embed UnimplementedSystemMonitorServer
 // for forward compatibility.
@@ -538,6 +574,11 @@ type SystemMonitorServer interface {
 	DownloadFile(*FileDownloadRequest, grpc.ServerStreamingServer[FileChunk]) error
 	// Delete a file or directory
 	DeleteFile(context.Context, *FileDeleteRequest) (*FileDeleteResponse, error)
+	// System Updates
+	// Get system update status (OS info, kernel, upgradable packages)
+	GetSystemUpdateStatus(context.Context, *Empty) (*SystemUpdateStatus, error)
+	// Stream system upgrade progress (apt update + apt upgrade)
+	StreamSystemUpgrade(*Empty, grpc.ServerStreamingServer[UpgradeProgress]) error
 	mustEmbedUnimplementedSystemMonitorServer()
 }
 
@@ -631,6 +672,12 @@ func (UnimplementedSystemMonitorServer) DownloadFile(*FileDownloadRequest, grpc.
 }
 func (UnimplementedSystemMonitorServer) DeleteFile(context.Context, *FileDeleteRequest) (*FileDeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteFile not implemented")
+}
+func (UnimplementedSystemMonitorServer) GetSystemUpdateStatus(context.Context, *Empty) (*SystemUpdateStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSystemUpdateStatus not implemented")
+}
+func (UnimplementedSystemMonitorServer) StreamSystemUpgrade(*Empty, grpc.ServerStreamingServer[UpgradeProgress]) error {
+	return status.Error(codes.Unimplemented, "method StreamSystemUpgrade not implemented")
 }
 func (UnimplementedSystemMonitorServer) mustEmbedUnimplementedSystemMonitorServer() {}
 func (UnimplementedSystemMonitorServer) testEmbeddedByValue()                       {}
@@ -1090,6 +1137,35 @@ func _SystemMonitor_DeleteFile_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemMonitor_GetSystemUpdateStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).GetSystemUpdateStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_GetSystemUpdateStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).GetSystemUpdateStatus(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_StreamSystemUpgrade_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SystemMonitorServer).StreamSystemUpgrade(m, &grpc.GenericServerStream[Empty, UpgradeProgress]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type SystemMonitor_StreamSystemUpgradeServer = grpc.ServerStreamingServer[UpgradeProgress]
+
 // SystemMonitor_ServiceDesc is the grpc.ServiceDesc for SystemMonitor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1173,6 +1249,10 @@ var SystemMonitor_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteFile",
 			Handler:    _SystemMonitor_DeleteFile_Handler,
 		},
+		{
+			MethodName: "GetSystemUpdateStatus",
+			Handler:    _SystemMonitor_GetSystemUpdateStatus_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -1218,6 +1298,279 @@ var SystemMonitor_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "DownloadFile",
 			Handler:       _SystemMonitor_DownloadFile_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamSystemUpgrade",
+			Handler:       _SystemMonitor_StreamSystemUpgrade_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "pi_control.proto",
+}
+
+const (
+	DockerService_ListContainers_FullMethodName   = "/picontrol.DockerService/ListContainers"
+	DockerService_StartContainer_FullMethodName   = "/picontrol.DockerService/StartContainer"
+	DockerService_StopContainer_FullMethodName    = "/picontrol.DockerService/StopContainer"
+	DockerService_RestartContainer_FullMethodName = "/picontrol.DockerService/RestartContainer"
+	DockerService_GetContainerLogs_FullMethodName = "/picontrol.DockerService/GetContainerLogs"
+)
+
+// DockerServiceClient is the client API for DockerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DockerServiceClient interface {
+	// List containers
+	ListContainers(ctx context.Context, in *DockerFilter, opts ...grpc.CallOption) (*ContainerList, error)
+	// Start a container
+	StartContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Stop a container
+	StopContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Restart a container
+	RestartContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Get container logs
+	GetContainerLogs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogEntry], error)
+}
+
+type dockerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDockerServiceClient(cc grpc.ClientConnInterface) DockerServiceClient {
+	return &dockerServiceClient{cc}
+}
+
+func (c *dockerServiceClient) ListContainers(ctx context.Context, in *DockerFilter, opts ...grpc.CallOption) (*ContainerList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ContainerList)
+	err := c.cc.Invoke(ctx, DockerService_ListContainers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dockerServiceClient) StartContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, DockerService_StartContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dockerServiceClient) StopContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, DockerService_StopContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dockerServiceClient) RestartContainer(ctx context.Context, in *ContainerId, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, DockerService_RestartContainer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dockerServiceClient) GetContainerLogs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogEntry], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &DockerService_ServiceDesc.Streams[0], DockerService_GetContainerLogs_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[LogRequest, LogEntry]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DockerService_GetContainerLogsClient = grpc.ServerStreamingClient[LogEntry]
+
+// DockerServiceServer is the server API for DockerService service.
+// All implementations must embed UnimplementedDockerServiceServer
+// for forward compatibility.
+type DockerServiceServer interface {
+	// List containers
+	ListContainers(context.Context, *DockerFilter) (*ContainerList, error)
+	// Start a container
+	StartContainer(context.Context, *ContainerId) (*ActionStatus, error)
+	// Stop a container
+	StopContainer(context.Context, *ContainerId) (*ActionStatus, error)
+	// Restart a container
+	RestartContainer(context.Context, *ContainerId) (*ActionStatus, error)
+	// Get container logs
+	GetContainerLogs(*LogRequest, grpc.ServerStreamingServer[LogEntry]) error
+	mustEmbedUnimplementedDockerServiceServer()
+}
+
+// UnimplementedDockerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDockerServiceServer struct{}
+
+func (UnimplementedDockerServiceServer) ListContainers(context.Context, *DockerFilter) (*ContainerList, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListContainers not implemented")
+}
+func (UnimplementedDockerServiceServer) StartContainer(context.Context, *ContainerId) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartContainer not implemented")
+}
+func (UnimplementedDockerServiceServer) StopContainer(context.Context, *ContainerId) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopContainer not implemented")
+}
+func (UnimplementedDockerServiceServer) RestartContainer(context.Context, *ContainerId) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestartContainer not implemented")
+}
+func (UnimplementedDockerServiceServer) GetContainerLogs(*LogRequest, grpc.ServerStreamingServer[LogEntry]) error {
+	return status.Error(codes.Unimplemented, "method GetContainerLogs not implemented")
+}
+func (UnimplementedDockerServiceServer) mustEmbedUnimplementedDockerServiceServer() {}
+func (UnimplementedDockerServiceServer) testEmbeddedByValue()                       {}
+
+// UnsafeDockerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DockerServiceServer will
+// result in compilation errors.
+type UnsafeDockerServiceServer interface {
+	mustEmbedUnimplementedDockerServiceServer()
+}
+
+func RegisterDockerServiceServer(s grpc.ServiceRegistrar, srv DockerServiceServer) {
+	// If the following call panics, it indicates UnimplementedDockerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&DockerService_ServiceDesc, srv)
+}
+
+func _DockerService_ListContainers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DockerFilter)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DockerServiceServer).ListContainers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DockerService_ListContainers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DockerServiceServer).ListContainers(ctx, req.(*DockerFilter))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DockerService_StartContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DockerServiceServer).StartContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DockerService_StartContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DockerServiceServer).StartContainer(ctx, req.(*ContainerId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DockerService_StopContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DockerServiceServer).StopContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DockerService_StopContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DockerServiceServer).StopContainer(ctx, req.(*ContainerId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DockerService_RestartContainer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContainerId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DockerServiceServer).RestartContainer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DockerService_RestartContainer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DockerServiceServer).RestartContainer(ctx, req.(*ContainerId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DockerService_GetContainerLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(LogRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(DockerServiceServer).GetContainerLogs(m, &grpc.GenericServerStream[LogRequest, LogEntry]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DockerService_GetContainerLogsServer = grpc.ServerStreamingServer[LogEntry]
+
+// DockerService_ServiceDesc is the grpc.ServiceDesc for DockerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DockerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "picontrol.DockerService",
+	HandlerType: (*DockerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListContainers",
+			Handler:    _DockerService_ListContainers_Handler,
+		},
+		{
+			MethodName: "StartContainer",
+			Handler:    _DockerService_StartContainer_Handler,
+		},
+		{
+			MethodName: "StopContainer",
+			Handler:    _DockerService_StopContainer_Handler,
+		},
+		{
+			MethodName: "RestartContainer",
+			Handler:    _DockerService_RestartContainer_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetContainerLogs",
+			Handler:       _DockerService_GetContainerLogs_Handler,
 			ServerStreams: true,
 		},
 	},

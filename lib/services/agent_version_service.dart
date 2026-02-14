@@ -6,7 +6,7 @@ import '../models/ssh_connection.dart';
 class AgentVersionService {
   // Current app version that expects this agent version
   // Temporarily set to 3.2.0 to test the update banner
-  static const String requiredAgentVersion = '3.2.0';
+  static const String requiredAgentVersion = '3.3.0';
 
   /// Get the app version from package info
   static Future<String> getAppVersion() async {

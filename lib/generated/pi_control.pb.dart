@@ -4543,6 +4543,668 @@ class FileDeleteResponse extends $pb.GeneratedMessage {
   void clearError() => $_clearField(3);
 }
 
+class DockerFilter extends $pb.GeneratedMessage {
+  factory DockerFilter({
+    $core.bool? all,
+  }) {
+    final result = create();
+    if (all != null) result.all = all;
+    return result;
+  }
+
+  DockerFilter._();
+
+  factory DockerFilter.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory DockerFilter.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DockerFilter',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOB(1, _omitFieldNames ? '' : 'all')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DockerFilter clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DockerFilter copyWith(void Function(DockerFilter) updates) =>
+      super.copyWith((message) => updates(message as DockerFilter))
+          as DockerFilter;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static DockerFilter create() => DockerFilter._();
+  @$core.override
+  DockerFilter createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static DockerFilter getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DockerFilter>(create);
+  static DockerFilter? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get all => $_getBF(0);
+  @$pb.TagNumber(1)
+  set all($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAll() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAll() => $_clearField(1);
+}
+
+class ContainerId extends $pb.GeneratedMessage {
+  factory ContainerId({
+    $core.String? id,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  ContainerId._();
+
+  factory ContainerId.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ContainerId.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContainerId',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerId clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerId copyWith(void Function(ContainerId) updates) =>
+      super.copyWith((message) => updates(message as ContainerId))
+          as ContainerId;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ContainerId create() => ContainerId._();
+  @$core.override
+  ContainerId createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ContainerId getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ContainerId>(create);
+  static ContainerId? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class ContainerList extends $pb.GeneratedMessage {
+  factory ContainerList({
+    $core.Iterable<ContainerInfo>? containers,
+  }) {
+    final result = create();
+    if (containers != null) result.containers.addAll(containers);
+    return result;
+  }
+
+  ContainerList._();
+
+  factory ContainerList.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ContainerList.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContainerList',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..pPM<ContainerInfo>(1, _omitFieldNames ? '' : 'containers',
+        subBuilder: ContainerInfo.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerList clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerList copyWith(void Function(ContainerList) updates) =>
+      super.copyWith((message) => updates(message as ContainerList))
+          as ContainerList;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ContainerList create() => ContainerList._();
+  @$core.override
+  ContainerList createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ContainerList getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ContainerList>(create);
+  static ContainerList? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<ContainerInfo> get containers => $_getList(0);
+}
+
+class ContainerInfo extends $pb.GeneratedMessage {
+  factory ContainerInfo({
+    $core.String? id,
+    $core.Iterable<$core.String>? names,
+    $core.String? image,
+    $core.String? state,
+    $core.String? status,
+    $fixnum.Int64? created,
+    $core.Iterable<$core.String>? ports,
+  }) {
+    final result = create();
+    if (id != null) result.id = id;
+    if (names != null) result.names.addAll(names);
+    if (image != null) result.image = image;
+    if (state != null) result.state = state;
+    if (status != null) result.status = status;
+    if (created != null) result.created = created;
+    if (ports != null) result.ports.addAll(ports);
+    return result;
+  }
+
+  ContainerInfo._();
+
+  factory ContainerInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ContainerInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContainerInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..pPS(2, _omitFieldNames ? '' : 'names')
+    ..aOS(3, _omitFieldNames ? '' : 'image')
+    ..aOS(4, _omitFieldNames ? '' : 'state')
+    ..aOS(5, _omitFieldNames ? '' : 'status')
+    ..aInt64(6, _omitFieldNames ? '' : 'created')
+    ..pPS(7, _omitFieldNames ? '' : 'ports')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContainerInfo copyWith(void Function(ContainerInfo) updates) =>
+      super.copyWith((message) => updates(message as ContainerInfo))
+          as ContainerInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ContainerInfo create() => ContainerInfo._();
+  @$core.override
+  ContainerInfo createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static ContainerInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ContainerInfo>(create);
+  static ContainerInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get names => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $core.String get image => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set image($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasImage() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearImage() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get state => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set state($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasState() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearState() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get status => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set status($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStatus() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStatus() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get created => $_getI64(5);
+  @$pb.TagNumber(6)
+  set created($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCreated() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCreated() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<$core.String> get ports => $_getList(6);
+}
+
+class LogRequest extends $pb.GeneratedMessage {
+  factory LogRequest({
+    $core.String? containerId,
+    $core.bool? follow,
+    $core.int? tail,
+  }) {
+    final result = create();
+    if (containerId != null) result.containerId = containerId;
+    if (follow != null) result.follow = follow;
+    if (tail != null) result.tail = tail;
+    return result;
+  }
+
+  LogRequest._();
+
+  factory LogRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory LogRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LogRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'containerId')
+    ..aOB(2, _omitFieldNames ? '' : 'follow')
+    ..aI(3, _omitFieldNames ? '' : 'tail')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogRequest copyWith(void Function(LogRequest) updates) =>
+      super.copyWith((message) => updates(message as LogRequest)) as LogRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static LogRequest create() => LogRequest._();
+  @$core.override
+  LogRequest createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static LogRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<LogRequest>(create);
+  static LogRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get containerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set containerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasContainerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearContainerId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get follow => $_getBF(1);
+  @$pb.TagNumber(2)
+  set follow($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFollow() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFollow() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get tail => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set tail($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTail() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTail() => $_clearField(3);
+}
+
+class SystemUpdateStatus extends $pb.GeneratedMessage {
+  factory SystemUpdateStatus({
+    $core.String? osName,
+    $core.String? kernelVersion,
+    $core.String? architecture,
+    $core.int? upgradableCount,
+    $core.Iterable<UpgradablePackage>? upgradablePackages,
+    $core.String? lastUpdate,
+    $core.String? uptime,
+  }) {
+    final result = create();
+    if (osName != null) result.osName = osName;
+    if (kernelVersion != null) result.kernelVersion = kernelVersion;
+    if (architecture != null) result.architecture = architecture;
+    if (upgradableCount != null) result.upgradableCount = upgradableCount;
+    if (upgradablePackages != null)
+      result.upgradablePackages.addAll(upgradablePackages);
+    if (lastUpdate != null) result.lastUpdate = lastUpdate;
+    if (uptime != null) result.uptime = uptime;
+    return result;
+  }
+
+  SystemUpdateStatus._();
+
+  factory SystemUpdateStatus.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory SystemUpdateStatus.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SystemUpdateStatus',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'osName')
+    ..aOS(2, _omitFieldNames ? '' : 'kernelVersion')
+    ..aOS(3, _omitFieldNames ? '' : 'architecture')
+    ..aI(4, _omitFieldNames ? '' : 'upgradableCount')
+    ..pPM<UpgradablePackage>(5, _omitFieldNames ? '' : 'upgradablePackages',
+        subBuilder: UpgradablePackage.create)
+    ..aOS(6, _omitFieldNames ? '' : 'lastUpdate')
+    ..aOS(7, _omitFieldNames ? '' : 'uptime')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SystemUpdateStatus clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SystemUpdateStatus copyWith(void Function(SystemUpdateStatus) updates) =>
+      super.copyWith((message) => updates(message as SystemUpdateStatus))
+          as SystemUpdateStatus;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SystemUpdateStatus create() => SystemUpdateStatus._();
+  @$core.override
+  SystemUpdateStatus createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static SystemUpdateStatus getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SystemUpdateStatus>(create);
+  static SystemUpdateStatus? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get osName => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set osName($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOsName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOsName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get kernelVersion => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set kernelVersion($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKernelVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKernelVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get architecture => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set architecture($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasArchitecture() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearArchitecture() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get upgradableCount => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set upgradableCount($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUpgradableCount() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUpgradableCount() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<UpgradablePackage> get upgradablePackages => $_getList(4);
+
+  @$pb.TagNumber(6)
+  $core.String get lastUpdate => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set lastUpdate($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasLastUpdate() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearLastUpdate() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get uptime => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set uptime($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasUptime() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearUptime() => $_clearField(7);
+}
+
+class UpgradablePackage extends $pb.GeneratedMessage {
+  factory UpgradablePackage({
+    $core.String? name,
+    $core.String? currentVersion,
+    $core.String? newVersion,
+    $core.String? architecture,
+  }) {
+    final result = create();
+    if (name != null) result.name = name;
+    if (currentVersion != null) result.currentVersion = currentVersion;
+    if (newVersion != null) result.newVersion = newVersion;
+    if (architecture != null) result.architecture = architecture;
+    return result;
+  }
+
+  UpgradablePackage._();
+
+  factory UpgradablePackage.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory UpgradablePackage.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpgradablePackage',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'currentVersion')
+    ..aOS(3, _omitFieldNames ? '' : 'newVersion')
+    ..aOS(4, _omitFieldNames ? '' : 'architecture')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpgradablePackage clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpgradablePackage copyWith(void Function(UpgradablePackage) updates) =>
+      super.copyWith((message) => updates(message as UpgradablePackage))
+          as UpgradablePackage;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static UpgradablePackage create() => UpgradablePackage._();
+  @$core.override
+  UpgradablePackage createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static UpgradablePackage getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpgradablePackage>(create);
+  static UpgradablePackage? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get currentVersion => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set currentVersion($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCurrentVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCurrentVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get newVersion => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set newVersion($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNewVersion() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNewVersion() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get architecture => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set architecture($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasArchitecture() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearArchitecture() => $_clearField(4);
+}
+
+class UpgradeProgress extends $pb.GeneratedMessage {
+  factory UpgradeProgress({
+    $core.String? line,
+    $core.String? phase,
+    $core.int? percent,
+    $core.bool? isComplete,
+    $core.bool? success,
+  }) {
+    final result = create();
+    if (line != null) result.line = line;
+    if (phase != null) result.phase = phase;
+    if (percent != null) result.percent = percent;
+    if (isComplete != null) result.isComplete = isComplete;
+    if (success != null) result.success = success;
+    return result;
+  }
+
+  UpgradeProgress._();
+
+  factory UpgradeProgress.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory UpgradeProgress.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpgradeProgress',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'picontrol'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'line')
+    ..aOS(2, _omitFieldNames ? '' : 'phase')
+    ..aI(3, _omitFieldNames ? '' : 'percent')
+    ..aOB(4, _omitFieldNames ? '' : 'isComplete')
+    ..aOB(5, _omitFieldNames ? '' : 'success')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpgradeProgress clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpgradeProgress copyWith(void Function(UpgradeProgress) updates) =>
+      super.copyWith((message) => updates(message as UpgradeProgress))
+          as UpgradeProgress;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static UpgradeProgress create() => UpgradeProgress._();
+  @$core.override
+  UpgradeProgress createEmptyInstance() => create();
+  @$core.pragma('dart2js:noInline')
+  static UpgradeProgress getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpgradeProgress>(create);
+  static UpgradeProgress? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get line => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set line($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLine() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLine() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get phase => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set phase($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPhase() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPhase() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get percent => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set percent($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPercent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPercent() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get isComplete => $_getBF(3);
+  @$pb.TagNumber(4)
+  set isComplete($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasIsComplete() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearIsComplete() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get success => $_getBF(4);
+  @$pb.TagNumber(5)
+  set success($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSuccess() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSuccess() => $_clearField(5);
+}
+
 const $core.bool _omitFieldNames =
     $core.bool.fromEnvironment('protobuf.omit_field_names');
 const $core.bool _omitMessageNames =

@@ -14,6 +14,8 @@ import 'packages_screen.dart';
 import 'network_tools_screen.dart';
 import '../widgets/agent_update_banner.dart';
 import '../services/agent_version_service.dart';
+import 'docker_screen.dart';
+import 'system_update_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -388,6 +390,38 @@ class DashboardScreen extends ConsumerWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const PackagesScreen()),
+                );
+              },
+            ),
+            const Gap(12),
+            
+            // Docker Manager Option
+            _buildMenuCard(
+              context,
+              icon: Icons.view_in_ar,
+              title: 'Docker Manager',
+              subtitle: 'Manage containers & logs',
+              color: const Color(0xFF0D47A1), // Docker Blue
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DockerScreen()),
+                );
+              },
+            ),
+            const Gap(12),
+
+            // System Updates Option
+            _buildMenuCard(
+              context,
+              icon: Icons.system_update_alt,
+              title: 'System Updates',
+              subtitle: 'Check & install system updates',
+              color: const Color(0xFF2E7D32), // Green
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SystemUpdateScreen()),
                 );
               },
             ),

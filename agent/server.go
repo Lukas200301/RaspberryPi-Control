@@ -1914,3 +1914,182 @@ func testUploadSpeed(stream pb.SystemMonitor_TestNetworkSpeedServer, duration in
 		Finished:    false,
 	})
 }
+
+// GetSystemUpdateStatus returns OS info, kernel version, and list of upgradable packages
+func (s *systemMonitorServer) GetSystemUpdateStatus(ctx context.Context, req *pb.Empty) (*pb.SystemUpdateStatus, error) {
+	status := &pb.SystemUpdateStatus{}
+
+	// Get OS name
+	if output, err := exec.Command("lsb_release", "-ds").Output(); err == nil {
+		status.OsName = strings.TrimSpace(string(output))
+	} else {
+		// Fallback: read /etc/os-release
+		if data, err := os.ReadFile("/etc/os-release"); err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				if strings.HasPrefix(line, "PRETTY_NAME=") {
+					status.OsName = strings.Trim(strings.TrimPrefix(line, "PRETTY_NAME="), "\"")
+					break
+				}
+			}
+		}
+	}
+
+	// Get kernel version
+	if output, err := exec.Command("uname", "-r").Output(); err == nil {
+		status.KernelVersion = strings.TrimSpace(string(output))
+	}
+
+	// Get architecture
+	status.Architecture = runtime.GOARCH
+
+	// Get uptime
+	if uptime, err := host.Uptime(); err == nil {
+		days := uptime / 86400
+		hours := (uptime % 86400) / 3600
+		mins := (uptime % 3600) / 60
+		if days > 0 {
+			status.Uptime = fmt.Sprintf("%dd %dh %dm", days, hours, mins)
+		} else if hours > 0 {
+			status.Uptime = fmt.Sprintf("%dh %dm", hours, mins)
+		} else {
+			status.Uptime = fmt.Sprintf("%dm", mins)
+		}
+	}
+
+	// Get last update time from apt cache
+	if info, err := os.Stat("/var/lib/apt/lists/partial"); err == nil {
+		status.LastUpdate = info.ModTime().Format("2006-01-02 15:04:05")
+	} else if info, err := os.Stat("/var/cache/apt/pkgcache.bin"); err == nil {
+		status.LastUpdate = info.ModTime().Format("2006-01-02 15:04:05")
+	}
+
+	// Get upgradable packages
+	cmd := exec.Command("apt", "list", "--upgradable")
+	cmd.Env = append(os.Environ(), "LANG=C")
+	output, err := cmd.Output()
+	if err == nil {
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.Contains(line, "Listing...") {
+				continue
+			}
+			// Format: package/source new_version arch [upgradable from: old_version]
+			pkg := parseUpgradableLine(line)
+			if pkg != nil {
+				status.UpgradablePackages = append(status.UpgradablePackages, pkg)
+			}
+		}
+		status.UpgradableCount = int32(len(status.UpgradablePackages))
+	}
+
+	return status, nil
+}
+
+// parseUpgradableLine parses a line from "apt list --upgradable"
+// Format: name/source version arch [upgradable from: old_version]
+func parseUpgradableLine(line string) *pb.UpgradablePackage {
+	// Split on "/" to get package name
+	slashIdx := strings.Index(line, "/")
+	if slashIdx < 0 {
+		return nil
+	}
+	name := line[:slashIdx]
+	rest := line[slashIdx+1:]
+
+	// Split remaining by whitespace
+	parts := strings.Fields(rest)
+	if len(parts) < 3 {
+		return nil
+	}
+
+	newVersion := parts[1]
+	arch := parts[2]
+
+	// Extract old version from "[upgradable from: x.y.z]"
+	oldVersion := ""
+	fromIdx := strings.Index(line, "upgradable from: ")
+	if fromIdx >= 0 {
+		tail := line[fromIdx+len("upgradable from: "):]
+		oldVersion = strings.TrimSuffix(strings.TrimSpace(tail), "]")
+	}
+
+	return &pb.UpgradablePackage{
+		Name:           name,
+		CurrentVersion: oldVersion,
+		NewVersion:     newVersion,
+		Architecture:   arch,
+	}
+}
+
+// StreamSystemUpgrade runs apt update then apt upgrade and streams output
+func (s *systemMonitorServer) StreamSystemUpgrade(req *pb.Empty, stream pb.SystemMonitor_StreamSystemUpgradeServer) error {
+	// Phase 1: apt update
+	if err := streamCommand(stream, "update", exec.Command("apt-get", "update")); err != nil {
+		return err
+	}
+
+	// Phase 2: apt upgrade
+	if err := streamCommand(stream, "upgrade", exec.Command("apt-get", "upgrade", "-y")); err != nil {
+		return err
+	}
+
+	// Send completion
+	return stream.Send(&pb.UpgradeProgress{
+		Line:       "System upgrade completed successfully.",
+		Phase:      "done",
+		Percent:    100,
+		IsComplete: true,
+		Success:    true,
+	})
+}
+
+func streamCommand(stream pb.SystemMonitor_StreamSystemUpgradeServer, phase string, cmd *exec.Cmd) error {
+	cmd.Env = append(os.Environ(), "DEBIAN_FRONTEND=noninteractive", "LANG=C")
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	cmd.Stderr = cmd.Stdout // merge stderr into stdout
+
+	if err := cmd.Start(); err != nil {
+		stream.Send(&pb.UpgradeProgress{
+			Line:       fmt.Sprintf("Failed to start %s: %v", phase, err),
+			Phase:      "error",
+			IsComplete: true,
+			Success:    false,
+		})
+		return err
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		select {
+		case <-stream.Context().Done():
+			cmd.Process.Kill()
+			return stream.Context().Err()
+		default:
+		}
+
+		line := scanner.Text()
+		if err := stream.Send(&pb.UpgradeProgress{
+			Line:  line,
+			Phase: phase,
+		}); err != nil {
+			return err
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		stream.Send(&pb.UpgradeProgress{
+			Line:       fmt.Sprintf("%s failed: %v", phase, err),
+			Phase:      "error",
+			IsComplete: true,
+			Success:    false,
+		})
+		return err
+	}
+
+	return nil
+}

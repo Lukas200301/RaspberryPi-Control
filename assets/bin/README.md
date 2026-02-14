@@ -12,16 +12,12 @@ You need to build and place the following binaries in this directory:
 
 ## Building the Agent
 
-Navigate to the `agent/` directory and run the build scripts:
+Navigate to the main directory and run the build scripts:
 
 ### On Windows:
-```bash
-.\build.bat
-```
 
-### On Linux/macOS:
 ```bash
-./build.sh
+.\build_all.ps1
 ```
 
 The build scripts will compile the Go agent for all three ARM architectures and place the binaries in this folder.
