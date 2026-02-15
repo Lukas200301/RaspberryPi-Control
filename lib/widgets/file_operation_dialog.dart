@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/file_item.dart';
 import 'file_editor_dialog.dart';
+import 'file_properties_dialog.dart';
 
 class FileOperationDialog extends StatelessWidget {
   final FileItem file;
@@ -117,14 +118,7 @@ class FileOperationDialog extends StatelessWidget {
               _showChmodDialog(context);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('Properties'),
-            onTap: () {
-              Navigator.pop(context);
-              _showPropertiesDialog(context);
-            },
-          ),
+
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
             title: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -139,6 +133,17 @@ class FileOperationDialog extends StatelessWidget {
           const SizedBox(height: 16),
         ],
         ),
+      ),
+    );
+  }
+
+  void _showPropertiesDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: FilePropertiesDialog(file: file),
       ),
     );
   }
@@ -323,57 +328,6 @@ class FileOperationDialog extends StatelessWidget {
     );
   }
 
-  Future<void> _showPropertiesDialog(BuildContext context) async {
-    await showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-        title: const Text('Properties'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPropertyItem('Name', file.name),
-            _buildPropertyItem('Path', file.path),
-            _buildPropertyItem('Type', file.isDirectory ? 'Directory' : 'File'),
-            if (!file.isDirectory) _buildPropertyItem('Extension', file.extension),
-            _buildPropertyItem('Size', file.formattedSize),
-            _buildPropertyItem('Permissions', '${file.permissionsString} (${file.permissionsOctal})'),
-            _buildPropertyItem('Modified', _formatDate(file.modified)),
-            _buildPropertyItem('Owner', file.owner),
-            _buildPropertyItem('Group', file.group),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPropertyItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 14),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<bool> _showDeleteConfirmation(BuildContext context) async {
     final result = await showDialog<bool>(

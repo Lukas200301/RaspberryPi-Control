@@ -19,14 +19,17 @@ class AppTheme {
   static const Color textSecondary = Color(0xB3FFFFFF); // 70% white
   static const Color textTertiary = Color(0x80FFFFFF); // 50% white
 
-  static ThemeData get darkTheme {
+  static ThemeData getTheme({
+    Color primary = primaryIndigo,
+    Color secondary = secondaryTeal,
+  }) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: background,
-      colorScheme: const ColorScheme.dark(
-        primary: primaryIndigo,
-        secondary: secondaryTeal,
+      colorScheme: ColorScheme.dark(
+        primary: primary,
+        secondary: secondary,
         error: errorRose,
         surface: glassLight,
         onSurface: textPrimary,
@@ -136,7 +139,7 @@ class AppTheme {
       // Button themes
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryIndigo,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -152,8 +155,8 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryIndigo,
-          side: const BorderSide(color: primaryIndigo, width: 2),
+          foregroundColor: primary,
+          side: BorderSide(color: primary, width: 2),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -179,7 +182,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryIndigo, width: 2),
+          borderSide: BorderSide(color: primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -211,6 +214,9 @@ class AppTheme {
       ),
     );
   }
+
+  // Backwards compatibility for now, can be removed later
+  static ThemeData get darkTheme => getTheme();
 
   // Helper method for glass effect decoration
   static BoxDecoration glassDecoration({

@@ -10,7 +10,10 @@ import '../providers/file_providers.dart';
 import '../providers/app_providers.dart';
 import '../widgets/file_operation_dialog.dart';
 import '../widgets/file_preview_dialog.dart';
+import '../widgets/file_operation_dialog.dart';
+import '../widgets/file_preview_dialog.dart';
 import '../widgets/grpc_file_transfer_panel.dart';
+import '../widgets/storage_bar.dart';
 
 class FilesScreen extends ConsumerStatefulWidget {
   const FilesScreen({super.key});
@@ -21,6 +24,7 @@ class FilesScreen extends ConsumerStatefulWidget {
 
 class _FilesScreenState extends ConsumerState<FilesScreen> {
   final _searchController = TextEditingController();
+  final _breadcrumbScrollController = ScrollController();
   bool _isSelectionMode = false;
 
   @override
@@ -47,11 +51,28 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         }
       }
     });
+
+
+    // Auto-scroll breadcrumbs when directory changes
+    ref.listenManual(currentDirectoryProvider, (previous, next) {
+      if (previous != next) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_breadcrumbScrollController.hasClients) {
+            _breadcrumbScrollController.animateTo(
+              _breadcrumbScrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _breadcrumbScrollController.dispose();
     super.dispose();
   }
 
@@ -522,8 +543,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               ]
             : [
                 IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () => ref.invalidate(fileListProvider),
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    // Toggle search bar visibility or focus
+                    // For now handled by inline search bar
+                  },
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.sort),
@@ -560,69 +584,42 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                     ),
                   ],
                 ),
-                PopupMenuButton(
+                IconButton(
                   icon: const Icon(Icons.add),
                   tooltip: 'New',
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'upload',
-                      child: Row(
-                        children: [
-                          Icon(Icons.upload_file),
-                          SizedBox(width: 8),
-                          Text('Upload File'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'uploadFolder',
-                      child: Row(
-                        children: [
-                          Icon(Icons.drive_folder_upload),
-                          SizedBox(width: 8),
-                          Text('Upload Folder'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'folder',
-                      child: Row(
-                        children: [
-                          Icon(Icons.create_new_folder),
-                          SizedBox(width: 8),
-                          Text('New Folder'),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'upload') {
-                      _uploadFile();
-                    } else if (value == 'uploadFolder') {
-                      _uploadFolder();
-                    } else if (value == 'folder') {
-                      _showCreateFolderDialog();
-                    }
-                  },
+                  onPressed: _showAddMenu,
                 ),
               ],
       ),
       body: Column(
         children: [
-          // Breadcrumb navigation
-          _buildBreadcrumb(currentPath),
+          // Storage Bar
+          const StorageBar(),
           
-          // Search bar
-          _buildSearchBar(),
+          // Breadcrumb & Search Row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildBreadcrumb(currentPath),
+                const SizedBox(height: 8),
+                _buildSearchBar(),
+              ],
+            ),
+          ),
           
           // File list
           Expanded(
-            child: fileListAsync.when(
-              data: (files) => files.isEmpty
-                  ? _buildEmptyState()
-                  : _buildFileList(files, selectedFiles),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorState(error.toString()),
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(fileListProvider),
+              child: fileListAsync.when(
+                data: (files) => files.isEmpty
+                    ? _buildEmptyState()
+                    : _buildFileList(files, selectedFiles),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => _buildErrorState(error.toString()),
+              ),
             ),
           ),
 
@@ -630,77 +627,98 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           const GrpcFileTransferPanel(),
         ],
       ),
+
     );
   }
 
   Widget _buildBreadcrumb(String path) {
     final parts = path.split('/').where((p) => p.isNotEmpty).toList();
     
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: GlassCard(
-        child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: ref.read(navigationHistoryProvider).isEmpty 
-                  ? null 
-                  : _navigateBack,
+    return SingleChildScrollView(
+      controller: _breadcrumbScrollController,
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_upward),
+            onPressed: path == '/' ? null : _navigateUp,
+            tooltip: 'Up one level',
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.glassLight,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            IconButton(
-              icon: const Icon(Icons.arrow_upward),
-              onPressed: path == '/' ? null : _navigateUp,
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              icon: const Icon(Icons.home, size: 18),
-              label: const Text('/'),
-              onPressed: () => _navigateToDirectory('/'),
-            ),
-            ...parts.asMap().entries.map((entry) {
-              final index = entry.key;
-              final part = entry.value;
-              final pathUpTo = '/${parts.sublist(0, index + 1).join('/')}';
-              
-              return Row(
-                children: [
-                  const Icon(Icons.chevron_right, size: 16),
-                  TextButton(
-                    onPressed: () => _navigateToDirectory(pathUpTo),
-                    child: Text(part),
+          ),
+          const SizedBox(width: 8),
+          ActionChip(
+            avatar: const Icon(Icons.home, size: 16, color: AppTheme.primaryIndigo),
+            label: const Text('/'),
+            onPressed: () => _navigateToDirectory('/'),
+            backgroundColor: AppTheme.glassLight,
+            side: BorderSide.none,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          ...parts.asMap().entries.map((entry) {
+            final index = entry.key;
+            final part = entry.value;
+            final pathUpTo = '/${parts.sublist(0, index + 1).join('/')}';
+            
+            return Row(
+              children: [
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, size: 16, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: Text(
+                    part, 
+                    style: TextStyle(
+                      color: index == parts.length - 1 
+                          ? AppTheme.textPrimary 
+                          : AppTheme.textSecondary
+                    ),
                   ),
-                ],
-              );
-            }),
-          ],
-        ),
-      ),
+                  onPressed: () => _navigateToDirectory(pathUpTo),
+                  backgroundColor: index == parts.length - 1 
+                      ? AppTheme.primaryIndigo.withOpacity(0.2)
+                      : AppTheme.glassLight,
+                  side: index == parts.length - 1
+                      ? const BorderSide(color: AppTheme.primaryIndigo, width: 1)
+                      : BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+              ],
+            );
+          }),
+        ],
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.glassLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.glassBorder),
+      ),
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search files...',
-          prefixIcon: const Icon(Icons.search),
+          hintText: 'Search current directory...',
+          hintStyle: const TextStyle(color: AppTheme.textTertiary),
+          prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear),
+                  icon: const Icon(Icons.clear, size: 20),
                   onPressed: () {
                     _searchController.clear();
                     ref.read(fileSearchQueryProvider.notifier).state = '';
                   },
                 )
               : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
         onChanged: (value) {
           ref.read(fileSearchQueryProvider.notifier).state = value;
@@ -711,7 +729,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
   Widget _buildFileList(List<FileItem> files, Set<String> selectedFiles) {
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: files.length,
       itemBuilder: (context, index) {
         final file = files[index];
@@ -719,28 +737,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: GlassCard(
-            child: ListTile(
-            leading: _isSelectionMode
-                ? Checkbox(
-                    value: isSelected,
-                    onChanged: (_) => _toggleSelection(file.path),
-                  )
-                : Icon(file.icon, color: file.color),
-            title: Text(
-              file.name,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            subtitle: Text(
-              '${file.formattedSize} • ${file.permissionsString}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => _showFileOptions(file),
-            ),
+          child: InkWell(
             onTap: () {
               if (_isSelectionMode) {
                 _toggleSelection(file.path);
@@ -755,10 +752,195 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                 _toggleSelection(file.path);
               }
             },
-          ),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? AppTheme.primaryIndigo.withOpacity(0.15) 
+                    : AppTheme.glassLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected 
+                      ? AppTheme.primaryIndigo 
+                      : AppTheme.glassBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  if (_isSelectionMode)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Checkbox(
+                        value: isSelected,
+                        onChanged: (_) => _toggleSelection(file.path),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ),
+                  
+                  // Icon
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: (file.isDirectory ? Colors.amber : Colors.blue).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      file.icon, 
+                      color: file.isDirectory ? Colors.amber : Colors.blueAccent,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  
+                  // Text Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          file.name,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: 15,
+                            color: AppTheme.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (!file.isDirectory) ...[
+                              Text(
+                                file.formattedSize,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('•', style: TextStyle(color: AppTheme.textTertiary)),
+                              const SizedBox(width: 8),
+                            ],
+                            const Icon(Icons.shield_outlined, size: 12, color: AppTheme.textTertiary),
+                            const SizedBox(width: 4),
+                            Text(
+                              file.permissionsString,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                                fontFamily: 'Monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Actions from right
+                  IconButton(
+                    icon: const Icon(Icons.more_vert, color: AppTheme.textSecondary),
+                    onPressed: () => _showFileOptions(file),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
+    );
+  }
+
+  void _showAddMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E).withOpacity(0.95),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+               Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 8, bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              _buildActionTile(
+                icon: Icons.create_new_folder,
+                label: 'New Folder',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCreateFolderDialog();
+                },
+              ),
+              _buildActionTile(
+                icon: Icons.upload_file,
+                label: 'Upload File',
+                onTap: () {
+                  Navigator.pop(context);
+                  _uploadFile();
+                },
+              ),
+              _buildActionTile(
+                icon: Icons.drive_folder_upload,
+                label: 'Upload Folder',
+                onTap: () {
+                  Navigator.pop(context);
+                  _uploadFolder();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryIndigo.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: AppTheme.primaryIndigo),
+      ),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+          fontSize: 16,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 

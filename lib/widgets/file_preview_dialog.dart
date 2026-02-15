@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/file_item.dart';
 import '../providers/file_providers.dart';
 import '../theme/app_theme.dart';
@@ -21,6 +25,7 @@ class FilePreviewDialog extends ConsumerStatefulWidget {
 class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
   bool _isLoading = true;
   String? _content;
+  Uint8List? _imageBytes;
   String? _error;
 
   @override
@@ -40,16 +45,23 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
     }
 
     try {
-      final data = await sftp.readFile(widget.file.path);
-      
-      if (widget.file.isTextFile) {
+      if (widget.file.isImage) {
+         // Load image bytes
+         final data = await sftp.readFile(widget.file.path);
+         setState(() {
+           _imageBytes = data;
+           _isLoading = false;
+         });
+      } else if (widget.file.isTextFile) {
+        // Load text content
+        final data = await sftp.readFile(widget.file.path);
         setState(() {
           _content = utf8.decode(data);
           _isLoading = false;
         });
       } else {
+        // Unsupported type, stop loading
         setState(() {
-          _error = 'Cannot preview this file type';
           _isLoading = false;
         });
       }
@@ -148,15 +160,13 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
     }
 
     // Show different preview based on file type
-    if (widget.file.isImage) {
+    if (widget.file.isImage && _imageBytes != null) {
       return _buildImagePreview();
-    } else if (widget.file.isTextFile) {
+    } else if (widget.file.isTextFile && _content != null) {
       return _buildTextPreview();
     }
 
-    return const Center(
-      child: Text('Preview not available for this file type'),
-    );
+    return _buildDownloadOption();
   }
 
   Widget _buildTextPreview() {
@@ -174,9 +184,90 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
   }
 
   Widget _buildImagePreview() {
-    return const Center(
-      child: Text('Image preview not yet implemented'),
+    return InteractiveViewer(
+      minScale: 0.1,
+      maxScale: 5.0,
+      child: Center(
+        child: Image.memory(
+          _imageBytes!,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text('Failed to display image: $error', style: const TextStyle(color: Colors.grey)),
+              ],
+            );
+          },
+        ),
+      ),
     );
+  }
+
+  Widget _buildDownloadOption() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(widget.file.icon, size: 80, color: widget.file.color.withOpacity(0.5)),
+          const SizedBox(height: 24),
+          const Text(
+            'Preview not available for this file type',
+            style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.download),
+            label: const Text('Download & Open'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryIndigo,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            onPressed: _downloadAndOpen,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadAndOpen() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final sftp = ref.read(sftpServiceProvider);
+      if (sftp == null) throw Exception('Not connected');
+
+      // Get temp directory
+      final tempDir = await getTemporaryDirectory();
+      final localPath = '${tempDir.path}/${widget.file.name}';
+      
+      // Download bytes
+      final bytes = await sftp.downloadFile(remotePath: widget.file.path);
+      
+      // Write to file
+      final file = File(localPath);
+      await file.writeAsBytes(bytes);
+      
+      // Open
+      final result = await OpenFilex.open(localPath);
+      if (result.type != ResultType.done) {
+        throw Exception(result.message);
+      }
+      
+      // Close dialog as we are opening externally
+      if (mounted) Navigator.pop(context);
+      
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to open file: $e';
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Color _getTextColor() {

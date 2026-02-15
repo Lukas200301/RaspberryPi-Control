@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'theme/app_theme.dart';
+import 'providers/theme_provider.dart';
 import 'services/storage_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/connections_screen.dart';
@@ -15,14 +17,16 @@ void main() async {
   runApp(const ProviderScope(child: RaspberryPiControlApp()));
 }
 
-class RaspberryPiControlApp extends StatelessWidget {
+class RaspberryPiControlApp extends ConsumerWidget {
   const RaspberryPiControlApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeState = ref.watch(themeProvider);
+
     return MaterialApp(
       title: 'Raspberry Pi Control',
-      theme: AppTheme.darkTheme,
+      theme: themeState.themeData,
       debugShowCheckedModeBanner: false,
       home: const LoginScreen(),
       routes: {

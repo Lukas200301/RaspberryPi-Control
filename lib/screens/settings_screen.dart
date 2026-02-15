@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;import 'package:open_filex/open_filex.dart';import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
+import '../providers/theme_provider.dart';
 import '../providers/file_providers.dart';
 import '../services/update_service.dart';
 import '../models/app_settings.dart';
@@ -140,6 +141,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                     activeTrackColor: AppTheme.primaryIndigo,
                   ),
+                ),
+                const Divider(color: AppTheme.glassBorder),
+                _buildSettingTile(
+                  context,
+                  icon: Icons.palette,
+                  title: 'Theme Colors',
+                  subtitle: 'Customize app colors',
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 2),
+                        ),
+                      ),
+                      const Gap(8),
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.secondary,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 2),
+                        ),
+                      ),
+                    ],
+                  ),
+                  onTap: () => _showThemeEditorDialog(context, ref),
                 ),
               ],
             ),
@@ -908,5 +941,145 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     }
+  }
+  void _showThemeEditorDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => const ThemeEditorDialog(),
+    );
+  }
+}
+
+class ThemeEditorDialog extends ConsumerStatefulWidget {
+  const ThemeEditorDialog({super.key});
+
+  @override
+  ConsumerState<ThemeEditorDialog> createState() => _ThemeEditorDialogState();
+}
+
+class _ThemeEditorDialogState extends ConsumerState<ThemeEditorDialog> {
+  final List<Color> _presetColors = [
+    const Color(0xFF6366F1), // Indigo (Default)
+    const Color(0xFF3B82F6), // Blue
+    const Color(0xFF06B6D4), // Cyan
+    const Color(0xFF14B8A6), // Teal
+    const Color(0xFF10B981), // Green
+    const Color(0xFFF59E0B), // Amber
+    const Color(0xFFF97316), // Orange
+    const Color(0xFFEF4444), // Red
+    const Color(0xFFEC4899), // Pink
+    const Color(0xFF8B5CF6), // Violet
+    const Color(0xFFD946EF), // Fuchsia
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final themeState = ref.watch(themeProvider);
+    final themeNotifier = ref.read(themeProvider.notifier);
+
+    return AlertDialog(
+      backgroundColor: AppTheme.background,
+      title: const Text('Customize Theme'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Primary Color',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const Gap(12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _presetColors.map((color) {
+                final isSelected = themeState.primaryColor.value == color.value;
+                return GestureDetector(
+                  onTap: () => themeNotifier.updatePrimaryColor(color),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 3)
+                          : Border.all(color: Colors.white24, width: 1),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.5),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+            const Gap(24),
+            Text(
+              'Accent Color',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const Gap(12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _presetColors.map((color) {
+                final isSelected = themeState.secondaryColor.value == color.value;
+                return GestureDetector(
+                  onTap: () => themeNotifier.updateSecondaryColor(color),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 3)
+                          : Border.all(color: Colors.white24, width: 1),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.5),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            themeNotifier.resetTheme();
+          },
+          child: const Text('Reset'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: themeState.primaryColor,
+          ),
+          child: const Text('Done'),
+        ),
+      ],
+    );
   }
 }

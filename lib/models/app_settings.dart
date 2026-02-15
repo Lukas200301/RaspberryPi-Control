@@ -26,6 +26,16 @@ class AppSettings {
   bool get autoReconnect => _storage.read(_keyAutoReconnect) ?? true;
   set autoReconnect(bool value) => _storage.write(_keyAutoReconnect, value);
 
+  // Theme
+  static const String _keyPrimaryColor = 'theme_primary_color';
+  static const String _keySecondaryColor = 'theme_secondary_color';
+
+  int? get primaryColor => _storage.read(_keyPrimaryColor);
+  set primaryColor(int? value) => _storage.write(_keyPrimaryColor, value);
+
+  int? get secondaryColor => _storage.read(_keySecondaryColor);
+  set secondaryColor(int? value) => _storage.write(_keySecondaryColor, value);
+
   // Reset all settings
   Future<void> resetAll() async {
     await _storage.erase();
