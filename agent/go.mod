@@ -3,7 +3,7 @@ module pi_agent
 go 1.25.4
 
 require (
-	github.com/docker/docker v27.5.1+incompatible
+	github.com/docker/docker v28.0.0+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
