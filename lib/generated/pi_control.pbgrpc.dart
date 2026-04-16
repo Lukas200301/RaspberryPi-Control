@@ -58,6 +58,22 @@ class SystemMonitorClient extends $grpc.Client {
     return $createUnaryCall(_$killProcess, request, options: options);
   }
 
+  /// Pause a specific process by PID (SIGSTOP)
+  $grpc.ResponseFuture<$0.ActionStatus> pauseProcess(
+    $0.ProcessId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$pauseProcess, request, options: options);
+  }
+
+  /// Resume a specific process by PID (SIGCONT)
+  $grpc.ResponseFuture<$0.ActionStatus> resumeProcess(
+    $0.ProcessId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$resumeProcess, request, options: options);
+  }
+
   /// List all systemd services
   $grpc.ResponseFuture<$0.ServiceList> listServices(
     $0.Empty request, {
@@ -309,6 +325,16 @@ class SystemMonitorClient extends $grpc.Client {
           '/picontrol.SystemMonitor/KillProcess',
           ($0.ProcessId value) => value.writeToBuffer(),
           $0.ActionStatus.fromBuffer);
+  static final _$pauseProcess =
+      $grpc.ClientMethod<$0.ProcessId, $0.ActionStatus>(
+          '/picontrol.SystemMonitor/PauseProcess',
+          ($0.ProcessId value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$resumeProcess =
+      $grpc.ClientMethod<$0.ProcessId, $0.ActionStatus>(
+          '/picontrol.SystemMonitor/ResumeProcess',
+          ($0.ProcessId value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
   static final _$listServices = $grpc.ClientMethod<$0.Empty, $0.ServiceList>(
       '/picontrol.SystemMonitor/ListServices',
       ($0.Empty value) => value.writeToBuffer(),
@@ -460,6 +486,20 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
     $addMethod($grpc.ServiceMethod<$0.ProcessId, $0.ActionStatus>(
         'KillProcess',
         killProcess_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ProcessId.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ProcessId, $0.ActionStatus>(
+        'PauseProcess',
+        pauseProcess_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ProcessId.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ProcessId, $0.ActionStatus>(
+        'ResumeProcess',
+        resumeProcess_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.ProcessId.fromBuffer(value),
@@ -681,6 +721,22 @@ abstract class SystemMonitorServiceBase extends $grpc.Service {
   }
 
   $async.Future<$0.ActionStatus> killProcess(
+      $grpc.ServiceCall call, $0.ProcessId request);
+
+  $async.Future<$0.ActionStatus> pauseProcess_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ProcessId> $request) async {
+    return pauseProcess($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> pauseProcess(
+      $grpc.ServiceCall call, $0.ProcessId request);
+
+  $async.Future<$0.ActionStatus> resumeProcess_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ProcessId> $request) async {
+    return resumeProcess($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> resumeProcess(
       $grpc.ServiceCall call, $0.ProcessId request);
 
   $async.Future<$0.ServiceList> listServices_Pre(

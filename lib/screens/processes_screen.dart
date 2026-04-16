@@ -6,6 +6,15 @@ import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
 
+class ProcessNode {
+  final ProcessInfo process;
+  final List<ProcessNode> children = [];
+  int depth;
+  List<bool> isLastPath = [];
+
+  ProcessNode(this.process, this.depth);
+}
+
 class ProcessesScreen extends ConsumerStatefulWidget {
   const ProcessesScreen({super.key});
 
@@ -15,7 +24,7 @@ class ProcessesScreen extends ConsumerStatefulWidget {
 
 class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
   String _searchQuery = '';
-  String _sortBy = 'cpu'; // cpu, memory, name, pid
+  String _sortBy = 'tree'; // cpu, memory, name, pid
   bool _sortAscending = false;
 
   @override
@@ -44,7 +53,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Search by name, PID, user...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.textSecondary,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -68,13 +80,40 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildSortChip('CPU', 'cpu', Icons.memory, AppTheme.primaryIndigo),
+                      _buildSortChip(
+                        'Tree',
+                        'tree',
+                        Icons.account_tree,
+                        AppTheme.textPrimary,
+                      ),
                       const Gap(8),
-                      _buildSortChip('Memory', 'memory', Icons.storage, AppTheme.secondaryTeal),
+                      _buildSortChip(
+                        'CPU',
+                        'cpu',
+                        Icons.memory,
+                        AppTheme.primaryIndigo,
+                      ),
                       const Gap(8),
-                      _buildSortChip('Name', 'name', Icons.abc, AppTheme.successGreen),
+                      _buildSortChip(
+                        'Memory',
+                        'memory',
+                        Icons.storage,
+                        AppTheme.secondaryTeal,
+                      ),
                       const Gap(8),
-                      _buildSortChip('PID', 'pid', Icons.tag, AppTheme.warningAmber),
+                      _buildSortChip(
+                        'Name',
+                        'name',
+                        Icons.abc,
+                        AppTheme.successGreen,
+                      ),
+                      const Gap(8),
+                      _buildSortChip(
+                        'PID',
+                        'pid',
+                        Icons.tag,
+                        AppTheme.warningAmber,
+                      ),
                     ],
                   ),
                 ),
@@ -83,22 +122,29 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
           ),
 
           // Processes List
-          Expanded(
-            child: _buildProcessesList(),
-          ),
+          Expanded(child: _buildProcessesList()),
         ],
       ),
     );
   }
 
-  Widget _buildSortChip(String label, String value, IconData icon, Color color) {
+  Widget _buildSortChip(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     final isSelected = _sortBy == value;
 
     return FilterChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isSelected ? color : AppTheme.textSecondary),
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? color : AppTheme.textSecondary,
+          ),
           const Gap(6),
           Text(label),
           if (isSelected) ...[
@@ -129,9 +175,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
         color: isSelected ? color : AppTheme.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
-      side: BorderSide(
-        color: isSelected ? color : AppTheme.glassBorder,
-      ),
+      side: BorderSide(color: isSelected ? color : AppTheme.glassBorder),
     );
   }
 
@@ -178,8 +222,9 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
 
         final processes = snapshot.data?.processes.toList() ?? <ProcessInfo>[];
         final filteredProcesses = _filterAndSortProcesses(processes);
+        final renderedNodes = _buildRenderedList(filteredProcesses);
 
-        if (filteredProcesses.isEmpty) {
+        if (renderedNodes.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -203,13 +248,59 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: filteredProcesses.length,
+          itemCount: renderedNodes.length,
           itemBuilder: (context, index) {
-            return _buildProcessCard(filteredProcesses[index]);
+            return _buildProcessCard(renderedNodes[index]);
           },
         );
       },
     );
+  }
+
+  List<ProcessNode> _buildRenderedList(List<ProcessInfo> processes) {
+    if (_searchQuery.isNotEmpty || _sortBy != 'tree') {
+      return processes.map((p) => ProcessNode(p, 0)).toList();
+    }
+
+    final map = <int, ProcessNode>{};
+    final roots = <ProcessNode>[];
+
+    for (final p in processes) {
+      map[p.pid] = ProcessNode(p, 0);
+    }
+
+    for (final p in processes) {
+      final node = map[p.pid]!;
+      if (p.ppid != 0 && map.containsKey(p.ppid)) {
+        map[p.ppid]!.children.add(node);
+      } else {
+        roots.add(node);
+      }
+    }
+
+    final result = <ProcessNode>[];
+    void flatten(ProcessNode node, int depth, List<bool> isLastPath) {
+      node.depth = depth;
+      node.isLastPath = isLastPath;
+      result.add(node);
+      node.children.sort(
+        (a, b) => b.process.cpuPercent.compareTo(a.process.cpuPercent),
+      );
+      for (int i = 0; i < node.children.length; i++) {
+        final child = node.children[i];
+        final childPath = List<bool>.from(isLastPath)
+          ..add(i == node.children.length - 1);
+        flatten(child, depth + 1, childPath);
+      }
+    }
+
+    roots.sort((a, b) => b.process.cpuPercent.compareTo(a.process.cpuPercent));
+    for (int i = 0; i < roots.length; i++) {
+      final root = roots[i];
+      flatten(root, 0, [i == roots.length - 1]);
+    }
+
+    return result;
   }
 
   List<ProcessInfo> _filterAndSortProcesses(List<ProcessInfo> processes) {
@@ -224,29 +315,32 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
     }).toList();
 
     // Sort
-    filtered.sort((a, b) {
-      int comparison = 0;
-      switch (_sortBy) {
-        case 'cpu':
-          comparison = a.cpuPercent.compareTo(b.cpuPercent);
-          break;
-        case 'memory':
-          comparison = a.memoryBytes.compareTo(b.memoryBytes);
-          break;
-        case 'name':
-          comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          break;
-        case 'pid':
-          comparison = a.pid.compareTo(b.pid);
-          break;
-      }
-      return _sortAscending ? comparison : -comparison;
-    });
+    if (_sortBy != 'tree') {
+      filtered.sort((a, b) {
+        int comparison = 0;
+        switch (_sortBy) {
+          case 'cpu':
+            comparison = a.cpuPercent.compareTo(b.cpuPercent);
+            break;
+          case 'memory':
+            comparison = a.memoryBytes.compareTo(b.memoryBytes);
+            break;
+          case 'name':
+            comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            break;
+          case 'pid':
+            comparison = a.pid.compareTo(b.pid);
+            break;
+        }
+        return _sortAscending ? comparison : -comparison;
+      });
+    }
 
     return filtered;
   }
 
-  Widget _buildProcessCard(ProcessInfo process) {
+  Widget _buildProcessCard(ProcessNode node) {
+    final process = node.process;
     Color getCpuColor(double cpu) {
       if (cpu > 80) return AppTheme.errorRose;
       if (cpu > 50) return AppTheme.warningAmber;
@@ -261,165 +355,269 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
 
     final memoryMB = (process.memoryBytes.toDouble() / 1024 / 1024);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: InkWell(
-          onTap: () => _showProcessDetails(process),
-          borderRadius: BorderRadius.circular(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row: Name and Kill Button
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      process.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const Gap(8),
-                  // Status Badge
-                  if (process.status.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppTheme.textTertiary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        process.status,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: AppTheme.textTertiary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  const Gap(8),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
-                    onPressed: () => _killProcess(process),
-                    color: AppTheme.errorRose,
-                    tooltip: 'Kill process',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const Gap(12),
-              // Info Row
-              Row(
-                children: [
-                  // PID
-                  const Icon(Icons.tag, size: 14, color: AppTheme.textTertiary),
-                  const Gap(4),
-                  Text(
-                    'PID: ${process.pid}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                  const Gap(16),
-                  // User
-                  const Icon(Icons.person, size: 14, color: AppTheme.textTertiary),
-                  const Gap(4),
-                  Expanded(
-                    child: Text(
-                      process.username,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const Gap(12),
-              // Stats Row
-              Row(
-                children: [
-                  // CPU
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (node.depth > 0)
+            Row(
+              children: List.generate(node.depth, (index) {
+                final isActualLevel = index == node.depth - 1;
+                if (isActualLevel) {
+                  final isLast = node.isLastPath[node.depth];
+                  return SizedBox(
+                    width: 24,
+                    child: Stack(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.memory, size: 14, color: AppTheme.primaryIndigo),
-                            const Gap(4),
-                            const Text(
-                              'CPU',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
+                        Positioned(
+                          left: 11,
+                          top: 0,
+                          bottom: isLast ? null : 0,
+                          height: isLast ? 36 : null, // 36 is ~middle of card
+                          child: Container(
+                            width: 2,
+                            color: AppTheme.glassBorder,
+                          ),
                         ),
-                        const Gap(4),
-                        Text(
-                          '${process.cpuPercent.toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: getCpuColor(process.cpuPercent),
+                        Positioned(
+                          left: 11,
+                          top: 36, // middle of card
+                          right: 0,
+                          child: Container(
+                            height: 2,
+                            color: AppTheme.glassBorder,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  // Memory
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.storage, size: 14, color: AppTheme.secondaryTeal),
-                            const Gap(4),
-                            const Text(
-                              'Memory',
-                              style: TextStyle(
+                  );
+                } else {
+                  final isLastAncestor = node.isLastPath[index + 1];
+                  return SizedBox(
+                    width: 24,
+                    child: isLastAncestor
+                        ? null
+                        : Stack(
+                            children: [
+                              Positioned(
+                                left: 11,
+                                top: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 2,
+                                  color: AppTheme.glassBorder,
+                                ),
+                              ),
+                            ],
+                          ),
+                  );
+                }
+              }),
+            ),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: InkWell(
+                  onTap: () => _showProcessDetails(node),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header Row: Name and Kill Button
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              process.name,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const Gap(8),
+                          // Status Badge
+                          if (process.status.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.textTertiary.withValues(
+                                  alpha: 0.2,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                process.status,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.textTertiary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          const Gap(8),
+                          IconButton(
+                            icon: const Icon(Icons.pause, size: 20),
+                            onPressed: () => _pauseProcess(process),
+                            color: AppTheme.warningAmber,
+                            tooltip: 'Pause process (SIGSTOP)',
+                            padding: const EdgeInsets.only(right: 8),
+                            constraints: const BoxConstraints(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.play_arrow, size: 20),
+                            onPressed: () => _resumeProcess(process),
+                            color: AppTheme.successGreen,
+                            tooltip: 'Resume process (SIGCONT)',
+                            padding: const EdgeInsets.only(right: 8),
+                            constraints: const BoxConstraints(),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            onPressed: () => _killProcess(process),
+                            color: AppTheme.errorRose,
+                            tooltip: 'Kill process',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const Gap(12),
+                      // Info Row
+                      Row(
+                        children: [
+                          // PID
+                          const Icon(
+                            Icons.tag,
+                            size: 14,
+                            color: AppTheme.textTertiary,
+                          ),
+                          const Gap(4),
+                          Text(
+                            'PID: ${process.pid}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondary,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const Gap(16),
+                          // User
+                          const Icon(
+                            Icons.person,
+                            size: 14,
+                            color: AppTheme.textTertiary,
+                          ),
+                          const Gap(4),
+                          Expanded(
+                            child: Text(
+                              process.username,
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: AppTheme.textSecondary,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
-                        const Gap(4),
-                        Text(
-                          '${memoryMB.toStringAsFixed(0)} MB',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: getMemoryColor(process.memoryPercent),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const Gap(12),
+                      // Stats Row
+                      Row(
+                        children: [
+                          // CPU
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.memory,
+                                      size: 14,
+                                      color: AppTheme.primaryIndigo,
+                                    ),
+                                    const Gap(4),
+                                    const Text(
+                                      'CPU',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Gap(4),
+                                Text(
+                                  '${process.cpuPercent.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: getCpuColor(process.cpuPercent),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Memory
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.storage,
+                                      size: 14,
+                                      color: AppTheme.secondaryTeal,
+                                    ),
+                                    const Gap(4),
+                                    const Text(
+                                      'Memory',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Gap(4),
+                                Text(
+                                  '${memoryMB.toStringAsFixed(0)} MB',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: getMemoryColor(
+                                      process.memoryPercent,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  void _showProcessDetails(ProcessInfo process) {
+  void _showProcessDetails(ProcessNode node) {
+    final process = node.process;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.background,
@@ -450,9 +648,17 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
             const Gap(12),
             _buildDetailRow('Status', process.status, Icons.info),
             const Gap(12),
-            _buildDetailRow('CPU Usage', '${process.cpuPercent.toStringAsFixed(2)}%', Icons.memory),
+            _buildDetailRow(
+              'CPU Usage',
+              '${process.cpuPercent.toStringAsFixed(2)}%',
+              Icons.memory,
+            ),
             const Gap(12),
-            _buildDetailRow('Memory', '${process.memoryPercent.toStringAsFixed(2)}% (${(process.memoryBytes.toDouble() / 1024 / 1024).toStringAsFixed(1)} MB)', Icons.storage),
+            _buildDetailRow(
+              'Memory',
+              '${process.memoryPercent.toStringAsFixed(2)}% (${(process.memoryBytes.toDouble() / 1024 / 1024).toStringAsFixed(1)} MB)',
+              Icons.storage,
+            ),
             if (process.cmdline.isNotEmpty) ...[
               const Gap(20),
               const Text(
@@ -488,10 +694,40 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
+                      _pauseProcess(process);
+                    },
+                    icon: const Icon(Icons.pause),
+                    label: const Text('Pause'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.warningAmber,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const Gap(8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _resumeProcess(process);
+                    },
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Resume'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.successGreen,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const Gap(8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
                       _killProcess(process);
                     },
                     icon: const Icon(Icons.close),
-                    label: const Text('Kill Process'),
+                    label: const Text('Kill'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.errorRose,
                       foregroundColor: Colors.white,
@@ -515,23 +751,79 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
           width: 100,
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _pauseProcess(ProcessInfo process) async {
+    try {
+      final grpcService = ref.read(grpcServiceProvider);
+      await grpcService.pauseProcess(process.pid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Paused "${process.name}"',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.warningAmber,
+          ),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to pause: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _resumeProcess(ProcessInfo process) async {
+    try {
+      final grpcService = ref.read(grpcServiceProvider);
+      await grpcService.resumeProcess(process.pid);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Resumed "${process.name}"',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to resume: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppTheme.errorRose,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _killProcess(ProcessInfo process) async {
@@ -568,8 +860,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Process "${process.name}" (PID: ${process.pid}) killed successfully',
-                  style: const TextStyle(color: Colors.white)),
+              content: Text(
+                'Process "${process.name}" (PID: ${process.pid}) killed successfully',
+                style: const TextStyle(color: Colors.white),
+              ),
               backgroundColor: AppTheme.successGreen,
             ),
           );
@@ -580,8 +874,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to kill process: $e',
-                  style: const TextStyle(color: Colors.white)),
+              content: Text(
+                'Failed to kill process: $e',
+                style: const TextStyle(color: Colors.white),
+              ),
               backgroundColor: AppTheme.errorRose,
             ),
           );

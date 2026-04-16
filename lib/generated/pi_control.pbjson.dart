@@ -109,6 +109,7 @@ const ProcessInfo$json = {
     {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
     {'1': 'username', '3': 7, '4': 1, '5': 9, '10': 'username'},
     {'1': 'cmdline', '3': 8, '4': 1, '5': 9, '10': 'cmdline'},
+    {'1': 'ppid', '3': 9, '4': 1, '5': 5, '10': 'ppid'},
   ],
 };
 
@@ -118,7 +119,7 @@ final $typed_data.Uint8List processInfoDescriptor = $convert.base64Decode(
     'NwdV9wZXJjZW50GAMgASgBUgpjcHVQZXJjZW50EiUKDm1lbW9yeV9wZXJjZW50GAQgASgBUg1t'
     'ZW1vcnlQZXJjZW50EiEKDG1lbW9yeV9ieXRlcxgFIAEoBFILbWVtb3J5Qnl0ZXMSFgoGc3RhdH'
     'VzGAYgASgJUgZzdGF0dXMSGgoIdXNlcm5hbWUYByABKAlSCHVzZXJuYW1lEhgKB2NtZGxpbmUY'
-    'CCABKAlSB2NtZGxpbmU=');
+    'CCABKAlSB2NtZGxpbmUSEgoEcHBpZBgJIAEoBVIEcHBpZA==');
 
 @$core.Deprecated('Use processListDescriptor instead')
 const ProcessList$json = {

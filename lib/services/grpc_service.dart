@@ -94,6 +94,18 @@ class GrpcService {
     return await _client!.killProcess(ProcessId()..pid = pid);
   }
 
+  /// Pause a process by PID
+  Future<ActionStatus> pauseProcess(int pid) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.pauseProcess(ProcessId()..pid = pid);
+  }
+
+  /// Resume a process by PID
+  Future<ActionStatus> resumeProcess(int pid) async {
+    if (_client == null) throw Exception('gRPC not connected');
+    return await _client!.resumeProcess(ProcessId()..pid = pid);
+  }
+
   /// List all systemd services
   Future<ServiceList> listServices() async {
     if (_client == null) throw Exception('gRPC not connected');

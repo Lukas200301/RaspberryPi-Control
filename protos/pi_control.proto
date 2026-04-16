@@ -16,6 +16,12 @@ service SystemMonitor {
   // Kill a specific process by PID
   rpc KillProcess (ProcessId) returns (ActionStatus);
 
+  // Pause a specific process by PID (SIGSTOP)
+  rpc PauseProcess (ProcessId) returns (ActionStatus);
+
+  // Resume a specific process by PID (SIGCONT)
+  rpc ResumeProcess (ProcessId) returns (ActionStatus);
+
   // List all systemd services
   rpc ListServices (Empty) returns (ServiceList);
 
@@ -161,6 +167,7 @@ message ProcessInfo {
   string status = 6;
   string username = 7;
   string cmdline = 8;
+  int32 ppid = 9;
 }
 
 // List of all processes

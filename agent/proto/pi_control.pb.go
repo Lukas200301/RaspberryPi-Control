@@ -327,6 +327,7 @@ type ProcessInfo struct {
 	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
 	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`
 	Cmdline       string                 `protobuf:"bytes,8,opt,name=cmdline,proto3" json:"cmdline,omitempty"`
+	Ppid          int32                  `protobuf:"varint,9,opt,name=ppid,proto3" json:"ppid,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -415,6 +416,13 @@ func (x *ProcessInfo) GetCmdline() string {
 		return x.Cmdline
 	}
 	return ""
+}
+
+func (x *ProcessInfo) GetPpid() int32 {
+	if x != nil {
+		return x.Ppid
+	}
+	return 0
 }
 
 // List of all processes
@@ -4083,7 +4091,7 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x0enet_bytes_recv\x18\x10 \x01(\x04R\fnetBytesRecv\x12;\n" +
 	"\rtop_processes\x18\x11 \x03(\v2\x16.picontrol.ProcessInfoR\ftopProcesses\x12\x1c\n" +
 	"\ttimestamp\x18\x12 \x01(\x03R\ttimestamp\x12.\n" +
-	"\adisk_io\x18\x13 \x03(\v2\x15.picontrol.DiskIOStatR\x06diskIo\"\xec\x01\n" +
+	"\adisk_io\x18\x13 \x03(\v2\x15.picontrol.DiskIOStatR\x06diskIo\"\x80\x02\n" +
 	"\vProcessInfo\x12\x10\n" +
 	"\x03pid\x18\x01 \x01(\x05R\x03pid\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -4093,7 +4101,8 @@ const file_pi_control_proto_rawDesc = "" +
 	"\fmemory_bytes\x18\x05 \x01(\x04R\vmemoryBytes\x12\x16\n" +
 	"\x06status\x18\x06 \x01(\tR\x06status\x12\x1a\n" +
 	"\busername\x18\a \x01(\tR\busername\x12\x18\n" +
-	"\acmdline\x18\b \x01(\tR\acmdline\"C\n" +
+	"\acmdline\x18\b \x01(\tR\acmdline\x12\x12\n" +
+	"\x04ppid\x18\t \x01(\x05R\x04ppid\"C\n" +
 	"\vProcessList\x124\n" +
 	"\tprocesses\x18\x01 \x03(\v2\x16.picontrol.ProcessInfoR\tprocesses\"\x1d\n" +
 	"\tProcessId\x12\x10\n" +
@@ -4424,11 +4433,13 @@ const file_pi_control_proto_rawDesc = "" +
 	"\x06ENABLE\x10\x03\x12\v\n" +
 	"\aDISABLE\x10\x04\x12\n" +
 	"\n" +
-	"\x06RELOAD\x10\x052\x87\x10\n" +
+	"\x06RELOAD\x10\x052\x86\x11\n" +
 	"\rSystemMonitor\x127\n" +
 	"\vStreamStats\x12\x10.picontrol.Empty\x1a\x14.picontrol.LiveStats0\x01\x129\n" +
 	"\rListProcesses\x12\x10.picontrol.Empty\x1a\x16.picontrol.ProcessList\x12<\n" +
-	"\vKillProcess\x12\x14.picontrol.ProcessId\x1a\x17.picontrol.ActionStatus\x128\n" +
+	"\vKillProcess\x12\x14.picontrol.ProcessId\x1a\x17.picontrol.ActionStatus\x12=\n" +
+	"\fPauseProcess\x12\x14.picontrol.ProcessId\x1a\x17.picontrol.ActionStatus\x12>\n" +
+	"\rResumeProcess\x12\x14.picontrol.ProcessId\x1a\x17.picontrol.ActionStatus\x128\n" +
 	"\fListServices\x12\x10.picontrol.Empty\x1a\x16.picontrol.ServiceList\x12C\n" +
 	"\rManageService\x12\x19.picontrol.ServiceCommand\x1a\x17.picontrol.ActionStatus\x129\n" +
 	"\n" +
@@ -4557,75 +4568,79 @@ var file_pi_control_proto_depIdxs = []int32{
 	1,  // 14: picontrol.SystemMonitor.StreamStats:input_type -> picontrol.Empty
 	1,  // 15: picontrol.SystemMonitor.ListProcesses:input_type -> picontrol.Empty
 	5,  // 16: picontrol.SystemMonitor.KillProcess:input_type -> picontrol.ProcessId
-	1,  // 17: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
-	8,  // 18: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
-	10, // 19: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
-	1,  // 20: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
-	1,  // 21: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
-	1,  // 22: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
-	18, // 23: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
-	21, // 24: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
-	21, // 25: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
-	21, // 26: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
-	1,  // 27: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
-	1,  // 28: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
-	1,  // 29: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
-	22, // 30: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
-	22, // 31: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
-	21, // 32: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
-	28, // 33: picontrol.SystemMonitor.PingHost:input_type -> picontrol.PingRequest
-	31, // 34: picontrol.SystemMonitor.ScanPorts:input_type -> picontrol.PortScanRequest
-	33, // 35: picontrol.SystemMonitor.DNSLookup:input_type -> picontrol.DNSRequest
-	36, // 36: picontrol.SystemMonitor.Traceroute:input_type -> picontrol.TracerouteRequest
-	1,  // 37: picontrol.SystemMonitor.GetWifiInfo:input_type -> picontrol.Empty
-	40, // 38: picontrol.SystemMonitor.TestNetworkSpeed:input_type -> picontrol.SpeedTestRequest
-	42, // 39: picontrol.SystemMonitor.UploadFile:input_type -> picontrol.FileChunk
-	44, // 40: picontrol.SystemMonitor.DownloadFile:input_type -> picontrol.FileDownloadRequest
-	45, // 41: picontrol.SystemMonitor.DeleteFile:input_type -> picontrol.FileDeleteRequest
-	1,  // 42: picontrol.SystemMonitor.GetSystemUpdateStatus:input_type -> picontrol.Empty
-	1,  // 43: picontrol.SystemMonitor.StreamSystemUpgrade:input_type -> picontrol.Empty
-	47, // 44: picontrol.DockerService.ListContainers:input_type -> picontrol.DockerFilter
-	48, // 45: picontrol.DockerService.StartContainer:input_type -> picontrol.ContainerId
-	48, // 46: picontrol.DockerService.StopContainer:input_type -> picontrol.ContainerId
-	48, // 47: picontrol.DockerService.RestartContainer:input_type -> picontrol.ContainerId
-	51, // 48: picontrol.DockerService.GetContainerLogs:input_type -> picontrol.LogRequest
-	2,  // 49: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
-	4,  // 50: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
-	9,  // 51: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
-	7,  // 52: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
-	9,  // 53: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
-	11, // 54: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
-	12, // 55: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
-	14, // 56: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
-	16, // 57: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
-	20, // 58: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
-	9,  // 59: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
-	9,  // 60: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
-	9,  // 61: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
-	9,  // 62: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
-	9,  // 63: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
-	27, // 64: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
-	23, // 65: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
-	24, // 66: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
-	25, // 67: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
-	29, // 68: picontrol.SystemMonitor.PingHost:output_type -> picontrol.PingResponse
-	32, // 69: picontrol.SystemMonitor.ScanPorts:output_type -> picontrol.PortScanResponse
-	34, // 70: picontrol.SystemMonitor.DNSLookup:output_type -> picontrol.DNSResponse
-	37, // 71: picontrol.SystemMonitor.Traceroute:output_type -> picontrol.TracerouteResponse
-	38, // 72: picontrol.SystemMonitor.GetWifiInfo:output_type -> picontrol.WifiInfo
-	41, // 73: picontrol.SystemMonitor.TestNetworkSpeed:output_type -> picontrol.SpeedTestResponse
-	43, // 74: picontrol.SystemMonitor.UploadFile:output_type -> picontrol.FileUploadResponse
-	42, // 75: picontrol.SystemMonitor.DownloadFile:output_type -> picontrol.FileChunk
-	46, // 76: picontrol.SystemMonitor.DeleteFile:output_type -> picontrol.FileDeleteResponse
-	52, // 77: picontrol.SystemMonitor.GetSystemUpdateStatus:output_type -> picontrol.SystemUpdateStatus
-	54, // 78: picontrol.SystemMonitor.StreamSystemUpgrade:output_type -> picontrol.UpgradeProgress
-	49, // 79: picontrol.DockerService.ListContainers:output_type -> picontrol.ContainerList
-	9,  // 80: picontrol.DockerService.StartContainer:output_type -> picontrol.ActionStatus
-	9,  // 81: picontrol.DockerService.StopContainer:output_type -> picontrol.ActionStatus
-	9,  // 82: picontrol.DockerService.RestartContainer:output_type -> picontrol.ActionStatus
-	11, // 83: picontrol.DockerService.GetContainerLogs:output_type -> picontrol.LogEntry
-	49, // [49:84] is the sub-list for method output_type
-	14, // [14:49] is the sub-list for method input_type
+	5,  // 17: picontrol.SystemMonitor.PauseProcess:input_type -> picontrol.ProcessId
+	5,  // 18: picontrol.SystemMonitor.ResumeProcess:input_type -> picontrol.ProcessId
+	1,  // 19: picontrol.SystemMonitor.ListServices:input_type -> picontrol.Empty
+	8,  // 20: picontrol.SystemMonitor.ManageService:input_type -> picontrol.ServiceCommand
+	10, // 21: picontrol.SystemMonitor.StreamLogs:input_type -> picontrol.LogFilter
+	1,  // 22: picontrol.SystemMonitor.GetDiskInfo:input_type -> picontrol.Empty
+	1,  // 23: picontrol.SystemMonitor.GetNetworkInfo:input_type -> picontrol.Empty
+	1,  // 24: picontrol.SystemMonitor.GetNetworkConnections:input_type -> picontrol.Empty
+	18, // 25: picontrol.SystemMonitor.ListPackages:input_type -> picontrol.PackageFilter
+	21, // 26: picontrol.SystemMonitor.InstallPackage:input_type -> picontrol.PackageCommand
+	21, // 27: picontrol.SystemMonitor.RemovePackage:input_type -> picontrol.PackageCommand
+	21, // 28: picontrol.SystemMonitor.UpdatePackage:input_type -> picontrol.PackageCommand
+	1,  // 29: picontrol.SystemMonitor.UpdatePackageList:input_type -> picontrol.Empty
+	1,  // 30: picontrol.SystemMonitor.UpgradePackages:input_type -> picontrol.Empty
+	1,  // 31: picontrol.SystemMonitor.GetVersion:input_type -> picontrol.Empty
+	22, // 32: picontrol.SystemMonitor.GetPackageDetails:input_type -> picontrol.PackageDetailsRequest
+	22, // 33: picontrol.SystemMonitor.GetPackageDependencies:input_type -> picontrol.PackageDetailsRequest
+	21, // 34: picontrol.SystemMonitor.StreamPackageOperation:input_type -> picontrol.PackageCommand
+	28, // 35: picontrol.SystemMonitor.PingHost:input_type -> picontrol.PingRequest
+	31, // 36: picontrol.SystemMonitor.ScanPorts:input_type -> picontrol.PortScanRequest
+	33, // 37: picontrol.SystemMonitor.DNSLookup:input_type -> picontrol.DNSRequest
+	36, // 38: picontrol.SystemMonitor.Traceroute:input_type -> picontrol.TracerouteRequest
+	1,  // 39: picontrol.SystemMonitor.GetWifiInfo:input_type -> picontrol.Empty
+	40, // 40: picontrol.SystemMonitor.TestNetworkSpeed:input_type -> picontrol.SpeedTestRequest
+	42, // 41: picontrol.SystemMonitor.UploadFile:input_type -> picontrol.FileChunk
+	44, // 42: picontrol.SystemMonitor.DownloadFile:input_type -> picontrol.FileDownloadRequest
+	45, // 43: picontrol.SystemMonitor.DeleteFile:input_type -> picontrol.FileDeleteRequest
+	1,  // 44: picontrol.SystemMonitor.GetSystemUpdateStatus:input_type -> picontrol.Empty
+	1,  // 45: picontrol.SystemMonitor.StreamSystemUpgrade:input_type -> picontrol.Empty
+	47, // 46: picontrol.DockerService.ListContainers:input_type -> picontrol.DockerFilter
+	48, // 47: picontrol.DockerService.StartContainer:input_type -> picontrol.ContainerId
+	48, // 48: picontrol.DockerService.StopContainer:input_type -> picontrol.ContainerId
+	48, // 49: picontrol.DockerService.RestartContainer:input_type -> picontrol.ContainerId
+	51, // 50: picontrol.DockerService.GetContainerLogs:input_type -> picontrol.LogRequest
+	2,  // 51: picontrol.SystemMonitor.StreamStats:output_type -> picontrol.LiveStats
+	4,  // 52: picontrol.SystemMonitor.ListProcesses:output_type -> picontrol.ProcessList
+	9,  // 53: picontrol.SystemMonitor.KillProcess:output_type -> picontrol.ActionStatus
+	9,  // 54: picontrol.SystemMonitor.PauseProcess:output_type -> picontrol.ActionStatus
+	9,  // 55: picontrol.SystemMonitor.ResumeProcess:output_type -> picontrol.ActionStatus
+	7,  // 56: picontrol.SystemMonitor.ListServices:output_type -> picontrol.ServiceList
+	9,  // 57: picontrol.SystemMonitor.ManageService:output_type -> picontrol.ActionStatus
+	11, // 58: picontrol.SystemMonitor.StreamLogs:output_type -> picontrol.LogEntry
+	12, // 59: picontrol.SystemMonitor.GetDiskInfo:output_type -> picontrol.DiskInfo
+	14, // 60: picontrol.SystemMonitor.GetNetworkInfo:output_type -> picontrol.NetworkInfo
+	16, // 61: picontrol.SystemMonitor.GetNetworkConnections:output_type -> picontrol.NetworkConnectionList
+	20, // 62: picontrol.SystemMonitor.ListPackages:output_type -> picontrol.PackageList
+	9,  // 63: picontrol.SystemMonitor.InstallPackage:output_type -> picontrol.ActionStatus
+	9,  // 64: picontrol.SystemMonitor.RemovePackage:output_type -> picontrol.ActionStatus
+	9,  // 65: picontrol.SystemMonitor.UpdatePackage:output_type -> picontrol.ActionStatus
+	9,  // 66: picontrol.SystemMonitor.UpdatePackageList:output_type -> picontrol.ActionStatus
+	9,  // 67: picontrol.SystemMonitor.UpgradePackages:output_type -> picontrol.ActionStatus
+	27, // 68: picontrol.SystemMonitor.GetVersion:output_type -> picontrol.VersionInfo
+	23, // 69: picontrol.SystemMonitor.GetPackageDetails:output_type -> picontrol.PackageDetails
+	24, // 70: picontrol.SystemMonitor.GetPackageDependencies:output_type -> picontrol.PackageDependencies
+	25, // 71: picontrol.SystemMonitor.StreamPackageOperation:output_type -> picontrol.PackageOperationLog
+	29, // 72: picontrol.SystemMonitor.PingHost:output_type -> picontrol.PingResponse
+	32, // 73: picontrol.SystemMonitor.ScanPorts:output_type -> picontrol.PortScanResponse
+	34, // 74: picontrol.SystemMonitor.DNSLookup:output_type -> picontrol.DNSResponse
+	37, // 75: picontrol.SystemMonitor.Traceroute:output_type -> picontrol.TracerouteResponse
+	38, // 76: picontrol.SystemMonitor.GetWifiInfo:output_type -> picontrol.WifiInfo
+	41, // 77: picontrol.SystemMonitor.TestNetworkSpeed:output_type -> picontrol.SpeedTestResponse
+	43, // 78: picontrol.SystemMonitor.UploadFile:output_type -> picontrol.FileUploadResponse
+	42, // 79: picontrol.SystemMonitor.DownloadFile:output_type -> picontrol.FileChunk
+	46, // 80: picontrol.SystemMonitor.DeleteFile:output_type -> picontrol.FileDeleteResponse
+	52, // 81: picontrol.SystemMonitor.GetSystemUpdateStatus:output_type -> picontrol.SystemUpdateStatus
+	54, // 82: picontrol.SystemMonitor.StreamSystemUpgrade:output_type -> picontrol.UpgradeProgress
+	49, // 83: picontrol.DockerService.ListContainers:output_type -> picontrol.ContainerList
+	9,  // 84: picontrol.DockerService.StartContainer:output_type -> picontrol.ActionStatus
+	9,  // 85: picontrol.DockerService.StopContainer:output_type -> picontrol.ActionStatus
+	9,  // 86: picontrol.DockerService.RestartContainer:output_type -> picontrol.ActionStatus
+	11, // 87: picontrol.DockerService.GetContainerLogs:output_type -> picontrol.LogEntry
+	51, // [51:88] is the sub-list for method output_type
+	14, // [14:51] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name

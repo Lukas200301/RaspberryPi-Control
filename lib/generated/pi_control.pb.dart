@@ -351,6 +351,7 @@ class ProcessInfo extends $pb.GeneratedMessage {
     $core.String? status,
     $core.String? username,
     $core.String? cmdline,
+    $core.int? ppid,
   }) {
     final result = create();
     if (pid != null) result.pid = pid;
@@ -361,6 +362,7 @@ class ProcessInfo extends $pb.GeneratedMessage {
     if (status != null) result.status = status;
     if (username != null) result.username = username;
     if (cmdline != null) result.cmdline = cmdline;
+    if (ppid != null) result.ppid = ppid;
     return result;
   }
 
@@ -387,6 +389,7 @@ class ProcessInfo extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'status')
     ..aOS(7, _omitFieldNames ? '' : 'username')
     ..aOS(8, _omitFieldNames ? '' : 'cmdline')
+    ..aI(9, _omitFieldNames ? '' : 'ppid')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -479,6 +482,15 @@ class ProcessInfo extends $pb.GeneratedMessage {
   $core.bool hasCmdline() => $_has(7);
   @$pb.TagNumber(8)
   void clearCmdline() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.int get ppid => $_getIZ(8);
+  @$pb.TagNumber(9)
+  set ppid($core.int value) => $_setSignedInt32(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasPpid() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearPpid() => $_clearField(9);
 }
 
 /// List of all processes

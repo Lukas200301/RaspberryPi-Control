@@ -37,6 +37,8 @@ func (s *systemMonitorServer) ListProcesses(ctx context.Context, req *pb.Empty) 
 			statusStr = status[0]
 		}
 
+		ppid, _ := p.Ppid()
+
 		result = append(result, &pb.ProcessInfo{
 			Pid:           int32(p.Pid),
 			Name:          name,
@@ -46,6 +48,7 @@ func (s *systemMonitorServer) ListProcesses(ctx context.Context, req *pb.Empty) 
 			Status:        statusStr,
 			Username:      username,
 			Cmdline:       cmdline,
+			Ppid:          ppid,
 		})
 	}
 
@@ -75,5 +78,57 @@ func (s *systemMonitorServer) KillProcess(ctx context.Context, req *pb.ProcessId
 	return &pb.ActionStatus{
 		Success: true,
 		Message: fmt.Sprintf("Successfully killed process %s (PID %d)", name, req.Pid),
+	}, nil
+}
+
+// PauseProcess sends SIGSTOP to a process
+func (s *systemMonitorServer) PauseProcess(ctx context.Context, req *pb.ProcessId) (*pb.ActionStatus, error) {
+	p, err := process.NewProcess(req.Pid)
+	if err != nil {
+		return &pb.ActionStatus{
+			Success:   false,
+			Message:   fmt.Sprintf("Process not found: %v", err),
+			ErrorCode: 1,
+		}, nil
+	}
+
+	name, _ := p.Name()
+	if err := p.Suspend(); err != nil {
+		return &pb.ActionStatus{
+			Success:   false,
+			Message:   fmt.Sprintf("Failed to pause process %s (PID %d): %v", name, req.Pid, err),
+			ErrorCode: 2,
+		}, nil
+	}
+
+	return &pb.ActionStatus{
+		Success: true,
+		Message: fmt.Sprintf("Successfully paused process %s (PID %d)", name, req.Pid),
+	}, nil
+}
+
+// ResumeProcess sends SIGCONT to a process
+func (s *systemMonitorServer) ResumeProcess(ctx context.Context, req *pb.ProcessId) (*pb.ActionStatus, error) {
+	p, err := process.NewProcess(req.Pid)
+	if err != nil {
+		return &pb.ActionStatus{
+			Success:   false,
+			Message:   fmt.Sprintf("Process not found: %v", err),
+			ErrorCode: 1,
+		}, nil
+	}
+
+	name, _ := p.Name()
+	if err := p.Resume(); err != nil {
+		return &pb.ActionStatus{
+			Success:   false,
+			Message:   fmt.Sprintf("Failed to resume process %s (PID %d): %v", name, req.Pid, err),
+			ErrorCode: 2,
+		}, nil
+	}
+
+	return &pb.ActionStatus{
+		Success: true,
+		Message: fmt.Sprintf("Successfully resumed process %s (PID %d)", name, req.Pid),
 	}, nil
 }

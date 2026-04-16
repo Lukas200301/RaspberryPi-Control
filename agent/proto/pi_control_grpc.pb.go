@@ -22,6 +22,8 @@ const (
 	SystemMonitor_StreamStats_FullMethodName            = "/picontrol.SystemMonitor/StreamStats"
 	SystemMonitor_ListProcesses_FullMethodName          = "/picontrol.SystemMonitor/ListProcesses"
 	SystemMonitor_KillProcess_FullMethodName            = "/picontrol.SystemMonitor/KillProcess"
+	SystemMonitor_PauseProcess_FullMethodName           = "/picontrol.SystemMonitor/PauseProcess"
+	SystemMonitor_ResumeProcess_FullMethodName          = "/picontrol.SystemMonitor/ResumeProcess"
 	SystemMonitor_ListServices_FullMethodName           = "/picontrol.SystemMonitor/ListServices"
 	SystemMonitor_ManageService_FullMethodName          = "/picontrol.SystemMonitor/ManageService"
 	SystemMonitor_StreamLogs_FullMethodName             = "/picontrol.SystemMonitor/StreamLogs"
@@ -61,6 +63,10 @@ type SystemMonitorClient interface {
 	ListProcesses(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ProcessList, error)
 	// Kill a specific process by PID
 	KillProcess(ctx context.Context, in *ProcessId, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Pause a specific process by PID (SIGSTOP)
+	PauseProcess(ctx context.Context, in *ProcessId, opts ...grpc.CallOption) (*ActionStatus, error)
+	// Resume a specific process by PID (SIGCONT)
+	ResumeProcess(ctx context.Context, in *ProcessId, opts ...grpc.CallOption) (*ActionStatus, error)
 	// List all systemd services
 	ListServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ServiceList, error)
 	// Control a systemd service (start/stop/restart/enable/disable)
@@ -161,6 +167,26 @@ func (c *systemMonitorClient) KillProcess(ctx context.Context, in *ProcessId, op
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ActionStatus)
 	err := c.cc.Invoke(ctx, SystemMonitor_KillProcess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) PauseProcess(ctx context.Context, in *ProcessId, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_PauseProcess_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemMonitorClient) ResumeProcess(ctx context.Context, in *ProcessId, opts ...grpc.CallOption) (*ActionStatus, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ActionStatus)
+	err := c.cc.Invoke(ctx, SystemMonitor_ResumeProcess_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -522,6 +548,10 @@ type SystemMonitorServer interface {
 	ListProcesses(context.Context, *Empty) (*ProcessList, error)
 	// Kill a specific process by PID
 	KillProcess(context.Context, *ProcessId) (*ActionStatus, error)
+	// Pause a specific process by PID (SIGSTOP)
+	PauseProcess(context.Context, *ProcessId) (*ActionStatus, error)
+	// Resume a specific process by PID (SIGCONT)
+	ResumeProcess(context.Context, *ProcessId) (*ActionStatus, error)
 	// List all systemd services
 	ListServices(context.Context, *Empty) (*ServiceList, error)
 	// Control a systemd service (start/stop/restart/enable/disable)
@@ -597,6 +627,12 @@ func (UnimplementedSystemMonitorServer) ListProcesses(context.Context, *Empty) (
 }
 func (UnimplementedSystemMonitorServer) KillProcess(context.Context, *ProcessId) (*ActionStatus, error) {
 	return nil, status.Error(codes.Unimplemented, "method KillProcess not implemented")
+}
+func (UnimplementedSystemMonitorServer) PauseProcess(context.Context, *ProcessId) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseProcess not implemented")
+}
+func (UnimplementedSystemMonitorServer) ResumeProcess(context.Context, *ProcessId) (*ActionStatus, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeProcess not implemented")
 }
 func (UnimplementedSystemMonitorServer) ListServices(context.Context, *Empty) (*ServiceList, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListServices not implemented")
@@ -743,6 +779,42 @@ func _SystemMonitor_KillProcess_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemMonitorServer).KillProcess(ctx, req.(*ProcessId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_PauseProcess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).PauseProcess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_PauseProcess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).PauseProcess(ctx, req.(*ProcessId))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemMonitor_ResumeProcess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProcessId)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemMonitorServer).ResumeProcess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemMonitor_ResumeProcess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemMonitorServer).ResumeProcess(ctx, req.(*ProcessId))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1180,6 +1252,14 @@ var SystemMonitor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "KillProcess",
 			Handler:    _SystemMonitor_KillProcess_Handler,
+		},
+		{
+			MethodName: "PauseProcess",
+			Handler:    _SystemMonitor_PauseProcess_Handler,
+		},
+		{
+			MethodName: "ResumeProcess",
+			Handler:    _SystemMonitor_ResumeProcess_Handler,
 		},
 		{
 			MethodName: "ListServices",

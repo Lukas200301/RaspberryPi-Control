@@ -7,7 +7,8 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:gap/gap.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_providers.dart';
-
+import '../providers/terminal_snippets_provider.dart';
+import '../providers/terminal_snippets_provider.dart';
 class TerminalScreen extends ConsumerStatefulWidget {
   const TerminalScreen({super.key});
 
@@ -26,30 +27,25 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   @override
   void initState() {
     super.initState();
-    
-    terminal = Terminal(
-      maxLines: 10000,
-    );
-    
+
+    terminal = Terminal(maxLines: 10000);
+
     terminalController = TerminalController();
-    
+
     _connectTerminal();
   }
 
   Future<void> _connectTerminal() async {
     try {
       final sshService = ref.read(sshServiceProvider);
-      
+
       if (!sshService.isConnected) {
         throw Exception('SSH not connected');
       }
 
       // Create SSH shell session
       final session = await sshService.client!.shell(
-        pty: SSHPtyConfig(
-          width: 80,
-          height: 24,
-        ),
+        pty: SSHPtyConfig(width: 80, height: 24),
       );
 
       // Connect terminal output to SSH
@@ -70,14 +66,15 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
       setState(() {
         _isConnected = true;
       });
-      
     } catch (e) {
       debugPrint('Terminal connection error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to connect terminal: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Failed to connect terminal: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -126,7 +123,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         break;
     }
   }
-  
+
   void _handleInput(String char) {
     if (_ctrlPressed) {
       // Send CTRL+char combination
@@ -178,7 +175,86 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
             },
             tooltip: 'Clear screen',
           ),
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.code),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+              tooltip: 'Snippets',
+            ),
+          ),
         ],
+      ),
+      endDrawer: Drawer(
+        backgroundColor: AppTheme.background,
+        child: Consumer(
+          builder: (context, ref, _) {
+            final snippets = ref.watch(terminalSnippetsProvider);
+            return SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Snippets',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.add,
+                            color: AppTheme.primaryIndigo,
+                          ),
+                          onPressed: () => _showAddSnippetDialog(ref),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: AppTheme.glassBorder),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: snippets.length,
+                      itemBuilder: (context, index) {
+                        final snippet = snippets[index];
+                        return ListTile(
+                          title: Text(
+                            snippet,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.delete,
+                              size: 16,
+                              color: AppTheme.errorRose,
+                            ),
+                            onPressed: () {
+                              ref
+                                  .read(terminalSnippetsProvider.notifier)
+                                  .removeSnippet(snippet);
+                            },
+                          ),
+                          onTap: () {
+                            terminal.textInput(snippet);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
       body: Column(
         children: [
@@ -204,7 +280,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 ],
               ),
             ),
-          
+
           // Terminal view
           Expanded(
             child: Container(
@@ -216,7 +292,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                     terminal,
                     controller: terminalController,
                     autofocus: true,
-                    backgroundOpacity: 1.0,
+                    backgroundOpacity: 0.0, // transparent so the Colors.black container shines through
                     padding: const EdgeInsets.all(8),
                     textStyle: TerminalStyle(
                       fontSize: settings.terminalFontSize,
@@ -236,7 +312,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 top: false,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       _buildKeyButton('ESC'),
@@ -276,7 +355,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
   Widget _buildKeyButton(String label, {IconData? icon, String? char}) {
     final isCtrl = label == 'CTRL';
     final isActive = isCtrl && _ctrlPressed;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Material(
@@ -295,8 +374,8 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: icon != null
                 ? Icon(
-                    icon, 
-                    size: 16, 
+                    icon,
+                    size: 16,
                     color: isActive ? Colors.white : AppTheme.primaryIndigo,
                   )
                 : Text(
@@ -309,6 +388,37 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                   ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showAddSnippetDialog(WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Add Snippet'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter bash command...'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref
+                  .read(terminalSnippetsProvider.notifier)
+                  .addSnippet(controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
