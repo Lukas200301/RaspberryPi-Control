@@ -36,7 +36,7 @@ class ReleaseNote {
 
   factory ReleaseNote.fromJson(Map<String, dynamic> json) {
     String downloadUrl = '';
-    
+
     // Find the APK asset in the release
     if (json['assets'] != null && json['assets'] is List) {
       for (var asset in json['assets']) {
@@ -60,7 +60,8 @@ class ReleaseNote {
 class UpdateService {
   static const String repoOwner = 'Lukas200301';
   static const String repoName = 'RaspberryPi-Control';
-  static const String apiUrl = 'https://api.github.com/repos/$repoOwner/$repoName/releases';
+  static const String apiUrl =
+      'https://api.github.com/repos/$repoOwner/$repoName/releases';
 
   /// Check for updates and return update information
   Future<UpdateInfo?> checkForUpdates() async {
@@ -71,10 +72,12 @@ class UpdateService {
       debugPrint('Current version: $currentVersion');
 
       // Fetch releases from GitHub
-      final response = await http.get(
-        Uri.parse(apiUrl),
-        headers: {'Accept': 'application/vnd.github.v3+json'},
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(apiUrl),
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         debugPrint('Failed to fetch releases: ${response.statusCode}');
@@ -82,7 +85,7 @@ class UpdateService {
       }
 
       final List<dynamic> releases = json.decode(response.body);
-      
+
       if (releases.isEmpty) {
         debugPrint('No releases found');
         return null;
@@ -90,7 +93,10 @@ class UpdateService {
 
       // Get latest release
       final latestRelease = releases.first;
-      final latestVersion = (latestRelease['tag_name'] as String).replaceAll('v', '');
+      final latestVersion = (latestRelease['tag_name'] as String).replaceAll(
+        'v',
+        '',
+      );
 
       debugPrint('Latest version: $latestVersion');
 
@@ -99,10 +105,13 @@ class UpdateService {
 
       // Get all release notes between current and latest
       final List<ReleaseNote> releaseNotes = [];
-      
+
       for (var release in releases) {
-        final releaseVersion = (release['tag_name'] as String).replaceAll('v', '');
-        
+        final releaseVersion = (release['tag_name'] as String).replaceAll(
+          'v',
+          '',
+        );
+
         // Include all releases newer than current version
         if (_isNewerVersion(currentVersion, releaseVersion)) {
           releaseNotes.add(ReleaseNote.fromJson(release));

@@ -17,9 +17,9 @@ class ConnectionManager {
     required SSHService sshService,
     required GrpcService grpcService,
     required AgentManager agentManager,
-  })  : _sshService = sshService,
-        _grpcService = grpcService,
-        _agentManager = agentManager;
+  }) : _sshService = sshService,
+       _grpcService = grpcService,
+       _agentManager = agentManager;
 
   // Connection state
   final _stateController = StreamController<ConnectionManagerState>.broadcast();
@@ -55,42 +55,52 @@ class ConnectionManager {
     if (_state is ConnectedState) {
       final current = (_state as ConnectedState).connection;
       if (current.id == connection.id) {
-        return ConnectionResult.error('Already connected to ${connection.name}');
+        return ConnectionResult.error(
+          'Already connected to ${connection.name}',
+        );
       }
       // Disconnect from current connection first
       await disconnect();
     }
 
-    _updateState(ConnectionManagerState.connecting(
-      connection: connection,
-      step: ConnectionStep.initializing,
-    ));
+    _updateState(
+      ConnectionManagerState.connecting(
+        connection: connection,
+        step: ConnectionStep.initializing,
+      ),
+    );
 
     try {
       // Step 1: Establish SSH connection
       onProgress?.call('Connecting to SSH...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.connectingSSH,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.connectingSSH,
+        ),
+      );
 
       await _sshService.connect(connection);
       debugPrint('✓ SSH connected');
 
       // Step 1.5: Check if user is root (required for app to function)
       onProgress?.call('Checking user permissions...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.checkingPermissions,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.checkingPermissions,
+        ),
+      );
 
       try {
         final hasSudo = await _agentManager.checkSudoAccess();
         debugPrint('Sudo access check result: $hasSudo');
-        
+
         if (!hasSudo) {
           debugPrint('User does not have sudo access - blocking connection');
-          throw Exception('SUDO_REQUIRED: This app requires sudo permissions. Please connect with a user that has sudo access.');
+          throw Exception(
+            'SUDO_REQUIRED: This app requires sudo permissions. Please connect with a user that has sudo access.',
+          );
         }
         debugPrint('✓ User has sudo access');
       } catch (e) {
@@ -99,18 +109,24 @@ class ConnectionManager {
         }
         // If command execution fails after successful SSH connection, it's a permission/shell issue
         debugPrint('Command execution error during sudo check: $e');
-        throw Exception('SUDO_REQUIRED: User cannot execute commands. This app requires a user with full shell access and sudo permissions.');
+        throw Exception(
+          'SUDO_REQUIRED: User cannot execute commands. This app requires a user with full shell access and sudo permissions.',
+        );
       }
 
       // Step 2: Check agent installation
       onProgress?.call('Checking agent status...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.checkingAgent,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.checkingAgent,
+        ),
+      );
 
       final agentInfo = await _agentManager.checkAgentVersion();
-      debugPrint('Agent info: installed=${agentInfo.isInstalled}, version=${agentInfo.version}, needs update=${agentInfo.needsUpdate}');
+      debugPrint(
+        'Agent info: installed=${agentInfo.isInstalled}, version=${agentInfo.version}, needs update=${agentInfo.needsUpdate}',
+      );
 
       // If agent is not installed, return partial result
       if (!agentInfo.isInstalled) {
@@ -122,15 +138,17 @@ class ConnectionManager {
         }
         // Agent will be installed by caller, then they can call continueConnection
       }
-      
+
       // Note: If agent just needs update, we continue connecting and show update banner
 
       // Step 4: Check SSH forwarding configuration
       onProgress?.call('Checking SSH configuration...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.checkingSSHConfig,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.checkingSSHConfig,
+        ),
+      );
 
       final forwardingEnabled = await _checkSSHForwarding();
       if (!forwardingEnabled && !enableForwardingIfNeeded) {
@@ -145,10 +163,12 @@ class ConnectionManager {
 
       // Step 6: Connect gRPC
       onProgress?.call('Connecting to agent...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.connectingGRPC,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.connectingGRPC,
+        ),
+      );
 
       await _grpcService.connect(50051);
       debugPrint('✓ gRPC connected');
@@ -159,8 +179,12 @@ class ConnectionManager {
         debugPrint('Fetching agent version via gRPC...');
         final versionInfo = await _grpcService.getVersion();
         debugPrint('✓ Agent version received: ${versionInfo.version}');
-        updatedConnection = connection.copyWith(agentVersion: versionInfo.version);
-        debugPrint('✓ Connection updated with agent version: ${updatedConnection.agentVersion}');
+        updatedConnection = connection.copyWith(
+          agentVersion: versionInfo.version,
+        );
+        debugPrint(
+          '✓ Connection updated with agent version: ${updatedConnection.agentVersion}',
+        );
       } catch (e) {
         debugPrint('⚠ Could not get agent version: $e');
         // Continue anyway - version check is non-critical
@@ -168,9 +192,13 @@ class ConnectionManager {
 
       // Success!
       _currentConnection = updatedConnection;
-      _updateState(ConnectionManagerState.connected(connection: updatedConnection));
-      
-      debugPrint('Connection complete - returning connection with agentVersion: ${updatedConnection.agentVersion}');
+      _updateState(
+        ConnectionManagerState.connected(connection: updatedConnection),
+      );
+
+      debugPrint(
+        'Connection complete - returning connection with agentVersion: ${updatedConnection.agentVersion}',
+      );
 
       return ConnectionResult.success(connection: updatedConnection);
     } catch (e, stackTrace) {
@@ -179,10 +207,12 @@ class ConnectionManager {
       // Cleanup on failure
       await _cleanupFailedConnection();
 
-      _updateState(ConnectionManagerState.error(
-        message: e.toString(),
-        previousConnection: _currentConnection,
-      ));
+      _updateState(
+        ConnectionManagerState.error(
+          message: e.toString(),
+          previousConnection: _currentConnection,
+        ),
+      );
 
       return ConnectionResult.error(e.toString());
     }
@@ -208,10 +238,12 @@ class ConnectionManager {
 
       // Connect gRPC
       onProgress?.call('Connecting to agent...');
-      _updateState(ConnectionManagerState.connecting(
-        connection: connection,
-        step: ConnectionStep.connectingGRPC,
-      ));
+      _updateState(
+        ConnectionManagerState.connecting(
+          connection: connection,
+          step: ConnectionStep.connectingGRPC,
+        ),
+      );
 
       await _grpcService.connect(50051);
       debugPrint('✓ gRPC connected');
@@ -221,7 +253,9 @@ class ConnectionManager {
       try {
         final versionInfo = await _grpcService.getVersion();
         debugPrint('✓ Agent version: ${versionInfo.version}');
-        updatedConnection = connection.copyWith(agentVersion: versionInfo.version);
+        updatedConnection = connection.copyWith(
+          agentVersion: versionInfo.version,
+        );
       } catch (e) {
         debugPrint('⚠ Could not get agent version: $e');
         // Continue anyway - version check is non-critical
@@ -229,7 +263,9 @@ class ConnectionManager {
 
       // Success!
       _currentConnection = updatedConnection;
-      _updateState(ConnectionManagerState.connected(connection: updatedConnection));
+      _updateState(
+        ConnectionManagerState.connected(connection: updatedConnection),
+      );
 
       return ConnectionResult.success(connection: updatedConnection);
     } catch (e, stackTrace) {
@@ -237,17 +273,21 @@ class ConnectionManager {
 
       await _cleanupFailedConnection();
 
-      _updateState(ConnectionManagerState.error(
-        message: e.toString(),
-        previousConnection: _currentConnection,
-      ));
+      _updateState(
+        ConnectionManagerState.error(
+          message: e.toString(),
+          previousConnection: _currentConnection,
+        ),
+      );
 
       return ConnectionResult.error(e.toString());
     }
   }
 
   /// Setup agent and SSH tunnel
-  Future<TunnelResult> _setupAgentAndTunnel(Function(String)? onProgress) async {
+  Future<TunnelResult> _setupAgentAndTunnel(
+    Function(String)? onProgress,
+  ) async {
     try {
       // Start agent using AgentManager
       onProgress?.call('Starting agent...');
@@ -263,7 +303,11 @@ class ConnectionManager {
       // Setup SSH tunnel
       onProgress?.call('Setting up secure tunnel...');
       try {
-        final localPort = await _sshService.forwardLocal(50051, 'localhost', 50051);
+        final localPort = await _sshService.forwardLocal(
+          50051,
+          'localhost',
+          50051,
+        );
         debugPrint('✓ SSH tunnel: localhost:$localPort -> Pi:50051');
 
         // Give tunnel time to establish
@@ -285,7 +329,8 @@ class ConnectionManager {
         'grep -i "^\\s*AllowTcpForwarding" /etc/ssh/sshd_config || echo "not_configured"',
       );
 
-      final isDisabled = result.toLowerCase().contains('allowtcpforwarding no') ||
+      final isDisabled =
+          result.toLowerCase().contains('allowtcpforwarding no') ||
           result.toLowerCase().contains('allowtcpforwarding=no');
 
       return !isDisabled;
@@ -303,7 +348,9 @@ class ConnectionManager {
 
     try {
       // Backup config
-      await _sshService.execute('sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup');
+      await _sshService.execute(
+        'sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup',
+      );
 
       // Enable forwarding
       await _sshService.execute(
@@ -316,7 +363,9 @@ class ConnectionManager {
       );
 
       // Restart SSH
-      await _sshService.execute('sudo systemctl restart sshd || sudo service ssh restart');
+      await _sshService.execute(
+        'sudo systemctl restart sshd || sudo service ssh restart',
+      );
 
       debugPrint('✓ SSH forwarding enabled');
     } catch (e) {
@@ -477,13 +526,15 @@ sealed class ConnectionResult {
 
   const ConnectionResult({required this.success, this.error});
 
-  factory ConnectionResult.success({required SSHConnection connection}) = SuccessResult;
+  factory ConnectionResult.success({required SSHConnection connection}) =
+      SuccessResult;
   factory ConnectionResult.error(String message) = ErrorResult;
   factory ConnectionResult.agentSetupRequired({
     required AgentInfo agentInfo,
     required bool sshConnected,
   }) = AgentSetupRequiredResult;
-  factory ConnectionResult.sshForwardingRequired() = SSHForwardingRequiredResult;
+  factory ConnectionResult.sshForwardingRequired() =
+      SSHForwardingRequiredResult;
 }
 
 class SuccessResult extends ConnectionResult {

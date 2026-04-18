@@ -13,10 +13,7 @@ import 'glass_card.dart';
 class FilePreviewDialog extends ConsumerStatefulWidget {
   final FileItem file;
 
-  const FilePreviewDialog({
-    super.key,
-    required this.file,
-  });
+  const FilePreviewDialog({super.key, required this.file});
 
   @override
   ConsumerState<FilePreviewDialog> createState() => _FilePreviewDialogState();
@@ -46,12 +43,12 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
 
     try {
       if (widget.file.isImage) {
-         // Load image bytes
-         final data = await sftp.readFile(widget.file.path);
-         setState(() {
-           _imageBytes = data;
-           _isLoading = false;
-         });
+        // Load image bytes
+        final data = await sftp.readFile(widget.file.path);
+        setState(() {
+          _imageBytes = data;
+          _isLoading = false;
+        });
       } else if (widget.file.isTextFile) {
         // Load text content
         final data = await sftp.readFile(widget.file.path);
@@ -117,11 +114,9 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
                 ),
               ),
               const Divider(height: 1),
-              
+
               // Content
-              Expanded(
-                child: _buildContent(),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
         ),
@@ -131,9 +126,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -154,9 +147,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
     }
 
     if (_content == null) {
-      return const Center(
-        child: Text('No content to display'),
-      );
+      return const Center(child: Text('No content to display'));
     }
 
     // Show different preview based on file type
@@ -197,7 +188,10 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
               children: [
                 const Icon(Icons.broken_image, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                Text('Failed to display image: $error', style: const TextStyle(color: Colors.grey)),
+                Text(
+                  'Failed to display image: $error',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
             );
           },
@@ -211,7 +205,11 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(widget.file.icon, size: 80, color: widget.file.color.withOpacity(0.5)),
+          Icon(
+            widget.file.icon,
+            size: 80,
+            color: widget.file.color.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 24),
           const Text(
             'Preview not available for this file type',
@@ -235,7 +233,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
 
   Future<void> _downloadAndOpen() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final sftp = ref.read(sftpServiceProvider);
       if (sftp == null) throw Exception('Not connected');
@@ -243,23 +241,22 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
       // Get temp directory
       final tempDir = await getTemporaryDirectory();
       final localPath = '${tempDir.path}/${widget.file.name}';
-      
+
       // Download bytes
       final bytes = await sftp.downloadFile(remotePath: widget.file.path);
-      
+
       // Write to file
       final file = File(localPath);
       await file.writeAsBytes(bytes);
-      
+
       // Open
       final result = await OpenFilex.open(localPath);
       if (result.type != ResultType.done) {
         throw Exception(result.message);
       }
-      
+
       // Close dialog as we are opening externally
       if (mounted) Navigator.pop(context);
-      
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -296,19 +293,18 @@ class SyntaxHighlighter {
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
-      
+
       // Line number
-      spans.add(TextSpan(
-        text: '${(i + 1).toString().padLeft(4)} │ ',
-        style: const TextStyle(
-          color: Colors.grey,
-          fontFamily: 'monospace',
+      spans.add(
+        TextSpan(
+          text: '${(i + 1).toString().padLeft(4)} │ ',
+          style: const TextStyle(color: Colors.grey, fontFamily: 'monospace'),
         ),
-      ));
+      );
 
       // Syntax highlighting based on extension
       spans.add(_highlightLine(line, extension));
-      
+
       if (i < lines.length - 1) {
         spans.add(const TextSpan(text: '\n'));
       }
@@ -321,7 +317,7 @@ class SyntaxHighlighter {
     // Basic keyword highlighting
     final keywords = _getKeywords(extension);
     final comments = _getCommentStyle(extension);
-    
+
     // Check for comments
     if (comments != null && line.trimLeft().startsWith(comments)) {
       return TextSpan(
@@ -337,45 +333,53 @@ class SyntaxHighlighter {
     // Highlight keywords
     final words = line.split(RegExp(r'\s+'));
     final spans = <InlineSpan>[];
-    
+
     for (var i = 0; i < words.length; i++) {
       final word = words[i];
-      
+
       if (keywords.contains(word)) {
-        spans.add(TextSpan(
-          text: word,
-          style: const TextStyle(
-            color: AppTheme.primaryIndigo,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'monospace',
+        spans.add(
+          TextSpan(
+            text: word,
+            style: const TextStyle(
+              color: AppTheme.primaryIndigo,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+            ),
           ),
-        ));
+        );
       } else if (word.startsWith('"') || word.startsWith("'")) {
-        spans.add(TextSpan(
-          text: word,
-          style: const TextStyle(
-            color: Colors.green,
-            fontFamily: 'monospace',
+        spans.add(
+          TextSpan(
+            text: word,
+            style: const TextStyle(
+              color: Colors.green,
+              fontFamily: 'monospace',
+            ),
           ),
-        ));
+        );
       } else if (RegExp(r'^\d+$').hasMatch(word)) {
-        spans.add(TextSpan(
-          text: word,
-          style: const TextStyle(
-            color: Colors.orange,
-            fontFamily: 'monospace',
+        spans.add(
+          TextSpan(
+            text: word,
+            style: const TextStyle(
+              color: Colors.orange,
+              fontFamily: 'monospace',
+            ),
           ),
-        ));
+        );
       } else {
-        spans.add(TextSpan(
-          text: word,
-          style: const TextStyle(
-            color: Colors.white,
-            fontFamily: 'monospace',
+        spans.add(
+          TextSpan(
+            text: word,
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'monospace',
+            ),
           ),
-        ));
+        );
       }
-      
+
       if (i < words.length - 1) {
         spans.add(const TextSpan(text: ' '));
       }
@@ -388,41 +392,170 @@ class SyntaxHighlighter {
     switch (extension) {
       case 'dart':
         return {
-          'class', 'extends', 'implements', 'with', 'abstract', 'interface',
-          'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'default',
-          'return', 'break', 'continue', 'try', 'catch', 'finally', 'throw',
-          'var', 'final', 'const', 'void', 'int', 'double', 'String', 'bool',
-          'List', 'Map', 'Set', 'Future', 'async', 'await', 'import', 'export',
+          'class',
+          'extends',
+          'implements',
+          'with',
+          'abstract',
+          'interface',
+          'if',
+          'else',
+          'for',
+          'while',
+          'do',
+          'switch',
+          'case',
+          'default',
+          'return',
+          'break',
+          'continue',
+          'try',
+          'catch',
+          'finally',
+          'throw',
+          'var',
+          'final',
+          'const',
+          'void',
+          'int',
+          'double',
+          'String',
+          'bool',
+          'List',
+          'Map',
+          'Set',
+          'Future',
+          'async',
+          'await',
+          'import',
+          'export',
         };
       case 'java':
         return {
-          'public', 'private', 'protected', 'class', 'interface', 'extends',
-          'implements', 'if', 'else', 'for', 'while', 'do', 'switch', 'case',
-          'return', 'break', 'continue', 'try', 'catch', 'finally', 'throw',
-          'int', 'long', 'double', 'float', 'boolean', 'void', 'String',
-          'import', 'package', 'static', 'final', 'abstract',
+          'public',
+          'private',
+          'protected',
+          'class',
+          'interface',
+          'extends',
+          'implements',
+          'if',
+          'else',
+          'for',
+          'while',
+          'do',
+          'switch',
+          'case',
+          'return',
+          'break',
+          'continue',
+          'try',
+          'catch',
+          'finally',
+          'throw',
+          'int',
+          'long',
+          'double',
+          'float',
+          'boolean',
+          'void',
+          'String',
+          'import',
+          'package',
+          'static',
+          'final',
+          'abstract',
         };
       case 'py':
         return {
-          'def', 'class', 'if', 'elif', 'else', 'for', 'while', 'return',
-          'import', 'from', 'as', 'try', 'except', 'finally', 'raise',
-          'with', 'lambda', 'yield', 'pass', 'break', 'continue',
-          'True', 'False', 'None', 'and', 'or', 'not', 'in', 'is',
+          'def',
+          'class',
+          'if',
+          'elif',
+          'else',
+          'for',
+          'while',
+          'return',
+          'import',
+          'from',
+          'as',
+          'try',
+          'except',
+          'finally',
+          'raise',
+          'with',
+          'lambda',
+          'yield',
+          'pass',
+          'break',
+          'continue',
+          'True',
+          'False',
+          'None',
+          'and',
+          'or',
+          'not',
+          'in',
+          'is',
         };
       case 'js':
       case 'ts':
         return {
-          'function', 'const', 'let', 'var', 'if', 'else', 'for', 'while',
-          'return', 'break', 'continue', 'try', 'catch', 'finally', 'throw',
-          'class', 'extends', 'import', 'export', 'default', 'async', 'await',
-          'new', 'this', 'super', 'typeof', 'instanceof',
+          'function',
+          'const',
+          'let',
+          'var',
+          'if',
+          'else',
+          'for',
+          'while',
+          'return',
+          'break',
+          'continue',
+          'try',
+          'catch',
+          'finally',
+          'throw',
+          'class',
+          'extends',
+          'import',
+          'export',
+          'default',
+          'async',
+          'await',
+          'new',
+          'this',
+          'super',
+          'typeof',
+          'instanceof',
         };
       case 'sh':
       case 'bash':
         return {
-          'if', 'then', 'else', 'elif', 'fi', 'for', 'while', 'do', 'done',
-          'case', 'esac', 'function', 'return', 'exit', 'echo', 'read',
-          'export', 'source', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv',
+          'if',
+          'then',
+          'else',
+          'elif',
+          'fi',
+          'for',
+          'while',
+          'do',
+          'done',
+          'case',
+          'esac',
+          'function',
+          'return',
+          'exit',
+          'echo',
+          'read',
+          'export',
+          'source',
+          'cd',
+          'pwd',
+          'mkdir',
+          'rm',
+          'cp',
+          'mv',
         };
       default:
         return {};

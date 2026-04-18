@@ -12,7 +12,9 @@ final dockerServiceProvider = Provider<DockerService>((ref) {
   return DockerService(channel);
 });
 
-final containerListProvider = FutureProvider.autoDispose<List<ContainerInfo>>((ref) async {
+final containerListProvider = FutureProvider.autoDispose<List<ContainerInfo>>((
+  ref,
+) async {
   final service = ref.watch(dockerServiceProvider);
   return service.listContainers(all: true);
 });
@@ -71,12 +73,16 @@ class DockerService {
     }
   }
 
-  Stream<LogEntry> getContainerLogs(String id, {bool follow = false, int tail = 100}) {
+  Stream<LogEntry> getContainerLogs(
+    String id, {
+    bool follow = false,
+    int tail = 100,
+  }) {
     final request = LogRequest()
       ..containerId = id
       ..follow = follow
       ..tail = tail;
-    
+
     return _client.getContainerLogs(request);
   }
 }

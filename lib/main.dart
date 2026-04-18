@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 import 'services/storage_service.dart';
 import 'screens/login_screen.dart';
@@ -29,9 +27,7 @@ class RaspberryPiControlApp extends ConsumerWidget {
       theme: themeState.themeData,
       debugShowCheckedModeBanner: false,
       home: const LoginScreen(),
-      routes: {
-        '/connections': (context) => const ConnectionsScreen(),
-      },
+      routes: {'/connections': (context) => const ConnectionsScreen()},
     );
   }
 }

@@ -33,7 +33,7 @@ class NetworkDiscoveryService {
       // Get local network info
       final info = NetworkInfo();
       final wifiIP = await info.getWifiIP();
-      
+
       if (wifiIP == null) {
         debugPrint('❌ Could not determine local IP address');
         return devices;
@@ -47,7 +47,7 @@ class NetworkDiscoveryService {
         debugPrint('❌ Invalid IP format: $wifiIP');
         return devices;
       }
-      
+
       final networkBase = '${parts[0]}.${parts[1]}.${parts[2]}';
       debugPrint('🌐 Scanning network: $networkBase.0/24');
 
@@ -85,8 +85,16 @@ class NetworkDiscoveryService {
   /// Check if a host is reachable and get its details
   Future<DiscoveredDevice?> _checkHost(String ip) async {
     // Try multiple common ports to detect devices
-    final portsToCheck = [22, 80, 443, 8080, 445, 139, 3389]; // SSH, HTTP, HTTPS, Alt-HTTP, SMB, RDP
-    
+    final portsToCheck = [
+      22,
+      80,
+      443,
+      8080,
+      445,
+      139,
+      3389,
+    ]; // SSH, HTTP, HTTPS, Alt-HTTP, SMB, RDP
+
     bool isReachable = false;
     int detectedPort = 22; // Default to SSH
     String deviceType = 'Unknown';
@@ -102,7 +110,7 @@ class NetworkDiscoveryService {
         socket.destroy();
         isReachable = true;
         detectedPort = port;
-        
+
         // Determine device type based on port
         switch (port) {
           case 22:
@@ -136,7 +144,9 @@ class NetworkDiscoveryService {
     String hostname = ip;
     try {
       final addr = InternetAddress(ip);
-      final result = await addr.reverse().timeout(const Duration(milliseconds: 800));
+      final result = await addr.reverse().timeout(
+        const Duration(milliseconds: 800),
+      );
       if (result.host != ip && result.host.isNotEmpty) {
         hostname = result.host;
         // Clean up hostname
@@ -160,7 +170,11 @@ class NetworkDiscoveryService {
   }
 
   /// Quick ping check to see if a host is reachable
-  Future<bool> isHostReachable(String host, {int port = 22, Duration timeout = const Duration(milliseconds: 800)}) async {
+  Future<bool> isHostReachable(
+    String host, {
+    int port = 22,
+    Duration timeout = const Duration(milliseconds: 800),
+  }) async {
     try {
       final socket = await Socket.connect(host, port, timeout: timeout);
       socket.destroy();
@@ -171,9 +185,12 @@ class NetworkDiscoveryService {
   }
 
   /// Check status of multiple hosts in parallel
-  Future<Map<String, bool>> checkHostsStatus(List<String> hosts, {int port = 22}) async {
+  Future<Map<String, bool>> checkHostsStatus(
+    List<String> hosts, {
+    int port = 22,
+  }) async {
     final results = <String, bool>{};
-    
+
     await Future.wait(
       hosts.map((host) async {
         results[host] = await isHostReachable(host, port: port);

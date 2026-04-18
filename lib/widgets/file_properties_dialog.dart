@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/file_item.dart';
@@ -28,16 +27,16 @@ class FilePropertiesDialog extends StatelessWidget {
               Text(
                 file.name,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 file.formattedSize,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                  color: AppTheme.textSecondary,
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -46,45 +45,51 @@ class FilePropertiesDialog extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      _buildPropertyGroup(
-                        context,
-                        'Location',
-                        [
+                      _buildPropertyGroup(context, 'Location', [
+                        _PropertyItem(
+                          label: 'Path',
+                          value: file.path,
+                          canCopy: true,
+                        ),
+                      ]),
+                      const SizedBox(height: 16),
+                      _buildPropertyGroup(context, 'Details', [
+                        _PropertyItem(
+                          label: 'Type',
+                          value: file.isDirectory
+                              ? 'Directory'
+                              : 'File (${file.extension})',
+                        ),
+                        if (!file.isDirectory)
                           _PropertyItem(
-                            label: 'Path',
-                            value: file.path,
-                            canCopy: true,
+                            label: 'Size',
+                            value: '${file.size} bytes',
                           ),
-                        ],
-                      ),
+                        _PropertyItem(
+                          label: 'Modified',
+                          value: _formatDate(file.modified),
+                        ),
+                      ]),
                       const SizedBox(height: 16),
-                      _buildPropertyGroup(
-                        context,
-                        'Details',
-                        [
-                          _PropertyItem(label: 'Type', value: file.isDirectory ? 'Directory' : 'File (${file.extension})'),
-                          if (!file.isDirectory) _PropertyItem(label: 'Size', value: '${file.size} bytes'),
-                          _PropertyItem(label: 'Modified', value: _formatDate(file.modified)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPropertyGroup(
-                        context,
-                        'Permissions',
-                        [
-                          _PropertyItem(label: 'String', value: file.permissionsString),
-                          _PropertyItem(label: 'Octal', value: file.permissionsOctal),
-                          _PropertyItem(label: 'Owner', value: file.owner),
-                          _PropertyItem(label: 'Group', value: file.group),
-                        ],
-                      ),
+                      _buildPropertyGroup(context, 'Permissions', [
+                        _PropertyItem(
+                          label: 'String',
+                          value: file.permissionsString,
+                        ),
+                        _PropertyItem(
+                          label: 'Octal',
+                          value: file.permissionsOctal,
+                        ),
+                        _PropertyItem(label: 'Owner', value: file.owner),
+                        _PropertyItem(label: 'Group', value: file.group),
+                      ]),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -102,27 +107,33 @@ class FilePropertiesDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildPropertyGroup(BuildContext context, String title, List<_PropertyItem> items) {
+  Widget _buildPropertyGroup(
+    BuildContext context,
+    String title,
+    List<_PropertyItem> items,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title.toUpperCase(),
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppTheme.textTertiary,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
+            color: AppTheme.textTertiary,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
           child: Column(
-            children: items.map((item) => _buildPropertyRow(context, item)).toList(),
+            children: items
+                .map((item) => _buildPropertyRow(context, item))
+                .toList(),
           ),
         ),
       ],
@@ -135,7 +146,7 @@ class FilePropertiesDialog extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -158,7 +169,8 @@ class FilePropertiesDialog extends StatelessWidget {
               item.value,
               style: const TextStyle(
                 color: AppTheme.textPrimary,
-                fontFamily: 'RobotoMono', // Monospace for values usually looks better
+                fontFamily:
+                    'RobotoMono', // Monospace for values usually looks better
               ),
             ),
           ),
@@ -188,7 +200,7 @@ class FilePropertiesDialog extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
-           '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
 

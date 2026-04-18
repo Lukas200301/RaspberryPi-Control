@@ -76,7 +76,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.message),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
       }
@@ -101,7 +103,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Upgrade All Packages'),
-        content: const Text('This will upgrade all installed packages to their latest versions. Continue?'),
+        content: const Text(
+          'This will upgrade all installed packages to their latest versions. Continue?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -150,7 +154,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
       }
@@ -174,7 +180,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
     }
   }
 
-  Future<void> _installPackage(String packageName) async{
+  Future<void> _installPackage(String packageName) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => BackdropFilter(
@@ -232,7 +238,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
       }
@@ -326,7 +334,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
       }
@@ -353,8 +363,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
   @override
   Widget build(BuildContext context) {
     final elevationStatus = ref.watch(agentElevationProvider);
-    final currentConnection = ref.watch(currentConnectionProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Package Manager'),
@@ -394,11 +403,15 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             data: (isRoot) {
               debugPrint('PackagesScreen: Elevation status - isRoot: $isRoot');
               if (!isRoot) {
-                const warningMessage = '⚠️ Limited Functionality: The agent is not running with elevated privileges. You can browse packages, but installing or removing them may fail.';
-                
+                const warningMessage =
+                    '⚠️ Limited Functionality: The agent is not running with elevated privileges. You can browse packages, but installing or removing them may fail.';
+
                 return Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorRose.withValues(alpha: 0.15),
                     border: Border(
@@ -419,7 +432,8 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                       Expanded(
                         child: Text(
                           warningMessage,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: AppTheme.errorRose,
                                 fontSize: 12,
                               ),
@@ -438,11 +452,15 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             error: (error, stack) {
               debugPrint('PackagesScreen: Elevation check error: $error');
               // Show warning if we can't check (assume not root to be safe)
-              const warningMessage = '⚠️ Limited Functionality: Could not verify agent privileges. Package operations may fail.';
-              
+              const warningMessage =
+                  '⚠️ Limited Functionality: Could not verify agent privileges. Package operations may fail.';
+
               return Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.errorRose.withValues(alpha: 0.15),
                   border: Border(
@@ -464,9 +482,9 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                       child: Text(
                         warningMessage,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.errorRose,
-                              fontSize: 12,
-                            ),
+                          color: AppTheme.errorRose,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -474,7 +492,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               );
             },
           ),
-          
+
           // Search and filter
           Padding(
             padding: const EdgeInsets.all(16),
@@ -564,63 +582,63 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                     ),
                   )
                 : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 64,
-                                color: AppTheme.errorRose,
-                              ),
-                              const Gap(16),
-                              Text(
-                                'Error loading packages',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const Gap(8),
-                              Text(
-                                _error!,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                              const Gap(16),
-                              FilledButton.icon(
-                                onPressed: _loadPackages,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Retry'),
-                              ),
-                            ],
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: AppTheme.errorRose,
                           ),
+                          const Gap(16),
+                          Text(
+                            'Error loading packages',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const Gap(8),
+                          Text(
+                            _error!,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const Gap(16),
+                          FilledButton.icon(
+                            onPressed: _loadPackages,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _packages.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 64,
+                          color: Colors.grey[600],
                         ),
-                      )
-                    : _packages.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.inbox_outlined,
-                                  size: 64,
-                                  color: Colors.grey[600],
-                                ),
-                                const Gap(16),
-                                Text(
-                                  'No packages found',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: _packages.length,
-                            itemBuilder: (context, index) {
-                              final package = _packages[index];
-                              return _buildPackageItem(package);
-                            },
-                          ),
+                        const Gap(16),
+                        Text(
+                          'No packages found',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _packages.length,
+                    itemBuilder: (context, index) {
+                      final package = _packages[index];
+                      return _buildPackageItem(package);
+                    },
+                  ),
           ),
         ],
       ),
@@ -647,111 +665,126 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
           });
         },
         child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: package.installed ? AppTheme.successGreen.withValues(alpha: 0.2) : AppTheme.glassLight,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              package.installed ? Icons.check_circle : Icons.apps,
-              color: package.installed ? AppTheme.successGreen : Colors.grey,
-              size: 24,
-            ),
-          ),
-          const Gap(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        package.name,
-                        style: Theme.of(context).textTheme.titleMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (package.version.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.glassLight,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          package.version,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                  ],
-                ),
-                if (package.description.isNotEmpty) ...[
-                  const Gap(4),
-                  Text(
-                    package.description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[400],
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                if (package.installed && package.installedSize > 0) ...[
-                  const Gap(4),
-                  Row(
-                    children: [
-                      Icon(Icons.sd_storage, size: 12, color: Colors.grey[500]),
-                      const Gap(4),
-                      Text(
-                        _formatBytes(package.installedSize.toInt()),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[500],
-                              fontSize: 11,
-                            ),
-                      ),
-                      if (package.section.isNotEmpty) ...[
-                        const Gap(8),
-                        Icon(Icons.folder_outlined, size: 12, color: Colors.grey[500]),
-                        const Gap(4),
-                        Expanded(
-                          child: Text(
-                            package.section,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[500],
-                                  fontSize: 11,
-                                ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const Gap(8),
-          if (package.installed)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              color: AppTheme.errorRose,
-              onPressed: () => _removePackage(package.name),
-            )
-          else
-            FilledButton.icon(
-              onPressed: () => _installPackage(package.name),
-              icon: const Icon(Icons.download, size: 18),
-              label: const Text('Install'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: package.installed
+                    ? AppTheme.successGreen.withValues(alpha: 0.2)
+                    : AppTheme.glassLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                package.installed ? Icons.check_circle : Icons.apps,
+                color: package.installed ? AppTheme.successGreen : Colors.grey,
+                size: 24,
               ),
             ),
-        ],
-      ),
+            const Gap(12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          package.name,
+                          style: Theme.of(context).textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (package.version.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.glassLight,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            package.version,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (package.description.isNotEmpty) ...[
+                    const Gap(4),
+                    Text(
+                      package.description,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (package.installed && package.installedSize > 0) ...[
+                    const Gap(4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.sd_storage,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const Gap(4),
+                        Text(
+                          _formatBytes(package.installedSize.toInt()),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[500], fontSize: 11),
+                        ),
+                        if (package.section.isNotEmpty) ...[
+                          const Gap(8),
+                          Icon(
+                            Icons.folder_outlined,
+                            size: 12,
+                            color: Colors.grey[500],
+                          ),
+                          const Gap(4),
+                          Expanded(
+                            child: Text(
+                              package.section,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Colors.grey[500],
+                                    fontSize: 11,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Gap(8),
+            if (package.installed)
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: AppTheme.errorRose,
+                onPressed: () => _removePackage(package.name),
+              )
+            else
+              FilledButton.icon(
+                onPressed: () => _installPackage(package.name),
+                icon: const Icon(Icons.download, size: 18),
+                label: const Text('Install'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -21,7 +21,10 @@ class StorageService {
 
   Future<void> saveConnections(List<SSHConnection> connections) async {
     final jsonList = connections.map((c) => c.toJson()).toList();
-    await _storage.write(AppConstants.storageKeyConnections, jsonEncode(jsonList));
+    await _storage.write(
+      AppConstants.storageKeyConnections,
+      jsonEncode(jsonList),
+    );
   }
 
   Future<void> addConnection(SSHConnection connection) async {

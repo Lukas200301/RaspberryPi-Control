@@ -13,7 +13,9 @@ final navigationHistoryProvider = StateProvider<List<String>>((ref) => []);
 final selectedFilesProvider = StateProvider<Set<String>>((ref) => {});
 
 /// Provider for file sort order
-final fileSortProvider = StateProvider<FileSortOption>((ref) => FileSortOption.nameAsc);
+final fileSortProvider = StateProvider<FileSortOption>(
+  (ref) => FileSortOption.nameAsc,
+);
 
 enum FileSortOption {
   nameAsc,
@@ -34,10 +36,12 @@ final sftpServiceProvider = Provider<SftpService?>((ref) {
 });
 
 /// Provider for file list in current directory
-final fileListProvider = FutureProvider.autoDispose<List<FileItem>>((ref) async {
+final fileListProvider = FutureProvider.autoDispose<List<FileItem>>((
+  ref,
+) async {
   // Keep provider alive when app goes to background
   ref.keepAlive();
-  
+
   final sftpService = ref.watch(sftpServiceProvider);
   final currentDir = ref.watch(currentDirectoryProvider);
   final sortOption = ref.watch(fileSortProvider);
@@ -48,7 +52,7 @@ final fileListProvider = FutureProvider.autoDispose<List<FileItem>>((ref) async 
 
   try {
     var files = await sftpService.listDirectory(currentDir);
-    
+
     // Apply sorting
     switch (sortOption) {
       case FileSortOption.nameAsc:
@@ -101,7 +105,7 @@ final fileListProvider = FutureProvider.autoDispose<List<FileItem>>((ref) async 
         });
         break;
     }
-    
+
     return files;
   } catch (e) {
     throw Exception('Failed to list files: $e');
@@ -117,7 +121,8 @@ class FileTransferNotifier extends Notifier<List<FileTransfer>> {
     state = [...state, transfer];
   }
 
-  void updateTransfer(String id, {
+  void updateTransfer(
+    String id, {
     int? transferredSize,
     FileTransferStatus? status,
     String? error,
@@ -149,7 +154,9 @@ class FileTransferNotifier extends Notifier<List<FileTransfer>> {
   }
 
   void clearCompleted() {
-    state = state.where((t) => t.status != FileTransferStatus.completed).toList();
+    state = state
+        .where((t) => t.status != FileTransferStatus.completed)
+        .toList();
   }
 
   void clearAll() {
@@ -157,9 +164,10 @@ class FileTransferNotifier extends Notifier<List<FileTransfer>> {
   }
 }
 
-final fileTransfersProvider = NotifierProvider<FileTransferNotifier, List<FileTransfer>>(() {
-  return FileTransferNotifier();
-});
+final fileTransfersProvider =
+    NotifierProvider<FileTransferNotifier, List<FileTransfer>>(() {
+      return FileTransferNotifier();
+    });
 
 /// Provider for search query
 final fileSearchQueryProvider = StateProvider<String>((ref) => '');
@@ -171,6 +179,8 @@ final filteredFileListProvider = Provider<AsyncValue<List<FileItem>>>((ref) {
 
   return fileListAsync.whenData((files) {
     if (searchQuery.isEmpty) return files;
-    return files.where((file) => file.name.toLowerCase().contains(searchQuery)).toList();
+    return files
+        .where((file) => file.name.toLowerCase().contains(searchQuery))
+        .toList();
   });
 });

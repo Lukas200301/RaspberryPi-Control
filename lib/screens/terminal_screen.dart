@@ -8,7 +8,8 @@ import 'package:gap/gap.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_providers.dart';
 import '../providers/terminal_snippets_provider.dart';
-import '../providers/terminal_snippets_provider.dart';
+import '../providers/theme_provider.dart';
+
 class TerminalScreen extends ConsumerStatefulWidget {
   const TerminalScreen({super.key});
 
@@ -288,11 +289,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
               child: Consumer(
                 builder: (context, ref, _) {
                   final settings = ref.watch(appSettingsProvider);
+                  final themeState = ref.watch(themeProvider);
                   return TerminalView(
                     terminal,
                     controller: terminalController,
                     autofocus: true,
-                    backgroundOpacity: 0.0, // transparent so the Colors.black container shines through
+                    backgroundOpacity:
+                        0.0, // transparent so the Colors.black container shines through
+                    theme: themeState.preset.terminalTheme,
                     padding: const EdgeInsets.all(8),
                     textStyle: TerminalStyle(
                       fontSize: settings.terminalFontSize,

@@ -59,7 +59,10 @@ class AgentVersionService {
   }
 
   /// Get a user-friendly message for the version status
-  static String getVersionMessage(AgentVersionStatus status, String? agentVersion) {
+  static String getVersionMessage(
+    AgentVersionStatus status,
+    String? agentVersion,
+  ) {
     switch (status) {
       case AgentVersionStatus.compatible:
         return 'Agent version $agentVersion is compatible';
@@ -132,15 +135,10 @@ echo "Agent updated to version $requiredAgentVersion"
   /// Check if we should show update notification
   static bool shouldShowUpdateNotification(SSHConnection connection) {
     if (connection.agentVersion == null) return false;
-    
+
     final status = checkVersion(connection.agentVersion);
     return status == AgentVersionStatus.outdated;
   }
 }
 
-enum AgentVersionStatus {
-  compatible,
-  outdated,
-  newer,
-  unknown,
-}
+enum AgentVersionStatus { compatible, outdated, newer, unknown }

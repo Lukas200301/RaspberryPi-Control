@@ -109,8 +109,12 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _autoScroll ? Icons.vertical_align_bottom : Icons.vertical_align_top,
-              color: _autoScroll ? AppTheme.primaryIndigo : AppTheme.textSecondary,
+              _autoScroll
+                  ? Icons.vertical_align_bottom
+                  : Icons.vertical_align_top,
+              color: _autoScroll
+                  ? AppTheme.primaryIndigo
+                  : AppTheme.textSecondary,
             ),
             onPressed: () {
               setState(() {
@@ -123,10 +127,14 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    _autoScroll ? 'Auto-scroll enabled' : 'Auto-scroll disabled',
+                    _autoScroll
+                        ? 'Auto-scroll enabled'
+                        : 'Auto-scroll disabled',
                     style: const TextStyle(color: Colors.white),
                   ),
-                  backgroundColor: _autoScroll ? AppTheme.successGreen : AppTheme.textSecondary,
+                  backgroundColor: _autoScroll
+                      ? AppTheme.successGreen
+                      : AppTheme.textSecondary,
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -146,26 +154,44 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                 children: [
                   _buildFilterChip('All', 'all', Icons.list),
                   const Gap(8),
-                  _buildFilterChip('Errors', 'error', Icons.error, AppTheme.errorRose),
+                  _buildFilterChip(
+                    'Errors',
+                    'error',
+                    Icons.error,
+                    AppTheme.errorRose,
+                  ),
                   const Gap(8),
-                  _buildFilterChip('Warnings', 'warning', Icons.warning, AppTheme.warningAmber),
+                  _buildFilterChip(
+                    'Warnings',
+                    'warning',
+                    Icons.warning,
+                    AppTheme.warningAmber,
+                  ),
                   const Gap(8),
-                  _buildFilterChip('Info', 'info', Icons.info, AppTheme.primaryIndigo),
+                  _buildFilterChip(
+                    'Info',
+                    'info',
+                    Icons.info,
+                    AppTheme.primaryIndigo,
+                  ),
                 ],
               ),
             ),
           ),
 
           // Log Stream
-          Expanded(
-            child: _buildLogStream(),
-          ),
+          Expanded(child: _buildLogStream()),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String value, IconData icon, [Color? color]) {
+  Widget _buildFilterChip(
+    String label,
+    String value,
+    IconData icon, [
+    Color? color,
+  ]) {
     final isSelected = _filterLevel == value;
     final chipColor = color ?? AppTheme.textSecondary;
 
@@ -173,7 +199,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isSelected ? chipColor : AppTheme.textSecondary),
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? chipColor : AppTheme.textSecondary,
+          ),
           const Gap(6),
           Text(label),
         ],
@@ -191,9 +221,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         color: isSelected ? chipColor : AppTheme.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
-      side: BorderSide(
-        color: isSelected ? chipColor : AppTheme.glassBorder,
-      ),
+      side: BorderSide(color: isSelected ? chipColor : AppTheme.glassBorder),
     );
   }
 
@@ -267,9 +295,9 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
             const Gap(16),
             Text(
               'No logs yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
             ),
             const Gap(8),
             const Text(
@@ -300,11 +328,16 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       final level = log.level.toLowerCase();
       switch (_filterLevel) {
         case 'error':
-          return level.contains('err') || level.contains('crit') || level.contains('alert') || level.contains('emerg');
+          return level.contains('err') ||
+              level.contains('crit') ||
+              level.contains('alert') ||
+              level.contains('emerg');
         case 'warning':
           return level.contains('warn');
         case 'info':
-          return level.contains('info') || level.contains('notice') || level.contains('debug');
+          return level.contains('info') ||
+              level.contains('notice') ||
+              level.contains('debug');
         default:
           return true;
       }
@@ -316,7 +349,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     Color levelColor;
     IconData levelIcon;
 
-    if (level.contains('err') || level.contains('crit') || level.contains('alert') || level.contains('emerg')) {
+    if (level.contains('err') ||
+        level.contains('crit') ||
+        level.contains('alert') ||
+        level.contains('emerg')) {
       levelColor = AppTheme.errorRose;
       levelIcon = Icons.error;
     } else if (level.contains('warn')) {
@@ -327,8 +363,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
       levelIcon = Icons.info;
     }
 
-    final timestamp = DateTime.fromMillisecondsSinceEpoch(log.timestamp.toInt() * 1000);
-    final timeStr = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
+    final timestamp = DateTime.fromMillisecondsSinceEpoch(
+      log.timestamp.toInt() * 1000,
+    );
+    final timeStr =
+        '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}:${timestamp.second.toString().padLeft(2, '0')}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -359,7 +398,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                       if (log.service.isNotEmpty) ...[
                         const Gap(8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: levelColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),

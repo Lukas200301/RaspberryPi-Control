@@ -10,10 +10,12 @@ class NetworkConnectionsScreen extends ConsumerStatefulWidget {
   const NetworkConnectionsScreen({super.key});
 
   @override
-  ConsumerState<NetworkConnectionsScreen> createState() => _NetworkConnectionsScreenState();
+  ConsumerState<NetworkConnectionsScreen> createState() =>
+      _NetworkConnectionsScreenState();
 }
 
-class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScreen> {
+class _NetworkConnectionsScreenState
+    extends ConsumerState<NetworkConnectionsScreen> {
   String _searchQuery = '';
   String _filterProtocol = 'all'; // all, tcp, udp
   String _filterStatus = 'all'; // all, established, listen
@@ -83,7 +85,10 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Search by address, port, or process...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.textSecondary,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -109,15 +114,35 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
                     children: [
                       _buildFilterChip('All Protocols', 'all', Icons.public),
                       const Gap(8),
-                      _buildFilterChip('TCP', 'tcp', Icons.swap_horiz, AppTheme.primaryIndigo),
+                      _buildFilterChip(
+                        'TCP',
+                        'tcp',
+                        Icons.swap_horiz,
+                        AppTheme.primaryIndigo,
+                      ),
                       const Gap(8),
-                      _buildFilterChip('UDP', 'udp', Icons.swap_vert, AppTheme.secondaryTeal),
+                      _buildFilterChip(
+                        'UDP',
+                        'udp',
+                        Icons.swap_vert,
+                        AppTheme.secondaryTeal,
+                      ),
                       const Gap(16),
                       _buildStatusChip('All States', 'all', Icons.circle),
                       const Gap(8),
-                      _buildStatusChip('Established', 'established', Icons.link, AppTheme.successGreen),
+                      _buildStatusChip(
+                        'Established',
+                        'established',
+                        Icons.link,
+                        AppTheme.successGreen,
+                      ),
                       const Gap(8),
-                      _buildStatusChip('Listen', 'listen', Icons.hearing, AppTheme.warningAmber),
+                      _buildStatusChip(
+                        'Listen',
+                        'listen',
+                        Icons.hearing,
+                        AppTheme.warningAmber,
+                      ),
                     ],
                   ),
                 ),
@@ -126,9 +151,7 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
           ),
 
           // Connections List
-          Expanded(
-            child: _buildConnectionsList(),
-          ),
+          Expanded(child: _buildConnectionsList()),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -141,7 +164,12 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
     );
   }
 
-  Widget _buildFilterChip(String label, String value, IconData icon, [Color? color]) {
+  Widget _buildFilterChip(
+    String label,
+    String value,
+    IconData icon, [
+    Color? color,
+  ]) {
     final isSelected = _filterProtocol == value;
     final chipColor = color ?? AppTheme.textSecondary;
 
@@ -149,7 +177,11 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isSelected ? chipColor : AppTheme.textSecondary),
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? chipColor : AppTheme.textSecondary,
+          ),
           const Gap(6),
           Text(label),
         ],
@@ -167,13 +199,16 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
         color: isSelected ? chipColor : AppTheme.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
-      side: BorderSide(
-        color: isSelected ? chipColor : AppTheme.glassBorder,
-      ),
+      side: BorderSide(color: isSelected ? chipColor : AppTheme.glassBorder),
     );
   }
 
-  Widget _buildStatusChip(String label, String value, IconData icon, [Color? color]) {
+  Widget _buildStatusChip(
+    String label,
+    String value,
+    IconData icon, [
+    Color? color,
+  ]) {
     final isSelected = _filterStatus == value;
     final chipColor = color ?? AppTheme.textSecondary;
 
@@ -181,7 +216,11 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isSelected ? chipColor : AppTheme.textSecondary),
+          Icon(
+            icon,
+            size: 16,
+            color: isSelected ? chipColor : AppTheme.textSecondary,
+          ),
           const Gap(6),
           Text(label),
         ],
@@ -199,9 +238,7 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
         color: isSelected ? chipColor : AppTheme.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
-      side: BorderSide(
-        color: isSelected ? chipColor : AppTheme.glassBorder,
-      ),
+      side: BorderSide(color: isSelected ? chipColor : AppTheme.glassBorder),
     );
   }
 
@@ -246,7 +283,8 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
           );
         }
 
-        final connections = snapshot.data?.connections.toList() ?? <NetworkConnection>[];
+        final connections =
+            snapshot.data?.connections.toList() ?? <NetworkConnection>[];
         final filteredConnections = _filterConnections(connections);
 
         if (filteredConnections.isEmpty) {
@@ -282,7 +320,9 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
     );
   }
 
-  List<NetworkConnection> _filterConnections(List<NetworkConnection> connections) {
+  List<NetworkConnection> _filterConnections(
+    List<NetworkConnection> connections,
+  ) {
     return connections.where((conn) {
       // Filter by protocol
       if (_filterProtocol != 'all') {
@@ -337,7 +377,9 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
 
     // Get port descriptions for display in top right
     final localPortDesc = _getPortDescription(conn.localPort);
-    final remotePortDesc = conn.remoteAddress.isNotEmpty ? _getPortDescription(conn.remotePort) : '';
+    final remotePortDesc = conn.remoteAddress.isNotEmpty
+        ? _getPortDescription(conn.remotePort)
+        : '';
     final hasPortDesc = localPortDesc.isNotEmpty || remotePortDesc.isNotEmpty;
 
     return Container(
@@ -351,7 +393,10 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: protocolColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
@@ -384,12 +429,19 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
                     children: [
                       if (localPortDesc.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryIndigo.withValues(alpha: 0.15),
+                            color: AppTheme.primaryIndigo.withValues(
+                              alpha: 0.15,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: AppTheme.primaryIndigo.withValues(alpha: 0.3),
+                              color: AppTheme.primaryIndigo.withValues(
+                                alpha: 0.3,
+                              ),
                               width: 1,
                             ),
                           ),
@@ -406,12 +458,19 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
                         const Gap(4),
                       if (remotePortDesc.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppTheme.secondaryTeal.withValues(alpha: 0.15),
+                            color: AppTheme.secondaryTeal.withValues(
+                              alpha: 0.15,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: AppTheme.secondaryTeal.withValues(alpha: 0.3),
+                              color: AppTheme.secondaryTeal.withValues(
+                                alpha: 0.3,
+                              ),
                               width: 1,
                             ),
                           ),
@@ -429,7 +488,11 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
                   const Gap(8),
                 ],
                 if (conn.processName.isNotEmpty) ...[
-                  const Icon(Icons.apps, size: 14, color: AppTheme.textTertiary),
+                  const Icon(
+                    Icons.apps,
+                    size: 14,
+                    color: AppTheme.textTertiary,
+                  ),
                   const Gap(4),
                   Text(
                     conn.processName,
@@ -447,14 +510,15 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
             // Local Address
             Row(
               children: [
-                const Icon(Icons.computer, size: 16, color: AppTheme.primaryIndigo),
+                const Icon(
+                  Icons.computer,
+                  size: 16,
+                  color: AppTheme.primaryIndigo,
+                ),
                 const Gap(8),
                 const Text(
                   'Local:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 const Gap(8),
                 Expanded(
@@ -473,14 +537,15 @@ class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScr
             // Remote Address
             Row(
               children: [
-                const Icon(Icons.public, size: 16, color: AppTheme.secondaryTeal),
+                const Icon(
+                  Icons.public,
+                  size: 16,
+                  color: AppTheme.secondaryTeal,
+                ),
                 const Gap(8),
                 const Text(
                   'Remote:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                 ),
                 const Gap(8),
                 Expanded(

@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/file_item.dart';
 import 'file_editor_dialog.dart';
-import 'file_properties_dialog.dart';
 
 class FileOperationDialog extends StatelessWidget {
   final FileItem file;
@@ -31,119 +30,114 @@ class FileOperationDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(file.icon, color: file.color, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        file.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(file.icon, color: file.color, size: 32),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          file.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        file.path,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          file.path,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          const Divider(height: 1),
+            const Divider(height: 1),
 
-          // File info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildInfoRow(context, 'Size', file.formattedSize),
-                _buildInfoRow(context, 'Permissions', file.permissionsString),
-                _buildInfoRow(context, 'Octal', file.permissionsOctal),
-                _buildInfoRow(context, 'Modified', _formatDate(file.modified)),
-                _buildInfoRow(context, 'Owner', file.owner),
-                _buildInfoRow(context, 'Group', file.group),
-              ],
+            // File info
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildInfoRow(context, 'Size', file.formattedSize),
+                  _buildInfoRow(context, 'Permissions', file.permissionsString),
+                  _buildInfoRow(context, 'Octal', file.permissionsOctal),
+                  _buildInfoRow(
+                    context,
+                    'Modified',
+                    _formatDate(file.modified),
+                  ),
+                  _buildInfoRow(context, 'Owner', file.owner),
+                  _buildInfoRow(context, 'Group', file.group),
+                ],
+              ),
             ),
-          ),
 
-          const Divider(height: 1),
+            const Divider(height: 1),
 
-          // Actions
-          ListTile(
-            leading: Icon(file.isDirectory ? Icons.folder_zip : Icons.download),
-            title: Text(file.isDirectory ? 'Download Folder' : 'Download'),
-            onTap: () {
-              Navigator.pop(context);
-              onDownload();
-            },
-          ),
-          if (!file.isDirectory && file.isTextFile)
+            // Actions
             ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit'),
+              leading: Icon(
+                file.isDirectory ? Icons.folder_zip : Icons.download,
+              ),
+              title: Text(file.isDirectory ? 'Download Folder' : 'Download'),
               onTap: () {
                 Navigator.pop(context);
-                showDialog(
-                  context: context,
-                  builder: (context) => FileEditorDialog(file: file),
-                );
+                onDownload();
               },
             ),
-          ListTile(
-            leading: const Icon(Icons.drive_file_rename_outline),
-            title: const Text('Rename'),
-            onTap: () {
-              Navigator.pop(context);
-              _showRenameDialog(context);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.security),
-            title: const Text('Change Permissions'),
-            onTap: () {
-              Navigator.pop(context);
-              _showChmodDialog(context);
-            },
-          ),
+            if (!file.isDirectory && file.isTextFile)
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => FileEditorDialog(file: file),
+                  );
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.drive_file_rename_outline),
+              title: const Text('Rename'),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenameDialog(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.security),
+              title: const Text('Change Permissions'),
+              onTap: () {
+                Navigator.pop(context);
+                _showChmodDialog(context);
+              },
+            ),
 
-          ListTile(
-            leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text('Delete', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              Navigator.pop(context);
-              final confirmed = await _showDeleteConfirmation(context);
-              if (confirmed) {
-                onDelete();
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-        ],
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirmed = await _showDeleteConfirmation(context);
+                if (confirmed) {
+                  onDelete();
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
-      ),
-    );
-  }
-
-  void _showPropertiesDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: FilePropertiesDialog(file: file),
       ),
     );
   }
@@ -156,15 +150,15 @@ class FileOperationDialog extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -177,7 +171,7 @@ class FileOperationDialog extends StatelessWidget {
 
   Future<void> _showRenameDialog(BuildContext context) async {
     final controller = TextEditingController(text: file.name);
-    
+
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -225,59 +219,83 @@ class FileOperationDialog extends StatelessWidget {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: StatefulBuilder(
-        builder: (context, setState) {
-          int calculatePermissions() {
-            return (ownerRead << 8) | (ownerWrite << 7) | (ownerExec << 6) |
-                   (groupRead << 5) | (groupWrite << 4) | (groupExec << 3) |
-                   (otherRead << 2) | (otherWrite << 1) | otherExec;
-          }
+          builder: (context, setState) {
+            int calculatePermissions() {
+              return (ownerRead << 8) |
+                  (ownerWrite << 7) |
+                  (ownerExec << 6) |
+                  (groupRead << 5) |
+                  (groupWrite << 4) |
+                  (groupExec << 3) |
+                  (otherRead << 2) |
+                  (otherWrite << 1) |
+                  otherExec;
+            }
 
-          String getOctal() {
-            final owner = (ownerRead * 4) + (ownerWrite * 2) + ownerExec;
-            final group = (groupRead * 4) + (groupWrite * 2) + groupExec;
-            final other = (otherRead * 4) + (otherWrite * 2) + otherExec;
-            return '$owner$group$other';
-          }
+            String getOctal() {
+              final owner = (ownerRead * 4) + (ownerWrite * 2) + ownerExec;
+              final group = (groupRead * 4) + (groupWrite * 2) + groupExec;
+              final other = (otherRead * 4) + (otherWrite * 2) + otherExec;
+              return '$owner$group$other';
+            }
 
-          return AlertDialog(
-            title: const Text('Change Permissions'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Octal: ${getOctal()}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                _buildPermissionRow('Owner', ownerRead == 1, ownerWrite == 1, ownerExec == 1, 
-                  (r) => setState(() => ownerRead = r ? 1 : 0),
-                  (w) => setState(() => ownerWrite = w ? 1 : 0),
-                  (x) => setState(() => ownerExec = x ? 1 : 0),
+            return AlertDialog(
+              title: const Text('Change Permissions'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Octal: ${getOctal()}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPermissionRow(
+                    'Owner',
+                    ownerRead == 1,
+                    ownerWrite == 1,
+                    ownerExec == 1,
+                    (r) => setState(() => ownerRead = r ? 1 : 0),
+                    (w) => setState(() => ownerWrite = w ? 1 : 0),
+                    (x) => setState(() => ownerExec = x ? 1 : 0),
+                  ),
+                  _buildPermissionRow(
+                    'Group',
+                    groupRead == 1,
+                    groupWrite == 1,
+                    groupExec == 1,
+                    (r) => setState(() => groupRead = r ? 1 : 0),
+                    (w) => setState(() => groupWrite = w ? 1 : 0),
+                    (x) => setState(() => groupExec = x ? 1 : 0),
+                  ),
+                  _buildPermissionRow(
+                    'Other',
+                    otherRead == 1,
+                    otherWrite == 1,
+                    otherExec == 1,
+                    (r) => setState(() => otherRead = r ? 1 : 0),
+                    (w) => setState(() => otherWrite = w ? 1 : 0),
+                    (x) => setState(() => otherExec = x ? 1 : 0),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
                 ),
-                _buildPermissionRow('Group', groupRead == 1, groupWrite == 1, groupExec == 1, 
-                  (r) => setState(() => groupRead = r ? 1 : 0),
-                  (w) => setState(() => groupWrite = w ? 1 : 0),
-                  (x) => setState(() => groupExec = x ? 1 : 0),
-                ),
-                _buildPermissionRow('Other', otherRead == 1, otherWrite == 1, otherExec == 1, 
-                  (r) => setState(() => otherRead = r ? 1 : 0),
-                  (w) => setState(() => otherWrite = w ? 1 : 0),
-                  (x) => setState(() => otherExec = x ? 1 : 0),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onChmod(calculatePermissions());
+                  },
+                  child: const Text('Apply'),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  onChmod(calculatePermissions());
-                },
-                child: const Text('Apply'),
-              ),
-            ],
-          );
-        },
+            );
+          },
         ),
       ),
     );
@@ -298,7 +316,10 @@ class FileOperationDialog extends StatelessWidget {
         children: [
           SizedBox(
             width: 60,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           Expanded(
             child: Row(
@@ -315,19 +336,19 @@ class FileOperationDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildPermissionCheckbox(String label, bool value, Function(bool) onChanged) {
+  Widget _buildPermissionCheckbox(
+    String label,
+    bool value,
+    Function(bool) onChanged,
+  ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label),
-        Checkbox(
-          value: value,
-          onChanged: (val) => onChanged(val ?? false),
-        ),
+        Checkbox(value: value, onChanged: (val) => onChanged(val ?? false)),
       ],
     );
   }
-
 
   Future<bool> _showDeleteConfirmation(BuildContext context) async {
     final result = await showDialog<bool>(

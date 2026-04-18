@@ -46,7 +46,10 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Search services...',
-                    prefixIcon: const Icon(Icons.search, color: AppTheme.textTertiary),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppTheme.textTertiary,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -101,9 +104,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                         const Gap(16),
                         Text(
                           'No services found',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -188,7 +190,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final nameMatch = service.name.toLowerCase().contains(_searchQuery);
-        final descMatch = service.description.toLowerCase().contains(_searchQuery);
+        final descMatch = service.description.toLowerCase().contains(
+          _searchQuery,
+        );
         if (!nameMatch && !descMatch) return false;
       }
 
@@ -205,7 +209,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
 
   Widget _buildServiceItem(ServiceInfo service) {
     final isRunning = service.subState == 'running';
-    final statusColor = isRunning ? AppTheme.successGreen : AppTheme.textTertiary;
+    final statusColor = isRunning
+        ? AppTheme.successGreen
+        : AppTheme.textTertiary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -223,13 +229,15 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   decoration: BoxDecoration(
                     color: statusColor,
                     shape: BoxShape.circle,
-                    boxShadow: isRunning ? [
-                      BoxShadow(
-                        color: statusColor.withValues(alpha: 0.5),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ] : null,
+                    boxShadow: isRunning
+                        ? [
+                            BoxShadow(
+                              color: statusColor.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
                   ),
                 ),
                 const Gap(12),
@@ -240,9 +248,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                     children: [
                       Text(
                         service.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -250,9 +257,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                         const Gap(2),
                         Text(
                           service.description,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textTertiary,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textTertiary),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -271,7 +277,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                 _buildStatusChip(
                   'Enabled',
                   service.enabled ? 'yes' : 'no',
-                  service.enabled ? AppTheme.primaryIndigo : AppTheme.textTertiary,
+                  service.enabled
+                      ? AppTheme.primaryIndigo
+                      : AppTheme.textTertiary,
                 ),
               ],
             ),
@@ -294,10 +302,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
         children: [
           Text(
             '$label: ',
-            style: TextStyle(
-              fontSize: 11,
-              color: AppTheme.textSecondary,
-            ),
+            style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
           ),
           Text(
             value,
@@ -327,7 +332,11 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.settings_applications, color: AppTheme.primaryIndigo, size: 28),
+                const Icon(
+                  Icons.settings_applications,
+                  color: AppTheme.primaryIndigo,
+                  size: 28,
+                ),
                 const Gap(12),
                 Expanded(
                   child: Text(
@@ -408,7 +417,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ServiceLogsScreen(serviceName: service.name),
+                    builder: (context) =>
+                        ServiceLogsScreen(serviceName: service.name),
                   ),
                 );
               },
@@ -418,7 +428,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                 backgroundColor: AppTheme.secondaryTeal.withValues(alpha: 0.2),
                 foregroundColor: AppTheme.secondaryTeal,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                side: BorderSide(color: AppTheme.secondaryTeal.withValues(alpha: 0.5)),
+                side: BorderSide(
+                  color: AppTheme.secondaryTeal.withValues(alpha: 0.5),
+                ),
               ),
             ),
             const Gap(16),
@@ -484,11 +496,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18),
-          const Gap(6),
-          Text(label),
-        ],
+        children: [Icon(icon, size: 18), const Gap(6), Text(label)],
       ),
     );
   }
@@ -505,7 +513,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
               result.success ? result.message : 'Failed: ${result.message}',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
 
@@ -519,7 +529,10 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Error: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );

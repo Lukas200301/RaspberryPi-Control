@@ -105,7 +105,8 @@ class AgentManager {
       final tempPath = '/tmp/pi-control-agent';
       final remoteFile = await sftp.open(
         tempPath,
-        mode: SftpFileOpenMode.create |
+        mode:
+            SftpFileOpenMode.create |
             SftpFileOpenMode.truncate |
             SftpFileOpenMode.write,
       );
@@ -115,8 +116,12 @@ class AgentManager {
 
       onProgress?.call('Installing agent to system directory...');
       // Move to /opt with sudo and set permissions
-      await sshService.execute('sudo mv $tempPath ${AppConstants.agentInstallPath}');
-      await sshService.execute('sudo chmod +x ${AppConstants.agentInstallPath}');
+      await sshService.execute(
+        'sudo mv $tempPath ${AppConstants.agentInstallPath}',
+      );
+      await sshService.execute(
+        'sudo chmod +x ${AppConstants.agentInstallPath}',
+      );
 
       onProgress?.call('Verifying installation...');
       final version = await sshService.execute(
@@ -147,7 +152,8 @@ class AgentManager {
 
       // Start agent with sudo (required for /opt/pi-control/)
       // Bind to 0.0.0.0 to accept connections from SSH tunnel
-      final command = 'sudo nohup ${AppConstants.agentInstallPath} --host 0.0.0.0 --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
+      final command =
+          'sudo nohup ${AppConstants.agentInstallPath} --host 0.0.0.0 --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
 
       // Start agent in background
       await sshService.execute(command);
@@ -165,7 +171,7 @@ class AgentManager {
       final portCheck = await sshService.execute(
         'sudo netstat -tuln 2>/dev/null | grep ":50051 " || sudo ss -tuln 2>/dev/null | grep ":50051 " || echo "not_listening"',
       );
-      
+
       if (portCheck.contains('not_listening')) {
         throw Exception('Agent not listening on port 50051');
       }
@@ -191,18 +197,18 @@ class AgentManager {
     // Check if user is root
     final whoami = await sshService.execute('whoami');
     debugPrint('Checking sudo access for user: ${whoami.trim()}');
-    
+
     if (whoami.trim() == 'root') {
       debugPrint('User is root - has sudo access');
       return true;
     }
-    
+
     // Check if user can run sudo (try with groups command)
     final sudoTest = await sshService.execute(
       'groups | grep -E "sudo|wheel|admin" || echo "NO_SUDO"',
     );
     debugPrint('Sudo groups check result: $sudoTest');
-    
+
     final hasSudo = !sudoTest.contains('NO_SUDO');
     debugPrint('User has sudo access: $hasSudo');
     return hasSudo;

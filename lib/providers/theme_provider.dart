@@ -1,99 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/app_settings.dart';
+import 'package:get_storage/get_storage.dart';
 import '../theme/app_theme.dart';
-import 'app_providers.dart';
 
-// Theme State
+// ─── Theme State ──────────────────────────────────────────────────────────────
 class ThemeState {
   final ThemeData themeData;
-  final Color primaryColor;
-  final Color secondaryColor;
+  final AppThemePreset preset;
 
-  ThemeState({
-    required this.themeData,
-    required this.primaryColor,
-    required this.secondaryColor,
-  });
+  ThemeState({required this.themeData, required this.preset});
 
-  ThemeState copyWith({
-    ThemeData? themeData,
-    Color? primaryColor,
-    Color? secondaryColor,
-  }) {
+  ThemeState copyWith({ThemeData? themeData, AppThemePreset? preset}) {
     return ThemeState(
       themeData: themeData ?? this.themeData,
-      primaryColor: primaryColor ?? this.primaryColor,
-      secondaryColor: secondaryColor ?? this.secondaryColor,
+      preset: preset ?? this.preset,
     );
   }
+
+  // Convenience getters
+  Color get primaryColor => preset.primary;
+  Color get secondaryColor => preset.secondary;
 }
 
+// ─── Theme Notifier ───────────────────────────────────────────────────────────
 class ThemeNotifier extends Notifier<ThemeState> {
+  static const _presetKey = 'app_theme_preset';
+  final _storage = GetStorage();
+
   @override
   ThemeState build() {
-    final settings = ref.watch(appSettingsProvider);
-    
-    // Load saved colors or use defaults
-    final savedPrimary = settings.primaryColor;
-    final savedSecondary = settings.secondaryColor;
-
-    final primaryColor = savedPrimary != null ? Color(savedPrimary) : AppTheme.primaryIndigo;
-    final secondaryColor = savedSecondary != null ? Color(savedSecondary) : AppTheme.secondaryTeal;
+    // Load saved preset or default to AMOLED
+    final savedIndex = _storage.read<int>(_presetKey) ?? 0;
+    final preset = AppThemePreset
+        .values[savedIndex.clamp(0, AppThemePreset.values.length - 1)];
 
     return ThemeState(
-      themeData: AppTheme.getTheme(
-        primary: primaryColor,
-        secondary: secondaryColor,
-      ),
-      primaryColor: primaryColor,
-      secondaryColor: secondaryColor,
+      themeData: AppTheme.getThemeFromPreset(preset),
+      preset: preset,
     );
   }
 
-  void updatePrimaryColor(Color color) {
-    final settings = ref.read(appSettingsProvider);
-    settings.primaryColor = color.value;
-    
-    state = state.copyWith(
-      primaryColor: color,
-      themeData: AppTheme.getTheme(
-        primary: color,
-        secondary: state.secondaryColor,
-      ),
-    );
-  }
-
-  void updateSecondaryColor(Color color) {
-    final settings = ref.read(appSettingsProvider);
-    settings.secondaryColor = color.value;
-    
-    state = state.copyWith(
-      secondaryColor: color,
-      themeData: AppTheme.getTheme(
-        primary: state.primaryColor,
-        secondary: color,
-      ),
-    );
-  }
-  
-  void resetTheme() {
-    final settings = ref.read(appSettingsProvider);
-    settings.primaryColor = null;
-    settings.secondaryColor = null;
-    
-    const defaultPrimary = AppTheme.primaryIndigo;
-    const defaultSecondary = AppTheme.secondaryTeal;
-
-    state = state.copyWith(
-      primaryColor: defaultPrimary,
-      secondaryColor: defaultSecondary,
-      themeData: AppTheme.getTheme(
-        primary: defaultPrimary,
-        secondary: defaultSecondary,
-      ),
+  void setPreset(AppThemePreset preset) {
+    _storage.write(_presetKey, preset.index);
+    state = ThemeState(
+      themeData: AppTheme.getThemeFromPreset(preset),
+      preset: preset,
     );
   }
 }
 
-final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(ThemeNotifier.new);
+final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(
+  ThemeNotifier.new,
+);

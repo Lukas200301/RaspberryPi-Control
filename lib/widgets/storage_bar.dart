@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../providers/app_providers.dart';
 import '../theme/app_theme.dart';
-import 'glass_card.dart';
 
 class StorageBar extends ConsumerWidget {
   const StorageBar({super.key});
@@ -36,15 +35,15 @@ class StorageBar extends ConsumerWidget {
                   Text(
                     'Storage',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     '${(partition.usedBytes.toDouble() / 1024 / 1024 / 1024).toStringAsFixed(1)} GB / ${(partition.totalBytes.toDouble() / 1024 / 1024 / 1024).toStringAsFixed(1)} GB',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -65,7 +64,7 @@ class StorageBar extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(3),
                       boxShadow: [
                         BoxShadow(
-                          color: color.withOpacity(0.5),
+                          color: color.withValues(alpha: 0.5),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
@@ -85,7 +84,7 @@ class StorageBar extends ConsumerWidget {
           backgroundColor: AppTheme.glassBorder,
         ),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (err, st) => const SizedBox.shrink(),
     );
   }
 }

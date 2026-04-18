@@ -9,7 +9,8 @@ class BackgroundChartWidget extends ConsumerStatefulWidget {
   const BackgroundChartWidget({super.key});
 
   @override
-  ConsumerState<BackgroundChartWidget> createState() => _BackgroundChartWidgetState();
+  ConsumerState<BackgroundChartWidget> createState() =>
+      _BackgroundChartWidgetState();
 }
 
 class _BackgroundChartWidgetState extends ConsumerState<BackgroundChartWidget> {

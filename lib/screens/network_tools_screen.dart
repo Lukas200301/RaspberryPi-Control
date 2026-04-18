@@ -57,26 +57,14 @@ class _NetworkToolsScreenState extends ConsumerState<NetworkToolsScreen>
             fontSize: 12,
           ),
           tabs: const [
-            Tab(
-              icon: Icon(Icons.network_ping, size: 20),
-              text: 'Ping',
-            ),
+            Tab(icon: Icon(Icons.network_ping, size: 20), text: 'Ping'),
             Tab(
               icon: Icon(Icons.settings_input_component, size: 20),
               text: 'Ports',
             ),
-            Tab(
-              icon: Icon(Icons.dns, size: 20),
-              text: 'DNS',
-            ),
-            Tab(
-              icon: Icon(Icons.speed, size: 20),
-              text: 'Speed',
-            ),
-            Tab(
-              icon: Icon(Icons.wifi, size: 20),
-              text: 'WiFi',
-            ),
+            Tab(icon: Icon(Icons.dns, size: 20), text: 'DNS'),
+            Tab(icon: Icon(Icons.speed, size: 20), text: 'Speed'),
+            Tab(icon: Icon(Icons.wifi, size: 20), text: 'WiFi'),
           ],
         ),
       ),
@@ -174,7 +162,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
 
   @override
   Widget build(BuildContext context) {
-    final statsResponse = _pingResults.where((r) => r.hasStatistics()).firstOrNull;
+    final statsResponse = _pingResults
+        .where((r) => r.hasStatistics())
+        .firstOrNull;
     final stats = statsResponse?.statistics;
 
     return SingleChildScrollView(
@@ -195,8 +185,12 @@ class _PingTabState extends ConsumerState<_PingTab> {
                 TextField(
                   controller: _hostController,
                   decoration: InputDecoration(
-                    hintText: 'Enter hostname or IP (e.g., google.com, 8.8.8.8)',
-                    prefixIcon: const Icon(Icons.dns, color: AppTheme.primaryIndigo),
+                    hintText:
+                        'Enter hostname or IP (e.g., google.com, 8.8.8.8)',
+                    prefixIcon: const Icon(
+                      Icons.dns,
+                      color: AppTheme.primaryIndigo,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -214,12 +208,17 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         controller: _countController,
                         decoration: InputDecoration(
                           labelText: 'Count',
-                          prefixIcon: const Icon(Icons.numbers, color: AppTheme.secondaryTeal),
+                          prefixIcon: const Icon(
+                            Icons.numbers,
+                            color: AppTheme.secondaryTeal,
+                          ),
                           filled: true,
                           fillColor: AppTheme.glassLight,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.glassBorder),
+                            borderSide: const BorderSide(
+                              color: AppTheme.glassBorder,
+                            ),
                           ),
                         ),
                         keyboardType: TextInputType.number,
@@ -234,7 +233,10 @@ class _PingTabState extends ConsumerState<_PingTab> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryIndigo,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -261,9 +263,24 @@ class _PingTabState extends ConsumerState<_PingTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatCard('Sent', '${stats.packetsSent}', Icons.send, AppTheme.primaryIndigo),
-                      _buildStatCard('Received', '${stats.packetsReceived}', Icons.download, AppTheme.successGreen),
-                      _buildStatCard('Loss', '${stats.packetLoss.toStringAsFixed(1)}%', Icons.error_outline, AppTheme.errorRose),
+                      _buildStatCard(
+                        'Sent',
+                        '${stats.packetsSent}',
+                        Icons.send,
+                        AppTheme.primaryIndigo,
+                      ),
+                      _buildStatCard(
+                        'Received',
+                        '${stats.packetsReceived}',
+                        Icons.download,
+                        AppTheme.successGreen,
+                      ),
+                      _buildStatCard(
+                        'Loss',
+                        '${stats.packetLoss.toStringAsFixed(1)}%',
+                        Icons.error_outline,
+                        AppTheme.errorRose,
+                      ),
                     ],
                   ),
                   const Gap(12),
@@ -300,10 +317,8 @@ class _PingTabState extends ConsumerState<_PingTab> {
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
-                        getDrawingHorizontalLine: (value) => FlLine(
-                          color: AppTheme.glassBorder,
-                          strokeWidth: 1,
-                        ),
+                        getDrawingHorizontalLine: (value) =>
+                            FlLine(color: AppTheme.glassBorder, strokeWidth: 1),
                       ),
                       titlesData: FlTitlesData(
                         leftTitles: AxisTitles(
@@ -345,15 +360,17 @@ class _PingTabState extends ConsumerState<_PingTab> {
                             show: true,
                             getDotPainter: (spot, percent, barData, index) =>
                                 FlDotCirclePainter(
-                              radius: 3,
-                              color: AppTheme.primaryIndigo,
-                              strokeWidth: 1,
-                              strokeColor: Colors.white,
-                            ),
+                                  radius: 3,
+                                  color: AppTheme.primaryIndigo,
+                                  strokeWidth: 1,
+                                  strokeColor: Colors.white,
+                                ),
                           ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                            color: AppTheme.primaryIndigo.withValues(
+                              alpha: 0.2,
+                            ),
                           ),
                         ),
                       ],
@@ -367,10 +384,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
 
           // Results
           if (_pingResults.isNotEmpty) ...[
-            Text(
-              'Results',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Results', style: Theme.of(context).textTheme.titleMedium),
             const Gap(12),
             GlassCard(
               padding: const EdgeInsets.all(12),
@@ -384,7 +398,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         children: [
                           Icon(
                             result.success ? Icons.check_circle : Icons.error,
-                            color: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+                            color: result.success
+                                ? AppTheme.successGreen
+                                : AppTheme.errorRose,
                             size: 16,
                           ),
                           const Gap(8),
@@ -395,7 +411,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
                                   : 'Request timeout: ${result.error}',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: result.success ? AppTheme.textPrimary : AppTheme.errorRose,
+                                color: result.success
+                                    ? AppTheme.textPrimary
+                                    : AppTheme.errorRose,
                                 fontFamily: 'monospace',
                               ),
                             ),
@@ -412,7 +430,12 @@ class _PingTabState extends ConsumerState<_PingTab> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -427,10 +450,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTheme.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -441,10 +461,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTheme.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
         const Gap(4),
         Text(
@@ -500,8 +517,12 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
     try {
       final request = PortScanRequest(
         host: _hostController.text.trim(),
-        startPort: _scanMode == 'range' ? int.tryParse(_startPortController.text) ?? 1 : 0,
-        endPort: _scanMode == 'range' ? int.tryParse(_endPortController.text) ?? 1024 : 0,
+        startPort: _scanMode == 'range'
+            ? int.tryParse(_startPortController.text) ?? 1
+            : 0,
+        endPort: _scanMode == 'range'
+            ? int.tryParse(_endPortController.text) ?? 1024
+            : 0,
         timeout: 1000,
       );
 
@@ -562,7 +583,10 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   controller: _hostController,
                   decoration: InputDecoration(
                     hintText: 'Target hostname or IP',
-                    prefixIcon: const Icon(Icons.dns, color: AppTheme.primaryIndigo),
+                    prefixIcon: const Icon(
+                      Icons.dns,
+                      color: AppTheme.primaryIndigo,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -578,24 +602,33 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                     ChoiceChip(
                       label: const Text('Common Ports'),
                       selected: _scanMode == 'common',
-                      onSelected: _isScanning ? null : (selected) {
-                        if (selected) setState(() => _scanMode = 'common');
-                      },
+                      onSelected: _isScanning
+                          ? null
+                          : (selected) {
+                              if (selected)
+                                setState(() => _scanMode = 'common');
+                            },
                       selectedColor: AppTheme.primaryIndigo,
                       labelStyle: TextStyle(
-                        color: _scanMode == 'common' ? Colors.white : AppTheme.textSecondary,
+                        color: _scanMode == 'common'
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     ),
                     const Gap(8),
                     ChoiceChip(
                       label: const Text('Port Range'),
                       selected: _scanMode == 'range',
-                      onSelected: _isScanning ? null : (selected) {
-                        if (selected) setState(() => _scanMode = 'range');
-                      },
+                      onSelected: _isScanning
+                          ? null
+                          : (selected) {
+                              if (selected) setState(() => _scanMode = 'range');
+                            },
                       selectedColor: AppTheme.primaryIndigo,
                       labelStyle: TextStyle(
-                        color: _scanMode == 'range' ? Colors.white : AppTheme.textSecondary,
+                        color: _scanMode == 'range'
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     ),
                   ],
@@ -613,7 +646,9 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                             fillColor: AppTheme.glassLight,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.glassBorder),
+                              borderSide: const BorderSide(
+                                color: AppTheme.glassBorder,
+                              ),
                             ),
                           ),
                           keyboardType: TextInputType.number,
@@ -630,7 +665,9 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                             fillColor: AppTheme.glassLight,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppTheme.glassBorder),
+                              borderSide: const BorderSide(
+                                color: AppTheme.glassBorder,
+                              ),
                             ),
                           ),
                           keyboardType: TextInputType.number,
@@ -646,7 +683,9 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   child: ElevatedButton.icon(
                     onPressed: _isScanning ? null : _startScan,
                     icon: Icon(_isScanning ? Icons.stop : Icons.search),
-                    label: Text(_isScanning ? 'Scanning... $_progress%' : 'Start Scan'),
+                    label: Text(
+                      _isScanning ? 'Scanning... $_progress%' : 'Start Scan',
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryIndigo,
                       foregroundColor: Colors.white,
@@ -662,7 +701,9 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   LinearProgressIndicator(
                     value: _progress / 100,
                     backgroundColor: AppTheme.glassLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryIndigo),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryIndigo,
+                    ),
                   ),
                 ],
               ],
@@ -832,7 +873,10 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                   controller: _hostnameController,
                   decoration: InputDecoration(
                     hintText: 'Enter hostname (e.g., google.com)',
-                    prefixIcon: const Icon(Icons.language, color: AppTheme.primaryIndigo),
+                    prefixIcon: const Icon(
+                      Icons.language,
+                      color: AppTheme.primaryIndigo,
+                    ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
                     border: OutlineInputBorder(
@@ -845,16 +889,22 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                 const Gap(12),
                 Wrap(
                   spacing: 8,
-                  children: ['A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME'].map((type) {
+                  children: ['A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME'].map((
+                    type,
+                  ) {
                     return ChoiceChip(
                       label: Text(type),
                       selected: _recordType == type,
-                      onSelected: _isLookingUp ? null : (selected) {
-                        if (selected) setState(() => _recordType = type);
-                      },
+                      onSelected: _isLookingUp
+                          ? null
+                          : (selected) {
+                              if (selected) setState(() => _recordType = type);
+                            },
                       selectedColor: AppTheme.primaryIndigo,
                       labelStyle: TextStyle(
-                        color: _recordType == type ? Colors.white : AppTheme.textSecondary,
+                        color: _recordType == type
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     );
                   }).toList(),
@@ -864,7 +914,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: _isLookingUp ? null : _performLookup,
-                    icon: Icon(_isLookingUp ? Icons.hourglass_empty : Icons.search),
+                    icon: Icon(
+                      _isLookingUp ? Icons.hourglass_empty : Icons.search,
+                    ),
                     label: Text(_isLookingUp ? 'Looking up...' : 'Lookup'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryIndigo,
@@ -888,7 +940,11 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
               GlassCard(
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: AppTheme.successGreen, size: 32),
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppTheme.successGreen,
+                      size: 32,
+                    ),
                     const Gap(16),
                     Expanded(
                       child: Column(
@@ -931,9 +987,14 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                       for (int i = 0; i < _result!.records.length; i++) ...[
                         ListTile(
                           leading: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                              color: AppTheme.primaryIndigo.withValues(
+                                alpha: 0.2,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -981,7 +1042,11 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             children: [
-                              const Icon(Icons.dns, color: AppTheme.primaryIndigo, size: 16),
+                              const Icon(
+                                Icons.dns,
+                                color: AppTheme.primaryIndigo,
+                                size: 16,
+                              ),
                               const Gap(8),
                               Text(
                                 address,
@@ -1001,7 +1066,11 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
               GlassCard(
                 child: Row(
                   children: [
-                    const Icon(Icons.error, color: AppTheme.errorRose, size: 32),
+                    const Icon(
+                      Icons.error,
+                      color: AppTheme.errorRose,
+                      size: 32,
+                    ),
                     const Gap(16),
                     Expanded(
                       child: Column(
@@ -1163,9 +1232,13 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                           child: CheckboxListTile(
                             title: const Text('Download'),
                             value: _testDownload,
-                            onChanged: _isTesting ? null : (value) {
-                              setState(() => _testDownload = value ?? true);
-                            },
+                            onChanged: _isTesting
+                                ? null
+                                : (value) {
+                                    setState(
+                                      () => _testDownload = value ?? true,
+                                    );
+                                  },
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -1174,9 +1247,11 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                           child: CheckboxListTile(
                             title: const Text('Upload'),
                             value: _testUpload,
-                            onChanged: _isTesting ? null : (value) {
-                              setState(() => _testUpload = value ?? true);
-                            },
+                            onChanged: _isTesting
+                                ? null
+                                : (value) {
+                                    setState(() => _testUpload = value ?? true);
+                                  },
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -1204,16 +1279,21 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                             max: 30,
                             divisions: 5,
                             label: '${_duration}s',
-                            onChanged: _isTesting ? null : (value) {
-                              setState(() => _duration = value.toInt());
-                            },
+                            onChanged: _isTesting
+                                ? null
+                                : (value) {
+                                    setState(() => _duration = value.toInt());
+                                  },
                           ),
                         ],
                       ),
                     ),
                     const Gap(16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.glassLight,
                         borderRadius: BorderRadius.circular(8),
@@ -1233,7 +1313,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: (_isTesting || (!_testDownload && !_testUpload)) ? null : _startSpeedTest,
+                    onPressed: (_isTesting || (!_testDownload && !_testUpload))
+                        ? null
+                        : _startSpeedTest,
                     icon: Icon(_isTesting ? Icons.stop : Icons.play_arrow),
                     label: Text(_isTesting ? 'Testing...' : 'Start Test'),
                     style: ElevatedButton.styleFrom(
@@ -1264,7 +1346,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryIndigo),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primaryIndigo,
+                          ),
                         ),
                       ),
                       const Gap(12),
@@ -1273,7 +1357,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _currentPhase.isEmpty ? 'Initializing...' : _currentPhase,
+                              _currentPhase.isEmpty
+                                  ? 'Initializing...'
+                                  : _currentPhase,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const Gap(4),
@@ -1293,7 +1379,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                   LinearProgressIndicator(
                     value: _progress / 100,
                     backgroundColor: AppTheme.glassLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryIndigo),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryIndigo,
+                    ),
                   ),
                 ],
               ),
@@ -1361,9 +1449,8 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                             children: [
                               Text(
                                 'Latency',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                ),
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(color: AppTheme.textSecondary),
                               ),
                               const Gap(4),
                               Text(
@@ -1384,9 +1471,8 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                               children: [
                                 Text(
                                   'Server',
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(color: AppTheme.textSecondary),
                                 ),
                                 const Gap(4),
                                 Text(
@@ -1476,9 +1562,14 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                             lineTouchData: LineTouchData(
                               touchTooltipData: LineTouchTooltipData(
                                 maxContentWidth: 120,
-                                tooltipPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                tooltipPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 getTooltipItems: (List<LineBarSpot> touchedSpots) {
-                                  return touchedSpots.map((LineBarSpot touchedSpot) {
+                                  return touchedSpots.map((
+                                    LineBarSpot touchedSpot,
+                                  ) {
                                     return LineTooltipItem(
                                       '${touchedSpot.y.toStringAsFixed(2)} Mbps',
                                       const TextStyle(
@@ -1498,24 +1589,30 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                   spots: _downloadHistory
                                       .asMap()
                                       .entries
-                                      .map((e) => FlSpot(e.key.toDouble(), e.value))
+                                      .map(
+                                        (e) =>
+                                            FlSpot(e.key.toDouble(), e.value),
+                                      )
                                       .toList(),
                                   isCurved: true,
                                   color: AppTheme.primaryIndigo,
                                   barWidth: 3,
                                   dotData: FlDotData(
                                     show: true,
-                                    getDotPainter: (spot, percent, barData, index) =>
-                                        FlDotCirclePainter(
-                                      radius: 3,
-                                      color: AppTheme.primaryIndigo,
-                                      strokeWidth: 2,
-                                      strokeColor: Colors.white,
-                                    ),
+                                    getDotPainter:
+                                        (spot, percent, barData, index) =>
+                                            FlDotCirclePainter(
+                                              radius: 3,
+                                              color: AppTheme.primaryIndigo,
+                                              strokeWidth: 2,
+                                              strokeColor: Colors.white,
+                                            ),
                                   ),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                                    color: AppTheme.primaryIndigo.withValues(
+                                      alpha: 0.2,
+                                    ),
                                   ),
                                 ),
                               if (_uploadHistory.isNotEmpty)
@@ -1523,24 +1620,30 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                   spots: _uploadHistory
                                       .asMap()
                                       .entries
-                                      .map((e) => FlSpot(e.key.toDouble(), e.value))
+                                      .map(
+                                        (e) =>
+                                            FlSpot(e.key.toDouble(), e.value),
+                                      )
                                       .toList(),
                                   isCurved: true,
                                   color: AppTheme.successGreen,
                                   barWidth: 3,
                                   dotData: FlDotData(
                                     show: true,
-                                    getDotPainter: (spot, percent, barData, index) =>
-                                        FlDotCirclePainter(
-                                      radius: 3,
-                                      color: AppTheme.successGreen,
-                                      strokeWidth: 2,
-                                      strokeColor: Colors.white,
-                                    ),
+                                    getDotPainter:
+                                        (spot, percent, barData, index) =>
+                                            FlDotCirclePainter(
+                                              radius: 3,
+                                              color: AppTheme.successGreen,
+                                              strokeWidth: 2,
+                                              strokeColor: Colors.white,
+                                            ),
                                   ),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: AppTheme.successGreen.withValues(alpha: 0.2),
+                                    color: AppTheme.successGreen.withValues(
+                                      alpha: 0.2,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -1646,7 +1749,13 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
     );
   }
 
-  Widget _buildSpeedCard(String label, String value, String unit, Color color, IconData icon) {
+  Widget _buildSpeedCard(
+    String label,
+    String value,
+    String unit,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1682,10 +1791,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
           ),
           Text(
             unit,
-            style: TextStyle(
-              fontSize: 12,
-              color: color.withValues(alpha: 0.7),
-            ),
+            style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.7)),
           ),
         ],
       ),
@@ -1761,9 +1867,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: AppTheme.primaryIndigo,
-        ),
+        child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
       );
     }
 
@@ -1772,11 +1876,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.wifi_off,
-              size: 64,
-              color: AppTheme.textSecondary,
-            ),
+            const Icon(Icons.wifi_off, size: 64, color: AppTheme.textSecondary),
             const Gap(16),
             const Text(
               'No WiFi information available',
@@ -1820,7 +1920,9 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                         height: 48,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _getSignalColor(_wifiInfo!.signalStrength).withValues(alpha: 0.2),
+                          color: _getSignalColor(
+                            _wifiInfo!.signalStrength,
+                          ).withValues(alpha: 0.2),
                         ),
                         child: Icon(
                           _getSignalIcon(_wifiInfo!.signalQuality),
@@ -1880,8 +1982,14 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildInfoColumn('IP Address', _wifiInfo!.ipAddress),
-                      _buildInfoColumn('Frequency', '${_wifiInfo!.frequency} GHz'),
-                      _buildInfoColumn('Link Speed', '${_wifiInfo!.linkSpeed.toStringAsFixed(0)} Mbps'),
+                      _buildInfoColumn(
+                        'Frequency',
+                        '${_wifiInfo!.frequency} GHz',
+                      ),
+                      _buildInfoColumn(
+                        'Link Speed',
+                        '${_wifiInfo!.linkSpeed.toStringAsFixed(0)} Mbps',
+                      ),
                     ],
                   ),
                 ],
@@ -1892,7 +2000,11 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
             GlassCard(
               child: Row(
                 children: [
-                  const Icon(Icons.wifi_off, color: AppTheme.warningAmber, size: 32),
+                  const Icon(
+                    Icons.wifi_off,
+                    color: AppTheme.warningAmber,
+                    size: 32,
+                  ),
                   const Gap(16),
                   const Expanded(
                     child: Text(
@@ -1920,11 +2032,19 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
               padding: const EdgeInsets.all(0),
               child: Column(
                 children: [
-                  for (int i = 0; i < _wifiInfo!.availableNetworks.length; i++) ...[
+                  for (
+                    int i = 0;
+                    i < _wifiInfo!.availableNetworks.length;
+                    i++
+                  ) ...[
                     ListTile(
                       leading: Icon(
-                        _getSignalIcon(_wifiInfo!.availableNetworks[i].signalQuality),
-                        color: _getSignalColor(_wifiInfo!.availableNetworks[i].signalStrength),
+                        _getSignalIcon(
+                          _wifiInfo!.availableNetworks[i].signalQuality,
+                        ),
+                        color: _getSignalColor(
+                          _wifiInfo!.availableNetworks[i].signalStrength,
+                        ),
                       ),
                       title: Text(
                         _wifiInfo!.availableNetworks[i].ssid,
@@ -1948,7 +2068,9 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                             '${_wifiInfo!.availableNetworks[i].signalQuality}%',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: _getSignalColor(_wifiInfo!.availableNetworks[i].signalStrength),
+                              color: _getSignalColor(
+                                _wifiInfo!.availableNetworks[i].signalStrength,
+                              ),
                             ),
                           ),
                           Text(
@@ -1978,10 +2100,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppTheme.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
         const Gap(4),
         Text(

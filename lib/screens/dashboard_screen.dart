@@ -2,521 +2,230 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
 import '../providers/file_providers.dart';
-import 'stats_screen.dart';
-import 'services_screen.dart';
-import 'logs_screen.dart';
-import 'network_connections_screen.dart';
-import 'processes_screen.dart';
-import 'packages_screen.dart';
-import 'network_tools_screen.dart';
-import '../widgets/agent_update_banner.dart';
+import '../providers/dashboard_provider.dart';
+import '../widgets/dashboard_widgets/system_vitals_widget.dart';
+import '../widgets/dashboard_widgets/disk_usage_widget.dart';
+import '../widgets/dashboard_widgets/quick_actions_widget.dart';
+import '../widgets/dashboard_widgets/connection_info_widget.dart';
 import '../services/agent_version_service.dart';
-import 'docker_screen.dart';
-import 'system_update_screen.dart';
+import '../widgets/agent_update_banner.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  String _formatUptime(int seconds) {
-    final days = seconds ~/ 86400;
-    final hours = (seconds % 86400) ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-
-    if (days > 0) {
-      return '${days}d ${hours}h ${minutes}m';
-    } else if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    } else {
-      return '${minutes}m';
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentConnection = ref.watch(currentConnectionProvider);
-    final liveStatsAsync = ref.watch(liveStatsProvider);
+    final widgetOrder = ref.watch(dashboardLayoutProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
         automaticallyImplyLeading: false,
         scrolledUnderElevation: 0,
+        actions: [
+          Builder(
+            builder: (innerContext) => IconButton(
+              icon: const Icon(Icons.widgets_outlined),
+              tooltip: 'Customize Widgets',
+              onPressed: () => _showWidgetPicker(innerContext, ref),
+            ),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Connection status card
-            GlassCard(
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primaryIndigo, AppTheme.secondaryTeal],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.computer,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Gap(16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          currentConnection?.name ?? 'Not connected',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const Gap(4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppTheme.successGreen,
-                              ),
-                            ),
-                            const Gap(8),
-                            Text(
-                              'Connected',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.successGreen,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        const Gap(4),
-                        Text(
-                          currentConnection != null
-                              ? '${currentConnection.username}@${currentConnection.host}'
-                              : '',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: AppTheme.background,
-                          title: const Text('Disconnect?'),
-                          content: const Text('Are you sure you want to disconnect from this device?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.errorRose,
-                              ),
-                              child: const Text('Disconnect'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmed == true && context.mounted) {
-                        // Clear file transfers before disconnecting
-                        ref.read(fileTransfersProvider.notifier).clearAll();
-
-                        // Clear current connection
-                        ref.read(currentConnectionProvider.notifier).setConnection(null);
-
-                        // Disconnect using connection manager
-                        final connectionManager = ref.read(connectionManagerProvider);
-                        connectionManager.disconnect().timeout(
-                          const Duration(seconds: 2),
-                          onTimeout: () {
-                            debugPrint('Disconnect timeout, navigating anyway');
-                          },
-                        ).catchError((e) {
-                          debugPrint('Error during disconnect: $e');
-                        });
-
-                        // Navigate immediately
-                        Navigator.of(context).pushReplacementNamed('/');
-                      }
-                    },
-                    icon: const Icon(Icons.logout),
-                    color: AppTheme.errorRose,
-                    tooltip: 'Disconnect',
-                  ),
-                ],
-              ),
-            ),
-            const Gap(32),
-
-            // Agent Update Banner
-            if (currentConnection != null && 
-                AgentVersionService.checkVersion(currentConnection.agentVersion) == AgentVersionStatus.outdated)
-              AgentUpdateBanner(
-                connection: currentConnection,
-                onDismiss: () {
-                  // User dismissed, could save this preference
-                },
-              ),
-
-            // Quick Info
-            Text(
-              'Quick Info',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const Gap(16),
-
-            liveStatsAsync.when(
-              data: (stats) {
-                final ramUsedGB = stats.ramUsed.toDouble() / 1024 / 1024 / 1024;
-                final ramTotalGB = stats.ramTotal.toDouble() / 1024 / 1024 / 1024;
-
-                return GlassCard(
-                  child: Column(
-                    children: [
-                      _buildInfoRow(
-                        context,
-                        icon: Icons.memory,
-                        label: 'CPU Usage',
-                        value: '${stats.cpuUsage.toStringAsFixed(1)}%',
-                        color: AppTheme.getCPUColor(stats.cpuUsage),
-                      ),
-                      const Divider(color: AppTheme.glassBorder),
-                      _buildInfoRow(
-                        context,
-                        icon: Icons.storage,
-                        label: 'RAM Usage',
-                        value: '${ramUsedGB.toStringAsFixed(1)} / ${ramTotalGB.toStringAsFixed(1)} GB',
-                        color: AppTheme.getMemoryColor(stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100),
-                      ),
-                      const Divider(color: AppTheme.glassBorder),
-                      _buildInfoRow(
-                        context,
-                        icon: Icons.thermostat,
-                        label: 'Temperature',
-                        value: '${stats.cpuTemp.toStringAsFixed(1)}°C',
-                        color: AppTheme.getTempColor(stats.cpuTemp),
-                      ),
-                      const Divider(color: AppTheme.glassBorder),
-                      _buildInfoRow(
-                        context,
-                        icon: Icons.access_time,
-                        label: 'Uptime',
-                        value: _formatUptime(stats.uptime.toInt()),
-                        color: AppTheme.textSecondary,
-                      ),
-                    ],
-                  ),
-                );
-              },
-              loading: () => GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        const CircularProgressIndicator(color: AppTheme.primaryIndigo),
-                        const Gap(16),
-                        Text(
-                          'Loading system info...',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              error: (error, stack) => GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRose),
-                        const Gap(16),
-                        Text(
-                          'Failed to load stats',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.errorRose,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const Gap(32),
-
-            // Menu Title
-            Text(
-              'Monitoring',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const Gap(16),
-
-            // Stats Option
-            _buildMenuCard(
-              context,
-              icon: Icons.analytics,
-              title: 'System Stats',
-              subtitle: 'CPU, RAM, Temperature & Network',
-              color: AppTheme.primaryIndigo,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const StatsScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // Services Option
-            _buildMenuCard(
-              context,
-              icon: Icons.settings_applications,
-              title: 'Services',
-              subtitle: 'Manage systemd services',
-              color: AppTheme.secondaryTeal,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ServicesScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // Logs Option
-            _buildMenuCard(
-              context,
-              icon: Icons.article,
-              title: 'System Logs',
-              subtitle: 'View real-time logs',
-              color: AppTheme.warningAmber,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LogsScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // Network Connections Option
-            _buildMenuCard(
-              context,
-              icon: Icons.lan,
-              title: 'Network Connections',
-              subtitle: 'View active connections',
-              color: AppTheme.successGreen,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NetworkConnectionsScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // Network Tools Option
-            _buildMenuCard(
-              context,
-              icon: Icons.network_check,
-              title: 'Network Tools',
-              subtitle: 'Ping, Port Scan, DNS, Speed & WiFi',
-              color: const Color(0xFF06B6D4), // Cyan
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NetworkToolsScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // Processes Option
-            _buildMenuCard(
-              context,
-              icon: Icons.apps,
-              title: 'Processes',
-              subtitle: 'Manage running processes',
-              color: AppTheme.errorRose,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProcessesScreen()),
-                );
-              },
-            ),
-            const Gap(32),
-
-            // Management Section
-            Text(
-              'Management',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const Gap(16),
-
-            // Package Management Option
-            _buildMenuCard(
-              context,
-              icon: Icons.inventory,
-              title: 'Package Manager',
-              subtitle: 'Install, update, and remove packages',
-              color: const Color(0xFF9C27B0), // Purple
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const PackagesScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-            
-            // Docker Manager Option
-            _buildMenuCard(
-              context,
-              icon: Icons.view_in_ar,
-              title: 'Docker Manager',
-              subtitle: 'Manage containers & logs',
-              color: const Color(0xFF0D47A1), // Docker Blue
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DockerScreen()),
-                );
-              },
-            ),
-            const Gap(12),
-
-            // System Updates Option
-            _buildMenuCard(
-              context,
-              icon: Icons.system_update_alt,
-              title: 'System Updates',
-              subtitle: 'Check & install system updates',
-              color: const Color(0xFF2E7D32), // Green
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SystemUpdateScreen()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+      body: _buildBody(context, ref, widgetOrder),
     );
   }
 
-  Widget _buildMenuCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GlassCard(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    List<DashboardWidgetType> order,
+  ) {
+    final currentConnection = ref.watch(currentConnectionProvider);
+
+    Widget buildWidgetForType(DashboardWidgetType type) {
+      switch (type) {
+        case DashboardWidgetType.connectionInfo:
+          return ConnectionInfoWidget(
+            key: const Key('connectionInfo'),
+            onDisconnect: () => _disconnect(context, ref),
+          );
+        case DashboardWidgetType.systemVitals:
+          return const SystemVitalsWidget(key: Key('systemVitals'));
+        case DashboardWidgetType.diskUsage:
+          return const DiskUsageWidget(key: Key('diskUsage'));
+        case DashboardWidgetType.quickActions:
+          return const QuickActionsWidget(key: Key('quickActions'));
+      }
+    }
+
+    // Build agent update banner if needed
+    Widget? updateBanner;
+    if (currentConnection != null &&
+        AgentVersionService.checkVersion(currentConnection.agentVersion) ==
+            AgentVersionStatus.outdated) {
+      updateBanner = Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        child: AgentUpdateBanner(
+          connection: currentConnection,
+          onDismiss: () {},
+        ),
+      );
+    }
+
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+      header: updateBanner,
+      itemCount: order.length,
+      onReorder: (oldIndex, newIndex) {
+        ref.read(dashboardLayoutProvider.notifier).reorder(oldIndex, newIndex);
+      },
+      proxyDecorator: (child, index, animation) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            return Material(
+              elevation: 6 * animation.value,
+              borderRadius: BorderRadius.circular(16),
+              shadowColor: AppTheme.primaryIndigo.withValues(alpha: 0.5),
+              color: Colors.transparent,
+              child: child,
+            );
+          },
+          child: child,
+        );
+      },
+      itemBuilder: (context, index) {
+        final type = order[index];
+        return Padding(
+          key: Key(type.name),
+          padding: const EdgeInsets.only(bottom: 12),
+          child: buildWidgetForType(type),
+        );
+      },
+    );
+  }
+
+  void _showWidgetPicker(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(dashboardLayoutProvider.notifier);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final order = ref.watch(dashboardLayoutProvider);
+          return Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(
-                colors: [color, color.withValues(alpha: 0.6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: const Color(0xFF111111),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
+              border: Border.all(color: AppTheme.glassBorder),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-          const Gap(16),
-          Expanded(
+            padding: const EdgeInsets.all(24),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.widgets_outlined,
+                      color: AppTheme.primaryIndigo,
+                      size: 20,
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Dashboard Widgets',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
                 ),
                 const Gap(4),
                 Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
+                  'Long-press on the dashboard to reorder. Toggle visibility here.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
+                const Gap(16),
+                ...DashboardWidgetType.values.map((type) {
+                  final isVisible = order.contains(type);
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _iconForWidget(type),
+                      color: isVisible
+                          ? AppTheme.primaryIndigo
+                          : AppTheme.textTertiary,
+                    ),
+                    title: Text(type.displayName),
+                    trailing: Switch(
+                      value: isVisible,
+                      onChanged: (_) => notifier.toggleWidget(type),
+                      activeColor: AppTheme.primaryIndigo,
+                    ),
+                  );
+                }),
+                const Gap(8),
               ],
             ),
-          ),
-          const Icon(
-            Icons.arrow_forward_ios,
-            color: AppTheme.textTertiary,
-            size: 20,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildInfoRow(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const Gap(12),
-          Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+  IconData _iconForWidget(DashboardWidgetType type) {
+    switch (type) {
+      case DashboardWidgetType.connectionInfo:
+        return Icons.computer;
+      case DashboardWidgetType.systemVitals:
+        return Icons.monitor_heart;
+      case DashboardWidgetType.diskUsage:
+        return Icons.storage;
+      case DashboardWidgetType.quickActions:
+        return Icons.bolt;
+    }
+  }
+
+  Future<void> _disconnect(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Disconnect?'),
+        content: const Text(
+          'Are you sure you want to disconnect from this device?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRose,
+            ),
+            child: const Text('Disconnect'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && context.mounted) {
+      ref.read(fileTransfersProvider.notifier).clearAll();
+      ref.read(currentConnectionProvider.notifier).setConnection(null);
+      final connectionManager = ref.read(connectionManagerProvider);
+      connectionManager
+          .disconnect()
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => debugPrint('Disconnect timeout'),
+          )
+          .catchError((e) => debugPrint('Disconnect error: $e'));
+      Navigator.of(context).pushReplacementNamed('/');
+    }
   }
 }

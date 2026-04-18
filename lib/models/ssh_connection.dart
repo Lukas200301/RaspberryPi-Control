@@ -22,30 +22,30 @@ class SSHConnection {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'host': host,
-        'port': port,
-        'username': username,
-        'password': password,
-        'isFavorite': isFavorite,
-        'lastConnected': lastConnected?.toIso8601String(),
-        'agentVersion': agentVersion,
-      };
+    'id': id,
+    'name': name,
+    'host': host,
+    'port': port,
+    'username': username,
+    'password': password,
+    'isFavorite': isFavorite,
+    'lastConnected': lastConnected?.toIso8601String(),
+    'agentVersion': agentVersion,
+  };
 
   factory SSHConnection.fromJson(Map<String, dynamic> json) => SSHConnection(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        host: json['host'] as String,
-        port: json['port'] as int? ?? 22,
-        username: json['username'] as String,
-        password: json['password'] as String,
-        isFavorite: json['isFavorite'] as bool? ?? false,
-        lastConnected: json['lastConnected'] != null
-            ? DateTime.parse(json['lastConnected'] as String)
-            : null,
-        agentVersion: json['agentVersion'] as String?,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    host: json['host'] as String,
+    port: json['port'] as int? ?? 22,
+    username: json['username'] as String,
+    password: json['password'] as String,
+    isFavorite: json['isFavorite'] as bool? ?? false,
+    lastConnected: json['lastConnected'] != null
+        ? DateTime.parse(json['lastConnected'] as String)
+        : null,
+    agentVersion: json['agentVersion'] as String?,
+  );
 
   SSHConnection copyWith({
     String? id,
@@ -68,7 +68,9 @@ class SSHConnection {
       password: password ?? this.password,
       isFavorite: isFavorite ?? this.isFavorite,
       lastConnected: lastConnected ?? this.lastConnected,
-      agentVersion: clearAgentVersion ? null : (agentVersion ?? this.agentVersion),
+      agentVersion: clearAgentVersion
+          ? null
+          : (agentVersion ?? this.agentVersion),
     );
   }
 }

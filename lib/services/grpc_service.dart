@@ -45,32 +45,32 @@ class GrpcService {
         debugPrint('Starting stats stream (attempt ${retryCount + 1})');
         final stream = _client!.streamStats(Empty());
         retryCount = 0; // Reset retry count on successful connection
-        
+
         await for (final stats in stream) {
           yield stats;
         }
-        
+
         // If stream ends normally, break
         break;
       } catch (e) {
         debugPrint('Error streaming stats: $e');
-        
+
         // Check if it's a connection error
         if (e is GrpcError && (e.code == 14 || e.code == 2)) {
           retryCount++;
-          
+
           if (retryCount >= maxRetries) {
             debugPrint('Max retries reached, stopping reconnection attempts');
             rethrow;
           }
-          
+
           // Exponential backoff
           final delay = initialDelay * (1 << (retryCount - 1));
           debugPrint('Connection lost, retrying in ${delay.inSeconds}s...');
           await Future.delayed(delay);
           continue;
         }
-        
+
         // For other errors, rethrow immediately
         rethrow;
       }
@@ -113,7 +113,10 @@ class GrpcService {
   }
 
   /// Manage a systemd service (start/stop/restart/enable/disable)
-  Future<ActionStatus> manageService(String serviceName, ServiceAction action) async {
+  Future<ActionStatus> manageService(
+    String serviceName,
+    ServiceAction action,
+  ) async {
     if (_client == null) throw Exception('gRPC not connected');
     return await _client!.manageService(
       ServiceCommand()
@@ -155,7 +158,9 @@ class GrpcService {
     }
     debugPrint('Calling _client.getDiskInfo()...');
     final diskInfo = await _client!.getDiskInfo(Empty());
-    debugPrint('getDiskInfo() returned ${diskInfo.partitions.length} partitions');
+    debugPrint(
+      'getDiskInfo() returned ${diskInfo.partitions.length} partitions',
+    );
     return diskInfo;
   }
 
@@ -172,7 +177,10 @@ class GrpcService {
   }
 
   /// List packages (installed or searchable)
-  Future<PackageList> listPackages({String? searchTerm, bool installedOnly = true}) async {
+  Future<PackageList> listPackages({
+    String? searchTerm,
+    bool installedOnly = true,
+  }) async {
     if (_client == null) throw Exception('gRPC not connected');
     return await _client!.listPackages(
       PackageFilter()
@@ -184,19 +192,25 @@ class GrpcService {
   /// Install a package
   Future<ActionStatus> installPackage(String packageName) async {
     if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.installPackage(PackageCommand()..packageName = packageName);
+    return await _client!.installPackage(
+      PackageCommand()..packageName = packageName,
+    );
   }
 
   /// Remove a package
   Future<ActionStatus> removePackage(String packageName) async {
     if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.removePackage(PackageCommand()..packageName = packageName);
+    return await _client!.removePackage(
+      PackageCommand()..packageName = packageName,
+    );
   }
 
   /// Update a specific package
   Future<ActionStatus> updatePackage(String packageName) async {
     if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.updatePackage(PackageCommand()..packageName = packageName);
+    return await _client!.updatePackage(
+      PackageCommand()..packageName = packageName,
+    );
   }
 
   /// Update package list (apt update)
@@ -227,20 +241,28 @@ class GrpcService {
   /// Get detailed package information
   Future<PackageDetails> getPackageDetails(String packageName) async {
     if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.getPackageDetails(PackageDetailsRequest()..packageName = packageName);
+    return await _client!.getPackageDetails(
+      PackageDetailsRequest()..packageName = packageName,
+    );
   }
 
   /// Get package dependencies
   Future<PackageDependencies> getPackageDependencies(String packageName) async {
     if (_client == null) throw Exception('gRPC not connected');
-    return await _client!.getPackageDependencies(PackageDetailsRequest()..packageName = packageName);
+    return await _client!.getPackageDependencies(
+      PackageDetailsRequest()..packageName = packageName,
+    );
   }
 
   /// Stream package operation logs
-  Stream<PackageOperationLog> streamPackageOperation(String packageName) async* {
+  Stream<PackageOperationLog> streamPackageOperation(
+    String packageName,
+  ) async* {
     if (_client == null) throw Exception('gRPC not connected');
 
-    final stream = _client!.streamPackageOperation(PackageCommand()..packageName = packageName);
+    final stream = _client!.streamPackageOperation(
+      PackageCommand()..packageName = packageName,
+    );
     await for (final log in stream) {
       yield log;
     }
@@ -322,19 +344,24 @@ class GrpcService {
 
   /// Upload a file via streaming chunks
   /// Returns the upload response with success status and bytes written
-  Future<FileUploadResponse> uploadFileStream(Stream<FileChunk> chunkStream) async {
+  Future<FileUploadResponse> uploadFileStream(
+    Stream<FileChunk> chunkStream,
+  ) async {
     if (_client == null) throw Exception('gRPC not connected');
     return await _client!.uploadFile(chunkStream);
   }
 
   /// Download a file as streaming chunks
   /// Use offset > 0 to resume a partial download
-  Stream<FileChunk> downloadFileStream(String remotePath, {int offset = 0}) async* {
+  Stream<FileChunk> downloadFileStream(
+    String remotePath, {
+    int offset = 0,
+  }) async* {
     if (_client == null) throw Exception('gRPC not connected');
     final request = FileDownloadRequest()
       ..path = remotePath
       ..offset = Int64(offset);
-    
+
     final stream = _client!.downloadFile(request);
     await for (final chunk in stream) {
       yield chunk;
@@ -343,12 +370,15 @@ class GrpcService {
 
   /// Delete a file or directory
   /// Set isDirectory to true to recursively delete a directory
-  Future<FileDeleteResponse> deleteFile(String remotePath, {bool isDirectory = false}) async {
+  Future<FileDeleteResponse> deleteFile(
+    String remotePath, {
+    bool isDirectory = false,
+  }) async {
     if (_client == null) throw Exception('gRPC not connected');
     final request = FileDeleteRequest()
       ..path = remotePath
       ..isDirectory = isDirectory;
-    
+
     return await _client!.deleteFile(request);
   }
 

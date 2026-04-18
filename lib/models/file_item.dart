@@ -43,22 +43,22 @@ class FileItem {
   /// Get permissions as string (e.g., "rwxr-xr-x")
   String get permissionsString {
     String result = '';
-    
+
     // Owner permissions
     result += (permissions & 0x100) != 0 ? 'r' : '-';
     result += (permissions & 0x80) != 0 ? 'w' : '-';
     result += (permissions & 0x40) != 0 ? 'x' : '-';
-    
+
     // Group permissions
     result += (permissions & 0x20) != 0 ? 'r' : '-';
     result += (permissions & 0x10) != 0 ? 'w' : '-';
     result += (permissions & 0x8) != 0 ? 'x' : '-';
-    
+
     // Other permissions
     result += (permissions & 0x4) != 0 ? 'r' : '-';
     result += (permissions & 0x2) != 0 ? 'w' : '-';
     result += (permissions & 0x1) != 0 ? 'x' : '-';
-    
+
     return result;
   }
 
@@ -78,19 +78,45 @@ class FileItem {
     }
 
     // Code files
-    if (['dart', 'java', 'py', 'js', 'ts', 'cpp', 'c', 'h', 'go', 'rs']
-        .contains(extension)) {
+    if ([
+      'dart',
+      'java',
+      'py',
+      'js',
+      'ts',
+      'cpp',
+      'c',
+      'h',
+      'go',
+      'rs',
+    ].contains(extension)) {
       return Icons.code;
     }
 
     // Config files
-    if (['json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config', 'xml']
-        .contains(extension)) {
+    if ([
+      'json',
+      'yaml',
+      'yml',
+      'toml',
+      'ini',
+      'conf',
+      'config',
+      'xml',
+    ].contains(extension)) {
       return Icons.settings_suggest;
     }
 
     // Images
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].contains(extension)) {
+    if ([
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'svg',
+      'webp',
+    ].contains(extension)) {
       return Icons.image;
     }
 
@@ -105,12 +131,28 @@ class FileItem {
     }
 
     // Scripts
-    if (['sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd'].contains(extension)) {
+    if ([
+      'sh',
+      'bash',
+      'zsh',
+      'fish',
+      'ps1',
+      'bat',
+      'cmd',
+    ].contains(extension)) {
       return Icons.terminal;
     }
 
     // Videos
-    if (['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'].contains(extension)) {
+    if ([
+      'mp4',
+      'avi',
+      'mkv',
+      'mov',
+      'wmv',
+      'flv',
+      'webm',
+    ].contains(extension)) {
       return Icons.video_file;
     }
 
@@ -127,19 +169,45 @@ class FileItem {
     if (isDirectory) return Colors.blue;
 
     // Code files
-    if (['dart', 'java', 'py', 'js', 'ts', 'cpp', 'c', 'h', 'go', 'rs']
-        .contains(extension)) {
+    if ([
+      'dart',
+      'java',
+      'py',
+      'js',
+      'ts',
+      'cpp',
+      'c',
+      'h',
+      'go',
+      'rs',
+    ].contains(extension)) {
       return Colors.green;
     }
 
     // Config files
-    if (['json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config', 'xml']
-        .contains(extension)) {
+    if ([
+      'json',
+      'yaml',
+      'yml',
+      'toml',
+      'ini',
+      'conf',
+      'config',
+      'xml',
+    ].contains(extension)) {
       return Colors.orange;
     }
 
     // Images
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].contains(extension)) {
+    if ([
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'bmp',
+      'svg',
+      'webp',
+    ].contains(extension)) {
       return Colors.purple;
     }
 
@@ -149,7 +217,15 @@ class FileItem {
     }
 
     // Scripts
-    if (['sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd'].contains(extension)) {
+    if ([
+      'sh',
+      'bash',
+      'zsh',
+      'fish',
+      'ps1',
+      'bat',
+      'cmd',
+    ].contains(extension)) {
       return Colors.teal;
     }
 
@@ -159,9 +235,33 @@ class FileItem {
   /// Check if file is a text file (can be previewed)
   bool get isTextFile {
     final textExtensions = [
-      'txt', 'md', 'json', 'yaml', 'yml', 'toml', 'ini', 'conf', 'config',
-      'xml', 'html', 'css', 'js', 'ts', 'dart', 'java', 'py', 'cpp', 'c',
-      'h', 'go', 'rs', 'sh', 'bash', 'log', 'csv', 'sql',
+      'txt',
+      'md',
+      'json',
+      'yaml',
+      'yml',
+      'toml',
+      'ini',
+      'conf',
+      'config',
+      'xml',
+      'html',
+      'css',
+      'js',
+      'ts',
+      'dart',
+      'java',
+      'py',
+      'cpp',
+      'c',
+      'h',
+      'go',
+      'rs',
+      'sh',
+      'bash',
+      'log',
+      'csv',
+      'sql',
     ];
     return textExtensions.contains(extension);
   }
@@ -208,16 +308,10 @@ class FileTransfer {
   });
 
   double get progress => totalSize > 0 ? transferredSize / totalSize : 0.0;
-  
+
   String get formattedProgress {
     return '${(progress * 100).toStringAsFixed(1)}%';
   }
 }
 
-enum FileTransferStatus {
-  pending,
-  transferring,
-  completed,
-  failed,
-  cancelled,
-}
+enum FileTransferStatus { pending, transferring, completed, failed, cancelled }

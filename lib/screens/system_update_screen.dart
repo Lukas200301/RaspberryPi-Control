@@ -106,10 +106,14 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.success ? 'Updated $packageName' : 'Failed: ${result.message}',
+              result.success
+                  ? 'Updated $packageName'
+                  : 'Failed: ${result.message}',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
         if (result.success) _checkForUpdates();
@@ -118,7 +122,10 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Error: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -146,8 +153,8 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
-              : _buildContent(),
+          ? _buildErrorState()
+          : _buildContent(),
     );
   }
 
@@ -158,13 +165,18 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
         children: [
           const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRose),
           const Gap(16),
-          Text('Failed to load update status',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Failed to load update status',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const Gap(8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(_error!, style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center),
+            child: Text(
+              _error!,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ),
           const Gap(16),
           FilledButton.icon(
@@ -187,10 +199,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
         const Gap(16),
         if (_status != null && _status!.upgradablePackages.isNotEmpty)
           _buildPackageList(),
-        if (_upgradeLog.isNotEmpty) ...[
-          const Gap(16),
-          _buildUpgradeLogCard(),
-        ],
+        if (_upgradeLog.isNotEmpty) ...[const Gap(16), _buildUpgradeLogCard()],
       ],
     );
   }
@@ -210,34 +219,59 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                     color: AppTheme.primaryIndigo.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.computer, color: AppTheme.primaryIndigo, size: 24),
+                  child: const Icon(
+                    Icons.computer,
+                    color: AppTheme.primaryIndigo,
+                    size: 24,
+                  ),
                 ),
                 const Gap(12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('System Information',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold)),
+                      Text(
+                        'System Information',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
                       if (_status?.osName.isNotEmpty == true)
-                        Text(_status!.osName,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.textSecondary)),
+                        Text(
+                          _status!.osName,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
+                        ),
                     ],
                   ),
                 ),
               ],
             ),
             const Divider(height: 24, color: AppTheme.glassBorder),
-            _buildInfoRow(Icons.memory, 'Kernel', _status?.kernelVersion ?? 'N/A'),
+            _buildInfoRow(
+              Icons.memory,
+              'Kernel',
+              _status?.kernelVersion ?? 'N/A',
+            ),
             const Gap(8),
-            _buildInfoRow(Icons.architecture, 'Architecture', _status?.architecture ?? 'N/A'),
+            _buildInfoRow(
+              Icons.architecture,
+              'Architecture',
+              _status?.architecture ?? 'N/A',
+            ),
             const Gap(8),
-            _buildInfoRow(Icons.timer_outlined, 'Uptime', _status?.uptime ?? 'N/A'),
+            _buildInfoRow(
+              Icons.timer_outlined,
+              'Uptime',
+              _status?.uptime ?? 'N/A',
+            ),
             const Gap(8),
-            _buildInfoRow(Icons.update, 'Last Checked',
-                _status?.lastUpdate.isNotEmpty == true ? _status!.lastUpdate : 'Never'),
+            _buildInfoRow(
+              Icons.update,
+              'Last Checked',
+              _status?.lastUpdate.isNotEmpty == true
+                  ? _status!.lastUpdate
+                  : 'Never',
+            ),
           ],
         ),
       ),
@@ -249,8 +283,12 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
       children: [
         Icon(icon, size: 16, color: AppTheme.textSecondary),
         const Gap(8),
-        Text('$label: ', style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.textSecondary)),
+        Text(
+          '$label: ',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+        ),
         Expanded(
           child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
         ),
@@ -285,14 +323,19 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        hasUpdates ? '$count update${count == 1 ? '' : 's'} available' : 'System is up to date',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold),
+                        hasUpdates
+                            ? '$count update${count == 1 ? '' : 's'} available'
+                            : 'System is up to date',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        hasUpdates ? 'Tap upgrade to install all updates' : 'No packages need updating',
+                        hasUpdates
+                            ? 'Tap upgrade to install all updates'
+                            : 'No packages need updating',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary),
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -306,8 +349,13 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                 child: FilledButton.icon(
                   icon: _isUpgrading
                       ? const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                       : const Icon(Icons.system_update_alt),
                   label: Text(_isUpgrading ? _getPhaseLabel() : 'Upgrade All'),
                   onPressed: _isUpgrading ? null : _startUpgrade,
@@ -348,49 +396,69 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Upgradable Packages',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold)),
+            Text(
+              'Upgradable Packages',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const Gap(12),
-            ...packages.map((pkg) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.arrow_upward, size: 14, color: AppTheme.warningAmber),
-                      const Gap(8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(pkg.name,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600)),
-                            Text(
-                              '${pkg.currentVersion.isNotEmpty ? pkg.currentVersion : "?"} → ${pkg.newVersion}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                    fontFamily: 'Courier',
-                                    fontSize: 11),
-                            ),
-                          ],
-                        ),
+            ...packages.map(
+              (pkg) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.arrow_upward,
+                      size: 14,
+                      color: AppTheme.warningAmber,
+                    ),
+                    const Gap(8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pkg.name,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            '${pkg.currentVersion.isNotEmpty ? pkg.currentVersion : "?"} → ${pkg.newVersion}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  fontFamily: 'Courier',
+                                  fontSize: 11,
+                                ),
+                          ),
+                        ],
                       ),
-                      if (_upgradingSingle.contains(pkg.name))
-                        const SizedBox(
-                          width: 18, height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.upgrade, size: 20, color: AppTheme.successGreen),
-                          onPressed: _isUpgrading ? null : () => _upgradeSinglePackage(pkg.name),
-                          tooltip: 'Upgrade ${pkg.name}',
-                          constraints: const BoxConstraints(),
-                          padding: const EdgeInsets.all(4),
+                    ),
+                    if (_upgradingSingle.contains(pkg.name))
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(
+                          Icons.upgrade,
+                          size: 20,
+                          color: AppTheme.successGreen,
                         ),
-                    ],
-                  ),
-                )),
+                        onPressed: _isUpgrading
+                            ? null
+                            : () => _upgradeSinglePackage(pkg.name),
+                        tooltip: 'Upgrade ${pkg.name}',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -406,9 +474,12 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
           children: [
             Row(
               children: [
-                Text('Upgrade Log',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold)),
+                Text(
+                  'Upgrade Log',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 18),
@@ -431,14 +502,18 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: _upgradeLog
-                      .map((line) => Text(
-                            line,
-                            style: TextStyle(
-                              color: line.startsWith('Error') ? AppTheme.errorRose : Colors.white70,
-                              fontFamily: 'Courier',
-                              fontSize: 11,
-                            ),
-                          ))
+                      .map(
+                        (line) => Text(
+                          line,
+                          style: TextStyle(
+                            color: line.startsWith('Error')
+                                ? AppTheme.errorRose
+                                : Colors.white70,
+                            fontFamily: 'Courier',
+                            fontSize: 11,
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),

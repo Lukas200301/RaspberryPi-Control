@@ -28,7 +28,9 @@ final grpcFileTransferServiceProvider = ChangeNotifierProvider((ref) {
   return GrpcFileTransferService(grpcService);
 });
 
-final networkDiscoveryServiceProvider = Provider((ref) => NetworkDiscoveryService());
+final networkDiscoveryServiceProvider = Provider(
+  (ref) => NetworkDiscoveryService(),
+);
 
 // Connection Manager - Central connection orchestrator
 final connectionManagerProvider = Provider((ref) {
@@ -43,15 +45,18 @@ final connectionManagerProvider = Provider((ref) {
 });
 
 // Connection Manager State Stream
-final connectionManagerStateProvider = StreamProvider<ConnectionManagerState>((ref) {
+final connectionManagerStateProvider = StreamProvider<ConnectionManagerState>((
+  ref,
+) {
   final connectionManager = ref.watch(connectionManagerProvider);
   return connectionManager.stateStream;
 });
 
 // Connection State
-final connectionListProvider = NotifierProvider<ConnectionListNotifier, List<SSHConnection>>(
-  ConnectionListNotifier.new,
-);
+final connectionListProvider =
+    NotifierProvider<ConnectionListNotifier, List<SSHConnection>>(
+      ConnectionListNotifier.new,
+    );
 
 class ConnectionListNotifier extends Notifier<List<SSHConnection>> {
   @override
@@ -80,7 +85,9 @@ class ConnectionListNotifier extends Notifier<List<SSHConnection>> {
 
   Future<void> toggleFavorite(String id) async {
     final connection = state.firstWhere((c) => c.id == id);
-    await updateConnection(connection.copyWith(isFavorite: !connection.isFavorite));
+    await updateConnection(
+      connection.copyWith(isFavorite: !connection.isFavorite),
+    );
   }
 }
 
@@ -94,9 +101,10 @@ class CurrentConnectionNotifier extends Notifier<SSHConnection?> {
   }
 }
 
-final currentConnectionProvider = NotifierProvider<CurrentConnectionNotifier, SSHConnection?>(
-  CurrentConnectionNotifier.new,
-);
+final currentConnectionProvider =
+    NotifierProvider<CurrentConnectionNotifier, SSHConnection?>(
+      CurrentConnectionNotifier.new,
+    );
 
 final connectionStateProvider = StreamProvider<ConnectionState>((ref) {
   final sshService = ref.watch(sshServiceProvider);
@@ -134,10 +142,10 @@ final currentScreenProvider = NotifierProvider<CurrentScreenNotifier, int>(
 // Live Stats Stream with keepAlive to maintain connection
 final liveStatsProvider = StreamProvider.autoDispose((ref) {
   final grpcService = ref.watch(grpcServiceProvider);
-  
+
   // Keep the provider alive for 30 seconds after last listener
   ref.keepAlive();
-  
+
   return grpcService.streamStats();
 });
 
@@ -168,9 +176,11 @@ class AgentElevationNotifier extends StateNotifier<AsyncValue<bool>> {
   Future<void> _checkElevation() async {
     try {
       final versionInfo = await grpcService.getVersion();
-      debugPrint('Agent elevation check: isRoot = ${versionInfo.isRoot}, version = ${versionInfo.version}');
+      debugPrint(
+        'Agent elevation check: isRoot = ${versionInfo.isRoot}, version = ${versionInfo.version}',
+      );
       state = AsyncValue.data(versionInfo.isRoot);
-    } catch (e, stackTrace) {
+    } catch (e) {
       // If check fails, assume not root to be safe
       state = const AsyncValue.data(false);
     }
@@ -182,7 +192,8 @@ class AgentElevationNotifier extends StateNotifier<AsyncValue<bool>> {
   }
 }
 
-final agentElevationProvider = StateNotifierProvider<AgentElevationNotifier, AsyncValue<bool>>((ref) {
-  final grpcService = ref.watch(grpcServiceProvider);
-  return AgentElevationNotifier(grpcService);
-});
+final agentElevationProvider =
+    StateNotifierProvider<AgentElevationNotifier, AsyncValue<bool>>((ref) {
+      final grpcService = ref.watch(grpcServiceProvider);
+      return AgentElevationNotifier(grpcService);
+    });

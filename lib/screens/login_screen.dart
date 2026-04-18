@@ -81,9 +81,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const Gap(8),
               Text(
                 'This may take up to 30 seconds',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
               ),
             ],
           ),
@@ -96,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (mounted) {
       Navigator.pop(context); // Close scanning dialog
-      
+
       setState(() {
         _discoveredDevices = devices;
         _isDiscovering = false;
@@ -107,8 +107,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No devices found on this network. Make sure devices are powered on.', 
-              style: TextStyle(color: Colors.white)),
+            content: Text(
+              'No devices found on this network. Make sure devices are powered on.',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.warningAmber,
           ),
         );
@@ -145,7 +147,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  const Icon(Icons.devices, color: AppTheme.primaryIndigo, size: 28),
+                  const Icon(
+                    Icons.devices,
+                    color: AppTheme.primaryIndigo,
+                    size: 28,
+                  ),
                   const Gap(12),
                   Text(
                     'Network Devices',
@@ -176,60 +182,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Navigator.pop(context);
                         _showAddConnectionSheet(
                           prefilledHost: device.host,
-                        prefilledName: device.name != device.host ? device.name : null,
+                          prefilledName: device.name != device.host
+                              ? device.name
+                              : null,
                         );
                       },
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryIndigo.withValues(
+                                alpha: 0.2,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.computer,
+                              color: AppTheme.primaryIndigo,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.computer,
+                          const Gap(16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  device.name,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const Gap(4),
+                                Text(
+                                  device.host,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: AppTheme.secondaryTeal),
+                                ),
+                                if (device.type != null) ...[
+                                  const Gap(2),
+                                  Text(
+                                    device.type!,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppTheme.textTertiary,
+                                          fontSize: 11,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.add_circle_outline,
+                            size: 20,
                             color: AppTheme.primaryIndigo,
                           ),
-                        ),
-                        const Gap(16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                device.name,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const Gap(4),
-                              Text(
-                                device.host,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.secondaryTeal,
-                                ),
-                              ),
-                              if (device.type != null) ...[
-                                const Gap(2),
-                                Text(
-                                  device.type!,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textTertiary,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.add_circle_outline,
-                          size: 20,
-                          color: AppTheme.primaryIndigo,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                   );
                 },
               ),
@@ -240,10 +252,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  void _showAddConnectionSheet({String? prefilledHost, int? prefilledPort, String? prefilledName}) {
+  void _showAddConnectionSheet({
+    String? prefilledHost,
+    int? prefilledPort,
+    String? prefilledName,
+  }) {
     final nameController = TextEditingController(text: prefilledName ?? '');
     final hostController = TextEditingController(text: prefilledHost ?? '');
-    final portController = TextEditingController(text: prefilledPort?.toString() ?? '22');
+    final portController = TextEditingController(
+      text: prefilledPort?.toString() ?? '22',
+    );
     final usernameController = TextEditingController(text: 'pi');
     final passwordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -270,7 +288,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.add_circle, color: AppTheme.primaryIndigo, size: 28),
+                      const Icon(
+                        Icons.add_circle,
+                        color: AppTheme.primaryIndigo,
+                        size: 28,
+                      ),
                       const Gap(12),
                       Text(
                         'New Connection',
@@ -286,7 +308,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: Icon(Icons.label),
                       hintText: 'Living Room Pi',
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                   ),
                   const Gap(16),
                   TextFormField(
@@ -297,7 +320,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       hintText: '192.168.1.100',
                     ),
                     keyboardType: TextInputType.text,
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                   ),
                   const Gap(16),
                   TextFormField(
@@ -310,7 +334,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
                       final port = int.tryParse(v);
-                      if (port == null || port < 1 || port > 65535) return 'Invalid port';
+                      if (port == null || port < 1 || port > 65535)
+                        return 'Invalid port';
                       return null;
                     },
                   ),
@@ -321,7 +346,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       labelText: 'Username',
                       prefixIcon: Icon(Icons.person),
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                   ),
                   const Gap(16),
                   TextFormField(
@@ -331,7 +357,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: Icon(Icons.lock),
                     ),
                     obscureText: true,
-                    validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                   ),
                   const Gap(24),
                   ElevatedButton(
@@ -347,14 +374,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         password: passwordController.text,
                       );
 
-                      await ref.read(connectionListProvider.notifier).addConnection(connection);
+                      await ref
+                          .read(connectionListProvider.notifier)
+                          .addConnection(connection);
 
                       if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${connection.name} saved!', 
-                              style: const TextStyle(color: Colors.white)),
+                            content: Text(
+                              '${connection.name} saved!',
+                              style: const TextStyle(color: Colors.white),
+                            ),
                             backgroundColor: AppTheme.successGreen,
                           ),
                         );
@@ -413,7 +444,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final agentManager = ref.read(agentManagerProvider);
       try {
         final hasSudo = await agentManager.checkSudoAccess();
-        
+
         if (!hasSudo) {
           if (mounted) {
             Navigator.pop(context); // Close loading
@@ -463,7 +494,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+                  const CircularProgressIndicator(
+                    color: AppTheme.primaryIndigo,
+                  ),
                   const Gap(16),
                   Text(
                     'Starting agent...',
@@ -478,16 +511,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (mounted) {
         final sshService = ref.read(sshServiceProvider);
-        
+
         // Check and enable SSH forwarding if needed
         try {
           final forwardCheck = await sshService.execute(
-            'grep -i "^\\s*AllowTcpForwarding" /etc/ssh/sshd_config || echo "not_configured"'
+            'grep -i "^\\s*AllowTcpForwarding" /etc/ssh/sshd_config || echo "not_configured"',
           );
           debugPrint('SSH forwarding config: $forwardCheck');
-          
+
           // Check if explicitly disabled
-          if (forwardCheck.toLowerCase().contains('allowtcpforwarding no') || 
+          if (forwardCheck.toLowerCase().contains('allowtcpforwarding no') ||
               forwardCheck.toLowerCase().contains('allowtcpforwarding=no')) {
             if (mounted) {
               final enable = await _showEnableForwardingDialog();
@@ -498,8 +531,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('SSH forwarding required for real-time monitoring',
-                          style: TextStyle(color: Colors.white)),
+                      content: Text(
+                        'SSH forwarding required for real-time monitoring',
+                        style: TextStyle(color: Colors.white),
+                      ),
                       backgroundColor: AppTheme.warningAmber,
                     ),
                   );
@@ -522,8 +557,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to start agent: $e',
-                    style: const TextStyle(color: Colors.white)),
+                content: Text(
+                  'Failed to start agent: $e',
+                  style: const TextStyle(color: Colors.white),
+                ),
                 backgroundColor: AppTheme.errorRose,
               ),
             );
@@ -533,9 +570,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         // Set up SSH tunnel for gRPC
         try {
-          final localPort = await sshService.forwardLocal(50051, 'localhost', 50051);
-          debugPrint('SSH tunnel established: localhost:$localPort -> Pi:localhost:50051');
-          
+          final localPort = await sshService.forwardLocal(
+            50051,
+            'localhost',
+            50051,
+          );
+          debugPrint(
+            'SSH tunnel established: localhost:$localPort -> Pi:localhost:50051',
+          );
+
           // Give tunnel time to establish
           await Future.delayed(const Duration(seconds: 1));
         } catch (e) {
@@ -544,8 +587,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to setup tunnel: $e',
-                    style: const TextStyle(color: Colors.white)),
+                content: Text(
+                  'Failed to setup tunnel: $e',
+                  style: const TextStyle(color: Colors.white),
+                ),
                 backgroundColor: AppTheme.errorRose,
               ),
             );
@@ -564,8 +609,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to connect to agent: $e',
-                    style: const TextStyle(color: Colors.white)),
+                content: Text(
+                  'Failed to connect to agent: $e',
+                  style: const TextStyle(color: Colors.white),
+                ),
                 backgroundColor: AppTheme.errorRose,
               ),
             );
@@ -584,15 +631,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           lastConnected: DateTime.now(),
           agentVersion: versionInfo.version,
         );
-        debugPrint('✓ Connection updated with agent version: ${updatedConnection.agentVersion}');
+        debugPrint(
+          '✓ Connection updated with agent version: ${updatedConnection.agentVersion}',
+        );
       } catch (e) {
         debugPrint('⚠ Could not get agent version: $e');
         // Continue anyway - just update last connected time
         updatedConnection = connection.copyWith(lastConnected: DateTime.now());
       }
 
-      await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
-      ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
+      await ref
+          .read(connectionListProvider.notifier)
+          .updateConnection(updatedConnection);
+      ref
+          .read(currentConnectionProvider.notifier)
+          .setConnection(updatedConnection);
 
       // Navigate
       if (mounted) {
@@ -607,7 +660,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Connection failed: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Connection failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -647,40 +703,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Future<void> _enableSSHForwarding(dynamic sshService, SSHConnection connection) async {
+  Future<void> _enableSSHForwarding(
+    dynamic sshService,
+    SSHConnection connection,
+  ) async {
     try {
       debugPrint('Enabling SSH forwarding...');
-      
+
       // Backup original config
-      await sshService.execute('sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup');
-      
+      await sshService.execute(
+        'sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup',
+      );
+
       // Enable AllowTcpForwarding
       await sshService.execute(
-        'echo "${connection.password}" | sudo -S sed -i "s/^\\s*AllowTcpForwarding.*/AllowTcpForwarding yes/" /etc/ssh/sshd_config'
+        'echo "${connection.password}" | sudo -S sed -i "s/^\\s*AllowTcpForwarding.*/AllowTcpForwarding yes/" /etc/ssh/sshd_config',
       );
-      
+
       // Add if not exists
       await sshService.execute(
-        'grep -q "^AllowTcpForwarding" /etc/ssh/sshd_config || echo "${connection.password}" | sudo -S sh -c "echo \'AllowTcpForwarding yes\' >> /etc/ssh/sshd_config"'
+        'grep -q "^AllowTcpForwarding" /etc/ssh/sshd_config || echo "${connection.password}" | sudo -S sh -c "echo \'AllowTcpForwarding yes\' >> /etc/ssh/sshd_config"',
       );
-      
+
       // Restart SSH service (this will drop our connection)
-      await sshService.execute('echo "${connection.password}" | sudo -S systemctl restart sshd || sudo -S service ssh restart');
-      
-      
+      await sshService.execute(
+        'echo "${connection.password}" | sudo -S systemctl restart sshd || sudo -S service ssh restart',
+      );
+
       // Wait for SSH service to restart and disconnect
       await Future.delayed(const Duration(seconds: 3));
-      
+
       // Reconnect SSH
       await sshService.disconnect();
       await Future.delayed(const Duration(seconds: 1));
       await sshService.connect(connection);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('SSH forwarding enabled and reconnected',
-                style: TextStyle(color: Colors.white)),
+            content: Text(
+              'SSH forwarding enabled and reconnected',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -690,8 +754,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to enable forwarding: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Failed to enable forwarding: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -785,7 +851,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Installation failed: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Installation failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -796,12 +865,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final connections = ref.watch(connectionListProvider);
-    
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.background,
-        ),
+        decoration: const BoxDecoration(color: AppTheme.background),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,21 +943,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const Gap(24),
                       Text(
                         'Welcome Back',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppTheme.textTertiary,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0.5,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: AppTheme.textTertiary,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0.5,
+                            ),
                       ),
                       const Gap(8),
                       Text(
                         'Connect to Your Devices',
-                        style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -1,
-                          color: AppTheme.primaryIndigo,
-                          height: 1.1,
-                        ),
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -1,
+                              color: AppTheme.primaryIndigo,
+                              height: 1.1,
+                            ),
                       ),
                     ],
                   ),
@@ -925,12 +994,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: isOnline ? AppTheme.successGreen : AppTheme.errorRose,
+                                      color: isOnline
+                                          ? AppTheme.successGreen
+                                          : AppTheme.errorRose,
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: (isOnline ? AppTheme.successGreen : AppTheme.errorRose)
-                                              .withValues(alpha: 0.5),
+                                          color:
+                                              (isOnline
+                                                      ? AppTheme.successGreen
+                                                      : AppTheme.errorRose)
+                                                  .withValues(alpha: 0.5),
                                           blurRadius: 8,
                                           spreadRadius: 2,
                                         ),
@@ -940,10 +1014,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   const Gap(8),
                                   Text(
                                     isOnline ? 'Online' : 'Offline',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: isOnline ? AppTheme.successGreen : AppTheme.errorRose,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: isOnline
+                                              ? AppTheme.successGreen
+                                              : AppTheme.errorRose,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                   ),
                                   const Spacer(),
                                   Icon(
@@ -956,24 +1033,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const Spacer(),
                               Text(
                                 conn.name,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primaryIndigo,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryIndigo,
+                                    ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               const Gap(8),
                               Row(
                                 children: [
-                                  const Icon(Icons.computer, size: 16, color: AppTheme.successGreen),
+                                  const Icon(
+                                    Icons.computer,
+                                    size: 16,
+                                    color: AppTheme.successGreen,
+                                  ),
                                   const Gap(6),
                                   Expanded(
                                     child: Text(
                                       conn.host,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppTheme.successGreen,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: AppTheme.successGreen,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -983,14 +1068,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const Gap(4),
                               Row(
                                 children: [
-                                  const Icon(Icons.person, size: 16, color: AppTheme.warningAmber),
+                                  const Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: AppTheme.warningAmber,
+                                  ),
                                   const Gap(6),
                                   Expanded(
                                     child: Text(
                                       '${conn.username}@${conn.host}:${conn.port}',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppTheme.warningAmber,
-                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppTheme.warningAmber,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1008,7 +1100,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: TextButton.icon(
-                    onPressed: () => Navigator.pushNamed(context, '/connections'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/connections'),
                     icon: const Icon(Icons.settings, size: 18),
                     label: const Text('Manage Connections'),
                     style: TextButton.styleFrom(
@@ -1021,7 +1114,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Expanded(
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 48,
+                        vertical: 24,
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -1033,16 +1129,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           const Gap(20),
                           Text(
                             'No Connections Yet',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(color: AppTheme.textSecondary),
                           ),
                           const Gap(8),
                           Text(
                             'Add your first Raspberry Pi to get started',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textTertiary,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppTheme.textTertiary),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -1053,7 +1147,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
 
               const Spacer(),
-              
+
               // Quick Actions Bar - Enhanced
               Container(
                 margin: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -1063,12 +1157,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: GlassCard(
                         onTap: () => _showAddConnectionSheet(),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: const [
-                              Icon(Icons.add_circle_outline, size: 18, color: AppTheme.primaryIndigo),
+                              Icon(
+                                Icons.add_circle_outline,
+                                size: 18,
+                                color: AppTheme.primaryIndigo,
+                              ),
                               Gap(8),
                               Text(
                                 'Add Device',
@@ -1088,7 +1189,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: GlassCard(
                         onTap: _isDiscovering ? null : _discoverDevices,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 14,
+                            horizontal: 12,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
@@ -1096,7 +1200,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Icon(
                                 Icons.radar,
                                 size: 18,
-                                color: _isDiscovering ? AppTheme.textTertiary : AppTheme.primaryIndigo,
+                                color: _isDiscovering
+                                    ? AppTheme.textTertiary
+                                    : AppTheme.primaryIndigo,
                               ),
                               const Gap(8),
                               Flexible(
@@ -1105,7 +1211,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: _isDiscovering ? AppTheme.textTertiary : AppTheme.primaryIndigo,
+                                    color: _isDiscovering
+                                        ? AppTheme.textTertiary
+                                        : AppTheme.primaryIndigo,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),

@@ -41,7 +41,11 @@ class DockerScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRose),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: AppTheme.errorRose,
+              ),
               const Gap(16),
               Text(
                 'Failed to load containers',
@@ -73,18 +77,24 @@ class DockerScreen extends ConsumerWidget {
           const Gap(16),
           Text(
             'No containers found',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContainerCard(BuildContext context, WidgetRef ref, ContainerInfo container) {
+  Widget _buildContainerCard(
+    BuildContext context,
+    WidgetRef ref,
+    ContainerInfo container,
+  ) {
     final isRunning = container.state == 'running';
-    final statusColor = isRunning ? AppTheme.successGreen : AppTheme.textSecondary;
+    final statusColor = isRunning
+        ? AppTheme.successGreen
+        : AppTheme.textSecondary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -110,16 +120,16 @@ class DockerScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          container.names.isNotEmpty ? container.names.first : container.id.substring(0, 12),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          container.names.isNotEmpty
+                              ? container.names.first
+                              : container.id.substring(0, 12),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
                           container.image,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
@@ -128,27 +138,31 @@ class DockerScreen extends ConsumerWidget {
                 ],
               ),
               const Gap(16),
-              
+
               // Key Stats / Info
               Row(
                 children: [
                   _buildInfoItem(context, 'ID', container.id.substring(0, 12)),
                   const Gap(16),
-                  _buildInfoItem(context, 'Created', _formatDate(container.created)),
+                  _buildInfoItem(
+                    context,
+                    'Created',
+                    _formatDate(container.created),
+                  ),
                 ],
               ),
               if (container.ports.isNotEmpty) ...[
                 const Gap(8),
                 Text(
                   'Ports: ${container.ports.join(", ")}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFamily: 'Courier',
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'Courier'),
                 ),
               ],
-              
+
               const Divider(height: 24, color: AppTheme.glassBorder),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -156,21 +170,28 @@ class DockerScreen extends ConsumerWidget {
                     TextButton.icon(
                       icon: const Icon(Icons.restart_alt, size: 18),
                       label: const Text('Restart'),
-                      onPressed: () => _restartContainer(context, ref, container),
-                      style: TextButton.styleFrom(foregroundColor: AppTheme.warningAmber),
+                      onPressed: () =>
+                          _restartContainer(context, ref, container),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.warningAmber,
+                      ),
                     ),
                     TextButton.icon(
                       icon: const Icon(Icons.stop, size: 18),
                       label: const Text('Stop'),
                       onPressed: () => _stopContainer(context, ref, container),
-                      style: TextButton.styleFrom(foregroundColor: AppTheme.errorRose),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.errorRose,
+                      ),
                     ),
                   ] else ...[
                     TextButton.icon(
                       icon: const Icon(Icons.play_arrow, size: 18),
                       label: const Text('Start'),
                       onPressed: () => _startContainer(context, ref, container),
-                      style: TextButton.styleFrom(foregroundColor: AppTheme.successGreen),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.successGreen,
+                      ),
                     ),
                   ],
                   const Gap(8),
@@ -181,7 +202,8 @@ class DockerScreen extends ConsumerWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DockerLogsScreen(container: container),
+                          builder: (context) =>
+                              DockerLogsScreen(container: container),
                         ),
                       );
                     },
@@ -242,14 +264,11 @@ class DockerScreen extends ConsumerWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
-                fontSize: 10,
-              ),
+            color: AppTheme.textSecondary,
+            fontSize: 10,
+          ),
         ),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
+        Text(value, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }
@@ -259,14 +278,22 @@ class DockerScreen extends ConsumerWidget {
     return DateFormat('MMM d, HH:mm').format(date);
   }
 
-  Future<void> _startContainer(BuildContext context, WidgetRef ref, ContainerInfo container) async {
+  Future<void> _startContainer(
+    BuildContext context,
+    WidgetRef ref,
+    ContainerInfo container,
+  ) async {
     try {
       final dockerService = ref.read(service.dockerServiceProvider);
       await dockerService.startContainer(container.id);
       ref.invalidate(service.containerListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Started ${container.names.isNotEmpty ? container.names.first : "container"}')),
+          SnackBar(
+            content: Text(
+              'Started ${container.names.isNotEmpty ? container.names.first : "container"}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -281,14 +308,22 @@ class DockerScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _stopContainer(BuildContext context, WidgetRef ref, ContainerInfo container) async {
+  Future<void> _stopContainer(
+    BuildContext context,
+    WidgetRef ref,
+    ContainerInfo container,
+  ) async {
     try {
       final dockerService = ref.read(service.dockerServiceProvider);
       await dockerService.stopContainer(container.id);
       ref.invalidate(service.containerListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Stopped ${container.names.isNotEmpty ? container.names.first : "container"}')),
+          SnackBar(
+            content: Text(
+              'Stopped ${container.names.isNotEmpty ? container.names.first : "container"}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -303,14 +338,22 @@ class DockerScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _restartContainer(BuildContext context, WidgetRef ref, ContainerInfo container) async {
+  Future<void> _restartContainer(
+    BuildContext context,
+    WidgetRef ref,
+    ContainerInfo container,
+  ) async {
     try {
       final dockerService = ref.read(service.dockerServiceProvider);
       await dockerService.restartContainer(container.id);
       ref.invalidate(service.containerListProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restarted ${container.names.isNotEmpty ? container.names.first : "container"}')),
+          SnackBar(
+            content: Text(
+              'Restarted ${container.names.isNotEmpty ? container.names.first : "container"}',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -348,29 +391,36 @@ class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
 
   void _startLogStream() {
     final dockerService = ref.read(service.dockerServiceProvider);
-    dockerService.getContainerLogs(widget.container.id, follow: true, tail: 100).listen(
-      (entry) {
-        if (mounted) {
-          setState(() {
-            _logs.add(entry);
-            if (_autoScroll) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (_scrollController.hasClients) {
-                  _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    dockerService
+        .getContainerLogs(widget.container.id, follow: true, tail: 100)
+        .listen(
+          (entry) {
+            if (mounted) {
+              setState(() {
+                _logs.add(entry);
+                if (_autoScroll) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(
+                        _scrollController.position.maxScrollExtent,
+                      );
+                    }
+                  });
                 }
               });
             }
-          });
-        }
-      },
-      onError: (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error streaming logs: $e'), backgroundColor: AppTheme.errorRose),
-          );
-        }
-      },
-    );
+          },
+          onError: (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error streaming logs: $e'),
+                  backgroundColor: AppTheme.errorRose,
+                ),
+              );
+            }
+          },
+        );
   }
 
   @override
@@ -382,7 +432,11 @@ class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_autoScroll ? Icons.vertical_align_bottom : Icons.vertical_align_center),
+            icon: Icon(
+              _autoScroll
+                  ? Icons.vertical_align_bottom
+                  : Icons.vertical_align_center,
+            ),
             onPressed: () {
               setState(() {
                 _autoScroll = !_autoScroll;
@@ -409,7 +463,9 @@ class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
           itemCount: _logs.length,
           itemBuilder: (context, index) {
             final log = _logs[index];
-            final color = log.level == 'error' ? AppTheme.errorRose : Colors.white;
+            final color = log.level == 'error'
+                ? AppTheme.errorRose
+                : Colors.white;
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(

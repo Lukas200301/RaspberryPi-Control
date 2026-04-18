@@ -12,11 +12,11 @@ class AgentInfo {
   });
 
   factory AgentInfo.notInstalled() => AgentInfo(
-        version: '',
-        isInstalled: false,
-        isRunning: false,
-        needsUpdate: false,
-      );
+    version: '',
+    isInstalled: false,
+    isRunning: false,
+    needsUpdate: false,
+  );
 
   factory AgentInfo.installed(String version, {bool isRunning = false}) =>
       AgentInfo(

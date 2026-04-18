@@ -6,13 +6,57 @@
   <component name="ChangeListManager">
     <list default="true" id="1fa8c623-a9d7-4399-9c34-aa2970ee10ef" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/RaspberryPi_Control.iml" beforeDir="false" afterPath="$PROJECT_DIR$/RaspberryPi_Control.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/agent/go.mod" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/agent/go.sum" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/bin/pi-agent-arm6" beforeDir="false" afterPath="$PROJECT_DIR$/assets/bin/pi-agent-arm6" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/bin/pi-agent-arm64" beforeDir="false" afterPath="$PROJECT_DIR$/assets/bin/pi-agent-arm64" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/bin/pi-agent-arm7" beforeDir="false" afterPath="$PROJECT_DIR$/assets/bin/pi-agent-arm7" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/agent_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/agent_info.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/app_settings.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/app_settings.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/file_item.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/file_item.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/ssh_connection.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/ssh_connection.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/providers/app_providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/providers/app_providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/providers/file_providers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/providers/file_providers.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/providers/terminal_snippets_provider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/providers/terminal_snippets_provider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/providers/theme_provider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/providers/theme_provider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/connections_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/connections_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/dashboard_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/dashboard_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/docker_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/docker_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/files_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/files_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/login_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/login_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/logs_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/logs_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/main_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/main_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/network_connections_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/network_connections_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/network_tools_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/network_tools_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/package_details_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/package_details_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/packages_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/packages_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/service_logs_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/service_logs_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/services_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/services_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/settings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/settings_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/stats_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/stats_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/system_update_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/system_update_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/screens/terminal_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/screens/terminal_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/agent_manager.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/agent_manager.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/agent_version_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/agent_version_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/connection_manager.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/connection_manager.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/docker_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/docker_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/grpc_file_transfer_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/grpc_file_transfer_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/grpc_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/grpc_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/network_discovery_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/network_discovery_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/sftp_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/sftp_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/ssh_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/ssh_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/storage_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/storage_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/services/update_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/update_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/theme/app_theme.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/theme/app_theme.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/agent_update_banner.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/agent_update_banner.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/background_chart_widget.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/background_chart_widget.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/file_editor_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/file_editor_dialog.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/file_operation_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/file_operation_dialog.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/file_preview_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/file_preview_dialog.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/file_properties_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/file_properties_dialog.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/glass_card.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/glass_card.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/grpc_file_transfer_panel.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/grpc_file_transfer_panel.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/stat_card.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/stat_card.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/widgets/storage_bar.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/widgets/storage_bar.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

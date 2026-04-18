@@ -16,7 +16,8 @@ class MainScreen extends ConsumerStatefulWidget {
   ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObserver {
+class _MainScreenState extends ConsumerState<MainScreen>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -104,7 +105,7 @@ class _MainScreenState extends ConsumerState<MainScreen> with WidgetsBindingObse
           ref.read(currentScreenProvider.notifier).setScreen(index);
         },
         backgroundColor: AppTheme.glassLight,
-        indicatorColor: AppTheme.primaryIndigo,
+        indicatorColor: AppTheme.primaryIndigo.withValues(alpha: 0.3),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),

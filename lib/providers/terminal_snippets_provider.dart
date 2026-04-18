@@ -37,6 +37,7 @@ class TerminalSnippetsNotifier extends Notifier<List<String>> {
   }
 }
 
-final terminalSnippetsProvider = NotifierProvider<TerminalSnippetsNotifier, List<String>>(
-  TerminalSnippetsNotifier.new,
-);
+final terminalSnippetsProvider =
+    NotifierProvider<TerminalSnippetsNotifier, List<String>>(
+      TerminalSnippetsNotifier.new,
+    );

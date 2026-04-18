@@ -10,10 +10,7 @@ import 'glass_card.dart';
 class FileEditorDialog extends ConsumerStatefulWidget {
   final FileItem file;
 
-  const FileEditorDialog({
-    super.key,
-    required this.file,
-  });
+  const FileEditorDialog({super.key, required this.file});
 
   @override
   ConsumerState<FileEditorDialog> createState() => _FileEditorDialogState();
@@ -60,7 +57,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
     try {
       final data = await sftp.readFile(widget.file.path);
       final content = utf8.decode(data);
-      
+
       setState(() {
         _originalContent = content;
         _controller.text = content;
@@ -85,7 +82,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
     try {
       final data = Uint8List.fromList(utf8.encode(_controller.text));
       await sftp.writeFile(widget.file.path, data);
-      
+
       setState(() {
         _originalContent = _controller.text;
         _hasUnsavedChanges = false;
@@ -104,7 +101,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       setState(() {
         _isSaving = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -123,7 +120,9 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text('You have unsaved changes. Do you want to discard them?'),
+        content: const Text(
+          'You have unsaved changes. Do you want to discard them?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -164,12 +163,10 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
                 // Header
                 _buildHeader(),
                 const Divider(height: 1),
-                
+
                 // Editor
-                Expanded(
-                  child: _buildEditor(),
-                ),
-                
+                Expanded(child: _buildEditor()),
+
                 // Footer with stats
                 _buildFooter(),
               ],
@@ -210,7 +207,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.2),
+                          color: Colors.orange.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: Colors.orange),
                         ),
@@ -268,9 +265,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
 
   Widget _buildEditor() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_error != null) {
@@ -302,15 +297,12 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
     }
 
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       child: TextField(
         controller: _controller,
         maxLines: null,
         expands: true,
-        style: const TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 14,
-        ),
+        style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
         decoration: const InputDecoration(
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(16),

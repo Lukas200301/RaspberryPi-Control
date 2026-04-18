@@ -5,7 +5,9 @@ import 'package:gap/gap.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;import 'package:open_filex/open_filex.dart';import '../theme/app_theme.dart';
+import 'package:http/http.dart' as http;
+import 'package:open_filex/open_filex.dart';
+import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
 import '../providers/theme_provider.dart';
@@ -70,9 +72,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Connection Info
           Text(
             'Connection',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           GlassCard(
@@ -83,7 +85,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.computer,
                   title: 'Connected Device',
                   subtitle: currentConnection?.name ?? 'Not connected',
-                  trailing: const Icon(Icons.check_circle, color: AppTheme.successGreen),
+                  trailing: const Icon(
+                    Icons.check_circle,
+                    color: AppTheme.successGreen,
+                  ),
                 ),
                 const Divider(color: AppTheme.glassBorder),
                 _buildSettingTile(
@@ -107,26 +112,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // App Settings
           Text(
             'Appearance',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           GlassCard(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSettingTile(
-                  context,
-                  icon: Icons.dark_mode,
-                  title: 'Dark Mode',
-                  subtitle: 'AMOLED Black theme',
-                  trailing: Switch(
-                    value: true,
-                    onChanged: null, // Always dark mode
-                    activeTrackColor: AppTheme.primaryIndigo,
-                  ),
-                ),
-                const Divider(color: AppTheme.glassBorder),
                 _buildSettingTile(
                   context,
                   icon: Icons.animation,
@@ -146,34 +140,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _buildSettingTile(
                   context,
                   icon: Icons.palette,
-                  title: 'Theme Colors',
-                  subtitle: 'Customize app colors',
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white24, width: 2),
-                        ),
-                      ),
-                      const Gap(8),
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white24, width: 2),
-                        ),
-                      ),
-                    ],
-                  ),
-                  onTap: () => _showThemeEditorDialog(context, ref),
+                  title: 'Theme',
+                  subtitle: 'Select color scheme & terminal palette',
                 ),
+                const Gap(12),
+                // Inline theme preset grid
+                _buildThemePresetGrid(context),
+                const Gap(4),
               ],
             ),
           ),
@@ -182,9 +155,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Monitoring
           Text(
             'Monitoring',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           GlassCard(
@@ -205,9 +178,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Terminal
           Text(
             'Terminal',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           GlassCard(
@@ -228,28 +201,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Agent
           Text(
             'Agent',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           Consumer(
             builder: (context, ref, child) {
               // Check currentConnectionProvider first
               var connection = ref.watch(currentConnectionProvider);
-              debugPrint('SettingsScreen: currentConnectionProvider connection = $connection');
-              debugPrint('SettingsScreen: connection?.agentVersion = ${connection?.agentVersion}');
+              debugPrint(
+                'SettingsScreen: currentConnectionProvider connection = $connection',
+              );
+              debugPrint(
+                'SettingsScreen: connection?.agentVersion = ${connection?.agentVersion}',
+              );
 
               // Fallback: check connection manager
               if (connection == null) {
                 final connectionManager = ref.watch(connectionManagerProvider);
                 connection = connectionManager.currentConnection;
-                debugPrint('SettingsScreen: Using connectionManager.currentConnection');
-                debugPrint('SettingsScreen: connectionManager connection?.agentVersion = ${connection?.agentVersion}');
+                debugPrint(
+                  'SettingsScreen: Using connectionManager.currentConnection',
+                );
+                debugPrint(
+                  'SettingsScreen: connectionManager connection?.agentVersion = ${connection?.agentVersion}',
+                );
               }
 
               final agentVersion = connection?.agentVersion ?? 'Not connected';
-              debugPrint('SettingsScreen: Final agentVersion display = $agentVersion');
+              debugPrint(
+                'SettingsScreen: Final agentVersion display = $agentVersion',
+              );
 
               return GlassCard(
                 child: Column(
@@ -278,9 +261,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // About
           Text(
             'About',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
           ),
           const Gap(12),
           GlassCard(
@@ -297,7 +280,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   context,
                   icon: Icons.system_update,
                   title: 'Check for Updates',
-                  subtitle: _checkingForUpdates ? 'Checking...' : 'Tap to check',
+                  subtitle: _checkingForUpdates
+                      ? 'Checking...'
+                      : 'Tap to check',
                   onTap: _checkingForUpdates ? null : _checkForUpdates,
                 ),
                 const Divider(color: AppTheme.glassBorder),
@@ -306,7 +291,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.code,
                   title: 'Open Source',
                   subtitle: 'View on GitHub',
-                  onTap: () => _launchURL('https://github.com/Lukas200301/RaspberryPi-Control'),
+                  onTap: () => _launchURL(
+                    'https://github.com/Lukas200301/RaspberryPi-Control',
+                  ),
                 ),
                 const Divider(color: AppTheme.glassBorder),
                 _buildSettingTile(
@@ -327,9 +314,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: const Icon(Icons.logout, color: AppTheme.errorRose),
               title: Text(
                 'Disconnect',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.errorRose,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: AppTheme.errorRose),
               ),
               onTap: () {
                 // Clear file transfers before disconnecting
@@ -337,22 +324,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                 // Disconnect in background without waiting
                 Future.wait([
-                  ref.read(sshServiceProvider).disconnect(),
-                  ref.read(grpcServiceProvider).disconnect(),
-                ], eagerError: true).timeout(
-                  const Duration(seconds: 2),
-                  onTimeout: () => [],
-                ).catchError((e) {
-                  debugPrint('Error during disconnect: $e');
-                  return [];
-                });
+                      ref.read(sshServiceProvider).disconnect(),
+                      ref.read(grpcServiceProvider).disconnect(),
+                    ], eagerError: true)
+                    .timeout(const Duration(seconds: 2), onTimeout: () => [])
+                    .catchError((e) {
+                      debugPrint('Error during disconnect: $e');
+                      return [];
+                    });
 
-                ref.read(currentConnectionProvider.notifier).setConnection(null);
+                ref
+                    .read(currentConnectionProvider.notifier)
+                    .setConnection(null);
 
                 // Navigate immediately
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const ConnectionsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const ConnectionsScreen(),
+                  ),
                   (route) => false,
                 );
               },
@@ -362,6 +352,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+
+  Widget _buildThemePresetGrid(BuildContext context) {
+    final themeState = ref.watch(themeProvider);
+    final notifier = ref.read(themeProvider.notifier);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 2.4,
+        children: AppThemePreset.values.map((preset) {
+          final isSelected = themeState.preset == preset;
+          return GestureDetector(
+            onTap: () => notifier.setPreset(preset),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: preset.background,
+                border: Border.all(
+                  color: isSelected ? preset.primary : AppTheme.glassBorder,
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: preset.primary.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    // Color dots
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _dot(preset.primary),
+                        const SizedBox(height: 4),
+                        _dot(preset.secondary),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            preset.displayName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(Icons.check_circle, color: preset.primary, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 
   Widget _buildSettingTile(
     BuildContext context, {
@@ -373,14 +451,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }) {
     return ListTile(
       leading: Icon(icon, color: AppTheme.primaryIndigo),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
-      subtitle: Text(
-        subtitle,
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
+      title: Text(title, style: Theme.of(context).textTheme.titleSmall),
+      subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
       trailing: trailing,
       onTap: onTap,
     );
@@ -402,8 +474,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Settings saved.',
-                        style: TextStyle(color: Colors.white)),
+                    content: Text(
+                      'Settings saved.',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: AppTheme.successGreen,
                   ),
                 );
@@ -416,8 +490,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Settings saved.',
-                        style: TextStyle(color: Colors.white)),
+                    content: Text(
+                      'Settings saved.',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: AppTheme.successGreen,
                   ),
                 );
@@ -430,8 +506,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Settings saved.',
-                        style: TextStyle(color: Colors.white)),
+                    content: Text(
+                      'Settings saved.',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: AppTheme.successGreen,
                   ),
                 );
@@ -444,8 +522,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Settings saved.',
-                        style: TextStyle(color: Colors.white)),
+                    content: Text(
+                      'Settings saved.',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     backgroundColor: AppTheme.successGreen,
                   ),
                 );
@@ -465,23 +545,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title: const Text('Terminal Font Size'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: AppSettings.availableFontSizes.map((size) => ListTile(
-            title: Text('${size.toInt()}px'),
-            trailing: settings.terminalFontSize == size
-                ? const Icon(Icons.check, color: AppTheme.primaryIndigo)
-                : null,
-            onTap: () {
-              setState(() => settings.terminalFontSize = size);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Font size updated',
-                      style: TextStyle(color: Colors.white)),
-                  backgroundColor: AppTheme.successGreen,
+          children: AppSettings.availableFontSizes
+              .map(
+                (size) => ListTile(
+                  title: Text('${size.toInt()}px'),
+                  trailing: settings.terminalFontSize == size
+                      ? const Icon(Icons.check, color: AppTheme.primaryIndigo)
+                      : null,
+                  onTap: () {
+                    setState(() => settings.terminalFontSize = size);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Font size updated',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: AppTheme.successGreen,
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          )).toList(),
+              )
+              .toList(),
         ),
       ),
     );
@@ -493,7 +579,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
         title: const Text('Reinstall Agent?'),
-        content: const Text('This will remove the current agent and prepare for a fresh installation. You will need to reconnect after this.'),
+        content: const Text(
+          'This will remove the current agent and prepare for a fresh installation. You will need to reconnect after this.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -533,7 +621,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       // Stop agent and kill port
       try {
-        await sshService.execute('sudo pkill -f "/opt/pi-control/agent" || true');
+        await sshService.execute(
+          'sudo pkill -f "/opt/pi-control/agent" || true',
+        );
         await sshService.execute('sudo fuser -k 50051/tcp 2>/dev/null || true');
         await Future.delayed(const Duration(seconds: 1));
       } catch (e) {
@@ -542,17 +632,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       // Delete the agent installation
       debugPrint('Removing agent installation...');
-      final rmResult = await sshService.execute('sudo rm -rf /opt/pi-control 2>&1 || echo "failed"');
+      final rmResult = await sshService.execute(
+        'sudo rm -rf /opt/pi-control 2>&1 || echo "failed"',
+      );
       debugPrint('Remove result: $rmResult');
 
-      final rmTmpResult = await sshService.execute('sudo rm -f /tmp/pi-control-agent 2>&1 || echo "done"');
+      final rmTmpResult = await sshService.execute(
+        'sudo rm -f /tmp/pi-control-agent 2>&1 || echo "done"',
+      );
       debugPrint('Remove temp result: $rmTmpResult');
 
       // Verify removal
-      final checkResult = await sshService.execute('ls /opt/pi-control/agent 2>&1 || echo "NOT_FOUND"');
+      final checkResult = await sshService.execute(
+        'ls /opt/pi-control/agent 2>&1 || echo "NOT_FOUND"',
+      );
       debugPrint('Verification check: $checkResult');
 
-      if (!checkResult.contains('NOT_FOUND') && !checkResult.contains('No such file')) {
+      if (!checkResult.contains('NOT_FOUND') &&
+          !checkResult.contains('No such file')) {
         throw Exception('Failed to remove old agent installation');
       }
 
@@ -583,10 +680,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Navigator.pop(context);
                   await ref.read(connectionManagerProvider).disconnect();
                   if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/',
-                      (route) => false,
-                    );
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/', (route) => false);
                   }
                 },
                 child: const Text('Disconnect & Reconnect'),
@@ -601,8 +697,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reinstall agent: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Failed to reinstall agent: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -641,8 +739,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Settings reset successfully',
-                style: TextStyle(color: Colors.white)),
+            content: Text(
+              'Settings reset successfully',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -651,8 +751,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to reset settings: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Failed to reset settings: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -668,8 +770,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open link: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Could not open link: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -690,8 +794,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (updateInfo == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Could not check for updates',
-                style: TextStyle(color: Colors.white)),
+            content: Text(
+              'Could not check for updates',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -703,8 +809,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('You are on the latest version!',
-                style: TextStyle(color: Colors.white)),
+            content: Text(
+              'You are on the latest version!',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.successGreen,
           ),
         );
@@ -714,8 +822,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _checkingForUpdates = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error checking for updates: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Error checking for updates: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -742,16 +852,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Text(
                 'Version ${updateInfo.latestVersion} is available!',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.successGreen,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: AppTheme.successGreen),
               ),
               const Gap(8),
               Text(
                 'Current: ${updateInfo.currentVersion}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
               ),
               const Gap(16),
               const Divider(color: AppTheme.glassBorder),
@@ -761,48 +871,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const Gap(12),
-              ...updateInfo.releaseNotes.map((note) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'v${note.version}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: AppTheme.primaryIndigo,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
+              ...updateInfo.releaseNotes.map(
+                (note) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
                         ),
-                        const Gap(8),
-                        Text(
-                          note.title,
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        const Gap(4),
-                        Text(
-                          note.body,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textSecondary,
-                                  ),
+                        child: Text(
+                          'v${note.version}',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: AppTheme.primaryIndigo,
+                                fontWeight: FontWeight.bold,
+                              ),
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                      const Gap(8),
+                      Text(
+                        note.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Gap(4),
+                      Text(
+                        note.body,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -831,8 +941,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (updateInfo.downloadUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Download URL not found',
-              style: TextStyle(color: Colors.white)),
+          content: Text(
+            'Download URL not found',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: AppTheme.errorRose,
         ),
       );
@@ -859,23 +971,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       // Download APK
       final response = await http.get(Uri.parse(updateInfo.downloadUrl));
-      
+
       if (response.statusCode == 200) {
         // Get download directory
         final dir = await getExternalStorageDirectory();
         final file = File('${dir!.path}/raspberrypi_control_update.apk');
-        
+
         // Delete old APK if exists
         if (await file.exists()) {
           await file.delete();
         }
-        
+
         // Write file
         await file.writeAsBytes(response.bodyBytes);
-        
+
         if (mounted) {
           Navigator.pop(context); // Close progress dialog
-          
+
           // Automatically open installer using open_filex
           try {
             debugPrint('Opening APK: ${file.path}');
@@ -883,9 +995,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               file.path,
               type: 'application/vnd.android.package-archive',
             );
-            
+
             debugPrint('APK open result: ${result.type} - ${result.message}');
-            
+
             if (result.type == ResultType.done) {
               // Successfully opened installer
               // Schedule file deletion after a delay (installer should have copied it by then)
@@ -903,10 +1015,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               // Failed to open installer
               throw Exception('Failed to open installer: ${result.message}');
             }
-            
           } catch (e) {
             debugPrint('Failed to open installer: $e');
-            
+
             // Show manual install dialog as fallback
             if (mounted) {
               showDialog(
@@ -934,19 +1045,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Navigator.pop(context); // Close progress dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: $e',
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Download failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
       }
     }
-  }
-  void _showThemeEditorDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (context) => const ThemeEditorDialog(),
-    );
   }
 }
 
@@ -958,20 +1065,6 @@ class ThemeEditorDialog extends ConsumerStatefulWidget {
 }
 
 class _ThemeEditorDialogState extends ConsumerState<ThemeEditorDialog> {
-  final List<Color> _presetColors = [
-    const Color(0xFF6366F1), // Indigo (Default)
-    const Color(0xFF3B82F6), // Blue
-    const Color(0xFF06B6D4), // Cyan
-    const Color(0xFF14B8A6), // Teal
-    const Color(0xFF10B981), // Green
-    const Color(0xFFF59E0B), // Amber
-    const Color(0xFFF97316), // Orange
-    const Color(0xFFEF4444), // Red
-    const Color(0xFFEC4899), // Pink
-    const Color(0xFF8B5CF6), // Violet
-    const Color(0xFFD946EF), // Fuchsia
-  ];
-
   @override
   Widget build(BuildContext context) {
     final themeState = ref.watch(themeProvider);
@@ -986,92 +1079,31 @@ class _ThemeEditorDialogState extends ConsumerState<ThemeEditorDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Primary Color',
+              'Select a theme preset:',
               style: Theme.of(context).textTheme.titleSmall,
             ),
-            const Gap(12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _presetColors.map((color) {
-                final isSelected = themeState.primaryColor.value == color.value;
-                return GestureDetector(
-                  onTap: () => themeNotifier.updatePrimaryColor(color),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.white, width: 3)
-                          : Border.all(color: Colors.white24, width: 1),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: color.withOpacity(0.5),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
-            const Gap(24),
-            Text(
-              'Accent Color',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const Gap(12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _presetColors.map((color) {
-                final isSelected = themeState.secondaryColor.value == color.value;
-                return GestureDetector(
-                  onTap: () => themeNotifier.updateSecondaryColor(color),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.white, width: 3)
-                          : Border.all(color: Colors.white24, width: 1),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: color.withOpacity(0.5),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
+            const Gap(16),
+            ...AppThemePreset.values.map((preset) {
+              final isSelected = themeState.preset == preset;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: preset.primary,
+                  radius: 14,
+                  child: isSelected
+                      ? const Icon(Icons.check, color: Colors.white, size: 14)
+                      : null,
+                ),
+                title: Text(preset.displayName),
+                selected: isSelected,
+                selectedColor: preset.primary,
+                onTap: () => themeNotifier.setPreset(preset),
+              );
+            }),
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () {
-            themeNotifier.resetTheme();
-          },
-          child: const Text('Reset'),
-        ),
         ElevatedButton(
           onPressed: () => Navigator.pop(context),
           style: ElevatedButton.styleFrom(

@@ -9,16 +9,19 @@ import '../constants/app_constants.dart';
 class SSHService {
   SSHClient? _client;
   SSHConnection? _currentConnection;
-  final _connectionStateController = StreamController<ConnectionState>.broadcast();
+  final _connectionStateController =
+      StreamController<ConnectionState>.broadcast();
   ConnectionState _state = ConnectionState.disconnected;
   ServerSocket? _tunnelSocket;
   Timer? _keepaliveTimer;
 
-  Stream<ConnectionState> get connectionState => _connectionStateController.stream;
+  Stream<ConnectionState> get connectionState =>
+      _connectionStateController.stream;
   ConnectionState get currentState => _state;
   SSHConnection? get currentConnection => _currentConnection;
   SSHClient? get client => _client;
-  bool get isConnected => _client != null && _state == ConnectionState.connected;
+  bool get isConnected =>
+      _client != null && _state == ConnectionState.connected;
 
   void _updateState(ConnectionState state) {
     _state = state;
@@ -56,7 +59,9 @@ class SSHService {
     _stopKeepalive();
     // Send a keepalive command every 45 seconds to prevent connection timeout
     // Increased from 30s to reduce conflicts with long-running operations
-    _keepaliveTimer = Timer.periodic(const Duration(seconds: 45), (timer) async {
+    _keepaliveTimer = Timer.periodic(const Duration(seconds: 45), (
+      timer,
+    ) async {
       if (_client == null || _state != ConnectionState.connected) {
         timer.cancel();
         return;
@@ -65,19 +70,22 @@ class SSHService {
       try {
         // Send a simple echo command to keep connection alive
         // Use timeout to prevent blocking if connection is busy
-        await _client!.run('echo "keepalive"').timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            debugPrint('SSH keepalive timeout (connection may be busy)');
-            return Uint8List(0);
-          },
-        );
+        await _client!
+            .run('echo "keepalive"')
+            .timeout(
+              const Duration(seconds: 5),
+              onTimeout: () {
+                debugPrint('SSH keepalive timeout (connection may be busy)');
+                return Uint8List(0);
+              },
+            );
         debugPrint('SSH keepalive sent');
       } catch (e) {
         // Log error but don't immediately mark as error - could just be busy
         debugPrint('Keepalive error (connection may be busy): $e');
         // Only mark as error if we can't connect at all
-        if (e.toString().contains('closed') || e.toString().contains('Closed')) {
+        if (e.toString().contains('closed') ||
+            e.toString().contains('Closed')) {
           debugPrint('Connection is closed, marking as error');
           _updateState(ConnectionState.error);
           timer.cancel();
@@ -146,7 +154,11 @@ class SSHService {
     return _client!.shell();
   }
 
-  Future<int> forwardLocal(int localPort, String remoteHost, int remotePort) async {
+  Future<int> forwardLocal(
+    int localPort,
+    String remoteHost,
+    int remotePort,
+  ) async {
     if (_client == null) {
       throw Exception('Not connected to SSH server');
     }
@@ -154,17 +166,20 @@ class SSHService {
     try {
       // Close existing tunnel if any
       await _tunnelSocket?.close();
-      
-      _tunnelSocket = await ServerSocket.bind(InternetAddress.loopbackIPv4, localPort);
+
+      _tunnelSocket = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        localPort,
+      );
       debugPrint('Local server bound to port ${_tunnelSocket!.port}');
 
       _tunnelSocket!.listen((localSocket) async {
         debugPrint('New connection on local port ${_tunnelSocket!.port}');
-        
+
         try {
           final forward = await _client!.forwardLocal(remoteHost, remotePort);
           debugPrint('SSH tunnel established to $remoteHost:$remotePort');
-          
+
           // Forward data from remote to local
           forward.stream.listen(
             (data) {
@@ -224,9 +239,4 @@ class SSHService {
   }
 }
 
-enum ConnectionState {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum ConnectionState { disconnected, connecting, connected, error }

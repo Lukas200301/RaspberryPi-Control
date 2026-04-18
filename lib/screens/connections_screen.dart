@@ -47,11 +47,7 @@ class ConnectionsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.devices,
-              size: 64,
-              color: AppTheme.textTertiary,
-            ),
+            Icon(Icons.devices, size: 64, color: AppTheme.textTertiary),
             const Gap(16),
             Text(
               'No Connections',
@@ -85,10 +81,7 @@ class ConnectionsScreen extends ConsumerWidget {
               color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.computer,
-              color: AppTheme.primaryIndigo,
-            ),
+            child: const Icon(Icons.computer, color: AppTheme.primaryIndigo),
           ),
           const Gap(16),
           Expanded(
@@ -121,8 +114,8 @@ class ConnectionsScreen extends ConsumerWidget {
                   Text(
                     'Last: ${_formatDate(connection.lastConnected!)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textTertiary,
-                        ),
+                      color: AppTheme.textTertiary,
+                    ),
                   ),
                 ],
               ],
@@ -142,14 +135,19 @@ class ConnectionsScreen extends ConsumerWidget {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: AppTheme.glassLight,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
                     border: Border(
                       top: BorderSide(color: AppTheme.glassBorder, width: 1),
                       left: BorderSide(color: AppTheme.glassBorder, width: 1),
                       right: BorderSide(color: AppTheme.glassBorder, width: 1),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: const Row(
                     children: [
                       Icon(Icons.star_outline, size: 20),
@@ -159,7 +157,9 @@ class ConnectionsScreen extends ConsumerWidget {
                   ),
                 ),
                 onTap: () {
-                  ref.read(connectionListProvider.notifier).toggleFavorite(connection.id);
+                  ref
+                      .read(connectionListProvider.notifier)
+                      .toggleFavorite(connection.id);
                 },
               ),
               PopupMenuItem(
@@ -173,7 +173,10 @@ class ConnectionsScreen extends ConsumerWidget {
                       top: BorderSide(color: AppTheme.glassBorder, width: 0.5),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: const Row(
                     children: [
                       Icon(Icons.edit, size: 20),
@@ -194,7 +197,9 @@ class ConnectionsScreen extends ConsumerWidget {
                 child: Container(
                   decoration: const BoxDecoration(
                     color: AppTheme.glassLight,
-                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
                     border: Border(
                       bottom: BorderSide(color: AppTheme.glassBorder, width: 1),
                       left: BorderSide(color: AppTheme.glassBorder, width: 1),
@@ -202,17 +207,25 @@ class ConnectionsScreen extends ConsumerWidget {
                       top: BorderSide(color: AppTheme.glassBorder, width: 0.5),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: const Row(
                     children: [
                       Icon(Icons.delete, size: 20, color: AppTheme.errorRose),
                       Gap(12),
-                      Text('Delete', style: TextStyle(color: AppTheme.errorRose)),
+                      Text(
+                        'Delete',
+                        style: TextStyle(color: AppTheme.errorRose),
+                      ),
                     ],
                   ),
                 ),
                 onTap: () {
-                  ref.read(connectionListProvider.notifier).deleteConnection(connection.id);
+                  ref
+                      .read(connectionListProvider.notifier)
+                      .deleteConnection(connection.id);
                 },
               ),
             ],
@@ -306,15 +319,22 @@ class ConnectionsScreen extends ConsumerWidget {
       // Handle different result types
       if (result is SuccessResult) {
         // Update current connection state with agent version from result
-        debugPrint('Connection success - agent version in result: ${result.connection.agentVersion}');
+        debugPrint(
+          'Connection success - agent version in result: ${result.connection.agentVersion}',
+        );
         final updatedConnection = result.connection.copyWith(
           lastConnected: DateTime.now(),
-          agentVersion: result.connection.agentVersion, // Preserve agent version
+          agentVersion:
+              result.connection.agentVersion, // Preserve agent version
         );
-        ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
+        ref
+            .read(currentConnectionProvider.notifier)
+            .setConnection(updatedConnection);
 
         // Save updated connection with agent version
-        await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
+        await ref
+            .read(connectionListProvider.notifier)
+            .updateConnection(updatedConnection);
 
         if (context.mounted) {
           Navigator.pop(context); // Close progress dialog
@@ -367,7 +387,9 @@ class ConnectionsScreen extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('SSH forwarding required for real-time monitoring'),
+                content: Text(
+                  'SSH forwarding required for real-time monitoring',
+                ),
                 backgroundColor: AppTheme.warningAmber,
               ),
             );
@@ -379,19 +401,23 @@ class ConnectionsScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // Close progress dialog
-        
+
         debugPrint('Connection error: $e');
-        
+
         final errorMessage = e.toString();
-        
+
         // Check if error is about sudo requirement
-        if (errorMessage.contains('SUDO_REQUIRED') || errorMessage.contains('ROOT_REQUIRED')) {
+        if (errorMessage.contains('SUDO_REQUIRED') ||
+            errorMessage.contains('ROOT_REQUIRED')) {
           _showRootRequiredDialog(context);
-        } else if (errorMessage.contains('AUTH_FAILED') && !errorMessage.contains('SUDO_REQUIRED')) {
+        } else if (errorMessage.contains('AUTH_FAILED') &&
+            !errorMessage.contains('SUDO_REQUIRED')) {
           // Only show auth failed if it's truly an authentication issue, not a permission issue
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Authentication failed. Please check your username and password.'),
+              content: Text(
+                'Authentication failed. Please check your username and password.',
+              ),
               backgroundColor: AppTheme.errorRose,
               duration: Duration(seconds: 5),
             ),
@@ -475,12 +501,17 @@ class ConnectionsScreen extends ConsumerWidget {
         // Update current connection state with agent version from result
         final updatedConnection = result.connection.copyWith(
           lastConnected: DateTime.now(),
-          agentVersion: result.connection.agentVersion, // Preserve agent version
+          agentVersion:
+              result.connection.agentVersion, // Preserve agent version
         );
-        ref.read(currentConnectionProvider.notifier).setConnection(updatedConnection);
+        ref
+            .read(currentConnectionProvider.notifier)
+            .setConnection(updatedConnection);
 
         // Save updated connection with agent version
-        await ref.read(connectionListProvider.notifier).updateConnection(updatedConnection);
+        await ref
+            .read(connectionListProvider.notifier)
+            .updateConnection(updatedConnection);
 
         if (context.mounted) {
           Navigator.pop(context); // Close progress dialog
@@ -539,7 +570,10 @@ class ConnectionsScreen extends ConsumerWidget {
     );
   }
 
-  Future<bool?> _showAgentSetupDialog(BuildContext context, dynamic agentInfo) async {
+  Future<bool?> _showAgentSetupDialog(
+    BuildContext context,
+    dynamic agentInfo,
+  ) async {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -610,7 +644,10 @@ class ConnectionsScreen extends ConsumerWidget {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Agent installation failed: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Agent installation failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: AppTheme.errorRose,
           ),
         );
@@ -624,7 +661,6 @@ class ConnectionsScreen extends ConsumerWidget {
     final portController = TextEditingController(text: '22');
     final usernameController = TextEditingController(text: 'pi');
     final passwordController = TextEditingController();
-
 
     showDialog(
       context: context,
@@ -681,7 +717,9 @@ class ConnectionsScreen extends ConsumerWidget {
                   password: passwordController.text,
                 );
 
-                ref.read(connectionListProvider.notifier).addConnection(connection);
+                ref
+                    .read(connectionListProvider.notifier)
+                    .addConnection(connection);
                 Navigator.pop(context);
               },
               child: const Text('Add'),
@@ -699,7 +737,9 @@ class ConnectionsScreen extends ConsumerWidget {
   ) {
     final nameController = TextEditingController(text: connection.name);
     final hostController = TextEditingController(text: connection.host);
-    final portController = TextEditingController(text: connection.port.toString());
+    final portController = TextEditingController(
+      text: connection.port.toString(),
+    );
     final usernameController = TextEditingController(text: connection.username);
     final passwordController = TextEditingController(text: connection.password);
 
@@ -755,10 +795,11 @@ class ConnectionsScreen extends ConsumerWidget {
                   port: int.tryParse(portController.text) ?? 22,
                   username: usernameController.text,
                   password: passwordController.text,
-
                 );
 
-                ref.read(connectionListProvider.notifier).updateConnection(updated);
+                ref
+                    .read(connectionListProvider.notifier)
+                    .updateConnection(updated);
                 Navigator.pop(context);
               },
               child: const Text('Save'),

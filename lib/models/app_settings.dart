@@ -5,7 +5,7 @@ class AppSettings {
   static const String _keyStatsHistory = 'stats_history';
   static const String _keyTerminalFontSize = 'terminal_font_size';
   static const String _keyAutoReconnect = 'auto_reconnect';
-  
+
   final GetStorage _storage = GetStorage();
 
   // Animations
@@ -18,9 +18,17 @@ class AppSettings {
 
   // Terminal
   double get terminalFontSize => _storage.read(_keyTerminalFontSize) ?? 14.0;
-  set terminalFontSize(double value) => _storage.write(_keyTerminalFontSize, value);
-  
-  static const List<double> availableFontSizes = [10.0, 12.0, 14.0, 16.0, 18.0, 20.0];
+  set terminalFontSize(double value) =>
+      _storage.write(_keyTerminalFontSize, value);
+
+  static const List<double> availableFontSizes = [
+    10.0,
+    12.0,
+    14.0,
+    16.0,
+    18.0,
+    20.0,
+  ];
 
   // Connection
   bool get autoReconnect => _storage.read(_keyAutoReconnect) ?? true;

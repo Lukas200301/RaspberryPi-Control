@@ -11,15 +11,17 @@ class GrpcFileTransferPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transferService = ref.watch(grpcFileTransferServiceProvider);
-    
+
     // Listen to changes
     final activeTransfers = transferService.activeTransfers;
-    final completedTransfers = transferService.completedTransfers.take(5).toList();
-    
+    final completedTransfers = transferService.completedTransfers
+        .take(5)
+        .toList();
+
     if (activeTransfers.isEmpty && completedTransfers.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -49,48 +51,43 @@ class GrpcFileTransferPanel extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Active transfers
             if (activeTransfers.isNotEmpty) ...[
               Text(
                 'Active (${activeTransfers.length})',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 8),
-              ...activeTransfers.map((transfer) => _buildTransferItem(
-                context,
-                transfer,
-                isActive: true,
-                onCancel: () => transferService.cancelTransfer(transfer.id),
-              )),
+              ...activeTransfers.map(
+                (transfer) => _buildTransferItem(
+                  context,
+                  transfer,
+                  isActive: true,
+                  onCancel: () => transferService.cancelTransfer(transfer.id),
+                ),
+              ),
               const SizedBox(height: 16),
             ],
-            
+
             // Recently completed transfers
             if (completedTransfers.isNotEmpty) ...[
               Text(
                 'Recent',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 8),
-              ...completedTransfers.map((transfer) => _buildTransferItem(
-                context,
-                transfer,
-                isActive: false,
-              )),
+              ...completedTransfers.map(
+                (transfer) =>
+                    _buildTransferItem(context, transfer, isActive: false),
+              ),
             ],
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildTransferItem(
     BuildContext context,
     FileTransferProgress transfer, {
@@ -98,7 +95,7 @@ class GrpcFileTransferPanel extends ConsumerWidget {
     VoidCallback? onCancel,
   }) {
     final hasError = transfer.error != null;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -106,7 +103,7 @@ class GrpcFileTransferPanel extends ConsumerWidget {
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: hasError 
+          color: hasError
               ? Colors.red.shade700.withValues(alpha: 0.3)
               : Colors.white.withValues(alpha: 0.1),
           width: 1,
@@ -145,11 +142,7 @@ class GrpcFileTransferPanel extends ConsumerWidget {
                   constraints: const BoxConstraints(),
                 )
               else if (hasError)
-                Icon(
-                  Icons.error_outline,
-                  size: 18,
-                  color: Colors.red[700],
-                )
+                Icon(Icons.error_outline, size: 18, color: Colors.red[700])
               else if (!isActive)
                 Icon(
                   Icons.check_circle_outline,
@@ -158,9 +151,9 @@ class GrpcFileTransferPanel extends ConsumerWidget {
                 ),
             ],
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Progress bar (only for active transfers)
           if (isActive) ...[
             ClipRRect(
@@ -174,15 +167,12 @@ class GrpcFileTransferPanel extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
           ],
-          
+
           // Transfer details
           if (hasError)
             Text(
               transfer.error!,
-              style: TextStyle(
-                color: Colors.red[700],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.red[700], fontSize: 12),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )
@@ -192,26 +182,17 @@ class GrpcFileTransferPanel extends ConsumerWidget {
               children: [
                 Text(
                   transfer.transferredString,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 if (isActive) ...[
                   Text(
                     '${transfer.speedString} • ${transfer.progressString}',
-                    style: TextStyle(
-                      color: Colors.blue[400],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.blue[400], fontSize: 12),
                   ),
                 ] else ...[
                   Text(
                     'Complete',
-                    style: TextStyle(
-                      color: Colors.green[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.green[600], fontSize: 12),
                   ),
                 ],
               ],

@@ -33,12 +33,14 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
 
     try {
       final sshService = ref.read(sshServiceProvider);
-      
+
       debugPrint('Stopping agent and removing installation...');
-      
+
       // Stop agent and kill port
       try {
-        await sshService.execute('sudo pkill -f "/opt/pi-control/agent" || true');
+        await sshService.execute(
+          'sudo pkill -f "/opt/pi-control/agent" || true',
+        );
         await sshService.execute('sudo fuser -k 50051/tcp 2>/dev/null || true');
         await Future.delayed(const Duration(seconds: 1));
       } catch (e) {
@@ -51,20 +53,27 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
 
       // Delete the agent installation
       debugPrint('Removing agent installation...');
-      final rmResult = await sshService.execute('sudo rm -rf /opt/pi-control 2>&1 || echo "failed"');
+      final rmResult = await sshService.execute(
+        'sudo rm -rf /opt/pi-control 2>&1 || echo "failed"',
+      );
       debugPrint('Remove result: $rmResult');
-      
-      final rmTmpResult = await sshService.execute('sudo rm -f /tmp/pi-control-agent 2>&1 || echo "done"');
+
+      final rmTmpResult = await sshService.execute(
+        'sudo rm -f /tmp/pi-control-agent 2>&1 || echo "done"',
+      );
       debugPrint('Remove temp result: $rmTmpResult');
-      
+
       // Verify removal
-      final checkResult = await sshService.execute('ls /opt/pi-control/agent 2>&1 || echo "NOT_FOUND"');
+      final checkResult = await sshService.execute(
+        'ls /opt/pi-control/agent 2>&1 || echo "NOT_FOUND"',
+      );
       debugPrint('Verification check: $checkResult');
-      
-      if (!checkResult.contains('NOT_FOUND') && !checkResult.contains('No such file')) {
+
+      if (!checkResult.contains('NOT_FOUND') &&
+          !checkResult.contains('No such file')) {
         throw Exception('Failed to remove agent installation');
       }
-      
+
       debugPrint('Agent removed successfully');
 
       setState(() {
@@ -100,10 +109,9 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                     Navigator.pop(context);
                     await ref.read(connectionManagerProvider).disconnect();
                     if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/',
-                        (route) => false,
-                      );
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil('/', (route) => false);
                     }
                   },
                   child: const Text('Disconnect & Reconnect'),
@@ -167,8 +175,10 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final status = AgentVersionService.checkVersion(widget.connection.agentVersion);
-    
+    final status = AgentVersionService.checkVersion(
+      widget.connection.agentVersion,
+    );
+
     if (status != AgentVersionStatus.outdated) {
       return const SizedBox.shrink();
     }

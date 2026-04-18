@@ -18,7 +18,8 @@ class PackageDetailsScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<PackageDetailsScreen> createState() => _PackageDetailsScreenState();
+  ConsumerState<PackageDetailsScreen> createState() =>
+      _PackageDetailsScreenState();
 }
 
 class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
@@ -51,7 +52,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
     try {
       final grpcService = ref.read(grpcServiceProvider);
       final details = await grpcService.getPackageDetails(widget.packageName);
-      final dependencies = await grpcService.getPackageDependencies(widget.packageName);
+      final dependencies = await grpcService.getPackageDependencies(
+        widget.packageName,
+      );
 
       if (mounted) {
         setState(() {
@@ -106,7 +109,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
 
@@ -143,9 +148,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.errorRose,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorRose),
             child: const Text('Remove'),
           ),
         ],
@@ -165,7 +168,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
 
@@ -239,7 +244,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               result.message,
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: result.success ? AppTheme.successGreen : AppTheme.errorRose,
+            backgroundColor: result.success
+                ? AppTheme.successGreen
+                : AppTheme.errorRose,
           ),
         );
 
@@ -301,28 +308,37 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryIndigo))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+            )
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRose),
-                      const Gap(16),
-                      Text('Error loading package details', style: Theme.of(context).textTheme.titleMedium),
-                      const Gap(8),
-                      Text(_error!, style: Theme.of(context).textTheme.bodySmall),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: AppTheme.errorRose,
                   ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildOverviewTab(),
-                    _buildDependenciesTab(),
-                    _buildDetailsTab(),
-                  ],
-                ),
+                  const Gap(16),
+                  Text(
+                    'Error loading package details',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Gap(8),
+                  Text(_error!, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOverviewTab(),
+                _buildDependenciesTab(),
+                _buildDetailsTab(),
+              ],
+            ),
     );
   }
 
@@ -338,7 +354,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _details!.installed ? AppTheme.successGreen : AppTheme.textTertiary,
+              color: _details!.installed
+                  ? AppTheme.successGreen
+                  : AppTheme.textTertiary,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -365,14 +383,30 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               children: [
                 _buildInfoRow(Icons.info_outline, 'Version', _details!.version),
                 const Divider(color: AppTheme.glassBorder),
-                _buildInfoRow(Icons.computer, 'Architecture', _details!.architecture),
+                _buildInfoRow(
+                  Icons.computer,
+                  'Architecture',
+                  _details!.architecture,
+                ),
                 const Divider(color: AppTheme.glassBorder),
-                _buildInfoRow(Icons.folder, 'Section', _details!.section.isEmpty ? 'Unknown' : _details!.section),
+                _buildInfoRow(
+                  Icons.folder,
+                  'Section',
+                  _details!.section.isEmpty ? 'Unknown' : _details!.section,
+                ),
                 if (_details!.installed) ...[
                   const Divider(color: AppTheme.glassBorder),
-                  _buildInfoRow(Icons.storage, 'Installed Size', _formatBytes(_details!.installedSize.toInt())),
+                  _buildInfoRow(
+                    Icons.storage,
+                    'Installed Size',
+                    _formatBytes(_details!.installedSize.toInt()),
+                  ),
                   const Divider(color: AppTheme.glassBorder),
-                  _buildInfoRow(Icons.calendar_today, 'Install Date', _formatDate(_details!.installDate.toInt())),
+                  _buildInfoRow(
+                    Icons.calendar_today,
+                    'Install Date',
+                    _formatDate(_details!.installDate.toInt()),
+                  ),
                 ],
               ],
             ),
@@ -383,9 +417,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           if (_details!.longDescription.isNotEmpty) ...[
             Text(
               'Description',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(12),
             GlassCard(
@@ -401,31 +435,43 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           ],
 
           // Maintainer & Homepage
-          if (_details!.maintainer.isNotEmpty || _details!.homepage.isNotEmpty) ...[
+          if (_details!.maintainer.isNotEmpty ||
+              _details!.homepage.isNotEmpty) ...[
             Text(
               'Project Information',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(12),
             GlassCard(
               child: Column(
                 children: [
                   if (_details!.maintainer.isNotEmpty) ...[
-                    _buildInfoRow(Icons.person, 'Maintainer', _details!.maintainer),
-                    if (_details!.homepage.isNotEmpty) const Divider(color: AppTheme.glassBorder),
+                    _buildInfoRow(
+                      Icons.person,
+                      'Maintainer',
+                      _details!.maintainer,
+                    ),
+                    if (_details!.homepage.isNotEmpty)
+                      const Divider(color: AppTheme.glassBorder),
                   ],
                   if (_details!.homepage.isNotEmpty)
                     ListTile(
-                      leading: const Icon(Icons.link, color: AppTheme.primaryIndigo),
+                      leading: const Icon(
+                        Icons.link,
+                        color: AppTheme.primaryIndigo,
+                      ),
                       title: const Text('Homepage'),
                       subtitle: Text(_details!.homepage),
                       trailing: const Icon(Icons.open_in_new, size: 20),
                       onTap: () async {
                         final uri = Uri.parse(_details!.homepage);
                         if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
                         }
                       },
                     ),
@@ -439,9 +485,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           if (_details!.tags.isNotEmpty) ...[
             Text(
               'Tags',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const Gap(12),
             Wrap(
@@ -449,7 +495,10 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               runSpacing: 8,
               children: _details!.tags.map((tag) {
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -550,7 +599,11 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle_outline, size: 48, color: AppTheme.successGreen),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    size: 48,
+                    color: AppTheme.successGreen,
+                  ),
                   const Gap(16),
                   Text(
                     'No dependencies',
@@ -560,8 +613,8 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                   Text(
                     'This package has no dependency information',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -588,18 +641,18 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ],
         ),
         const Gap(8),
         Text(
           description,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
         ),
         const Gap(12),
         GlassCard(
@@ -611,7 +664,11 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                 children: [
                   if (index > 0) const Divider(color: AppTheme.glassBorder),
                   ListTile(
-                    leading: Icon(Icons.inventory_2_outlined, color: color, size: 20),
+                    leading: Icon(
+                      Icons.inventory_2_outlined,
+                      color: color,
+                      size: 20,
+                    ),
                     title: Text(pkg),
                     trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: () {
@@ -621,7 +678,8 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                         MaterialPageRoute(
                           builder: (context) => PackageDetailsScreen(
                             packageName: pkg,
-                            isInstalled: false, // We don't know, will be checked
+                            isInstalled:
+                                false, // We don't know, will be checked
                           ),
                         ),
                       );
@@ -646,9 +704,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
         children: [
           Text(
             'Technical Details',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const Gap(12),
           GlassCard(
@@ -666,16 +724,25 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                   _buildDetailRow('Source Package', _details!.source),
                 ],
                 const Divider(color: AppTheme.glassBorder),
-                _buildDetailRow('Section', _details!.section.isEmpty ? 'Unknown' : _details!.section),
+                _buildDetailRow(
+                  'Section',
+                  _details!.section.isEmpty ? 'Unknown' : _details!.section,
+                ),
                 if (_details!.license.isNotEmpty) ...[
                   const Divider(color: AppTheme.glassBorder),
                   _buildDetailRow('License', _details!.license),
                 ],
                 if (_details!.installed) ...[
                   const Divider(color: AppTheme.glassBorder),
-                  _buildDetailRow('Installed Size', _formatBytes(_details!.installedSize.toInt())),
+                  _buildDetailRow(
+                    'Installed Size',
+                    _formatBytes(_details!.installedSize.toInt()),
+                  ),
                   const Divider(color: AppTheme.glassBorder),
-                  _buildDetailRow('Install Date', _formatDate(_details!.installDate.toInt())),
+                  _buildDetailRow(
+                    'Install Date',
+                    _formatDate(_details!.installDate.toInt()),
+                  ),
                 ],
               ],
             ),
@@ -703,20 +770,14 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
             ),
           ),
           const Gap(16),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
         ],

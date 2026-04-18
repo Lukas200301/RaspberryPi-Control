@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
 import '../models/file_item.dart';
 import '../providers/file_providers.dart';
 import '../providers/app_providers.dart';
-import '../widgets/file_operation_dialog.dart';
-import '../widgets/file_preview_dialog.dart';
 import '../widgets/file_operation_dialog.dart';
 import '../widgets/file_preview_dialog.dart';
 import '../widgets/grpc_file_transfer_panel.dart';
@@ -52,7 +49,6 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       }
     });
 
-
     // Auto-scroll breadcrumbs when directory changes
     ref.listenManual(currentDirectoryProvider, (previous, next) {
       if (previous != next) {
@@ -79,27 +75,16 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   void _navigateToDirectory(String path) {
     final currentPath = ref.read(currentDirectoryProvider);
     final history = ref.read(navigationHistoryProvider);
-    
+
     // Add current path to history
-    ref.read(navigationHistoryProvider.notifier).state = [...history, currentPath];
-    
+    ref.read(navigationHistoryProvider.notifier).state = [
+      ...history,
+      currentPath,
+    ];
+
     // Navigate to new path
     ref.read(currentDirectoryProvider.notifier).state = path;
-    
-    // Clear selection
-    ref.read(selectedFilesProvider.notifier).state = {};
-    _isSelectionMode = false;
-  }
 
-  void _navigateBack() {
-    final history = ref.read(navigationHistoryProvider);
-    if (history.isEmpty) return;
-
-    final previousPath = history.last;
-    ref.read(navigationHistoryProvider.notifier).state = 
-        history.sublist(0, history.length - 1);
-    ref.read(currentDirectoryProvider.notifier).state = previousPath;
-    
     // Clear selection
     ref.read(selectedFilesProvider.notifier).state = {};
     _isSelectionMode = false;
@@ -112,7 +97,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     final parts = currentPath.split('/');
     parts.removeLast();
     final parentPath = parts.isEmpty ? '/' : parts.join('/');
-    
+
     _navigateToDirectory(parentPath.isEmpty ? '/' : parentPath);
   }
 
@@ -144,8 +129,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Upload failed for ${file.name}: $e', 
-                    style: const TextStyle(color: Colors.white)),
+                content: Text(
+                  'Upload failed for ${file.name}: $e',
+                  style: const TextStyle(color: Colors.white),
+                ),
                 backgroundColor: Colors.red,
               ),
             );
@@ -157,8 +144,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Uploaded ${result.files.length} file(s) successfully', 
-                style: const TextStyle(color: Colors.black)),
+            content: Text(
+              'Uploaded ${result.files.length} file(s) successfully',
+              style: const TextStyle(color: Colors.black),
+            ),
             backgroundColor: Colors.green.shade700,
           ),
         );
@@ -166,13 +155,14 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
 
       // Refresh file list
       ref.invalidate(fileListProvider);
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Upload failed: $e', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Upload failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -197,8 +187,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Uploading folder $folderName...', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Uploading folder $folderName...',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.blue.shade700,
             duration: const Duration(seconds: 2),
           ),
@@ -218,21 +210,24 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Folder "$folderName" uploaded successfully!', 
-                style: const TextStyle(color: Colors.black)),
+            content: Text(
+              'Folder "$folderName" uploaded successfully!',
+              style: const TextStyle(color: Colors.black),
+            ),
             backgroundColor: Colors.green.shade700,
           ),
         );
       }
 
       ref.invalidate(fileListProvider);
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Upload failed: $e', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Upload failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -250,7 +245,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     try {
       // On mobile platforms, we need to handle downloads differently
       final transferService = ref.read(grpcFileTransferServiceProvider);
-      
+
       // For mobile: use getDirectoryPath to let user pick download folder
       final downloadFolder = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'Select download location',
@@ -267,8 +262,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloading ${file.name}...', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Downloading ${file.name}...',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.blue.shade700,
             duration: const Duration(seconds: 2),
           ),
@@ -286,20 +283,23 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('File saved successfully!', 
-                style: const TextStyle(color: Colors.black)),
+            content: Text(
+              'File saved successfully!',
+              style: const TextStyle(color: Colors.black),
+            ),
             backgroundColor: Colors.green.shade700,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: $e', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Download failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -323,8 +323,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Downloading folder "${folder.name}"...', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Downloading folder "${folder.name}"...',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.blue.shade700,
             duration: const Duration(seconds: 2),
           ),
@@ -350,20 +352,23 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Folder "${folder.name}" downloaded successfully!', 
-                style: const TextStyle(color: Colors.black)),
+            content: Text(
+              'Folder "${folder.name}" downloaded successfully!',
+              style: const TextStyle(color: Colors.black),
+            ),
             backgroundColor: Colors.green.shade700,
             duration: const Duration(seconds: 3),
           ),
         );
       }
-      
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Folder download failed: $e', 
-                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              'Folder download failed: $e',
+              style: const TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -380,9 +385,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     required String folderName,
   }) async {
     // Create the folder structure locally
-    final localFolderPath = '$localBasePath${Platform.pathSeparator}$folderName';
+    final localFolderPath =
+        '$localBasePath${Platform.pathSeparator}$folderName';
     final localDir = Directory(localFolderPath);
-    
+
     if (!await localDir.exists()) {
       await localDir.create(recursive: true);
     }
@@ -402,8 +408,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         );
       } else {
         // Download file via gRPC
-        final localFilePath = '$localFolderPath${Platform.pathSeparator}${item.name}';
-        
+        final localFilePath =
+            '$localFolderPath${Platform.pathSeparator}${item.name}';
+
         try {
           await transferService.downloadFile(
             remotePath: item.path,
@@ -424,13 +431,13 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   void _toggleSelection(String path) {
     final selected = ref.read(selectedFilesProvider);
     final newSelected = Set<String>.from(selected);
-    
+
     if (newSelected.contains(path)) {
       newSelected.remove(path);
     } else {
       newSelected.add(path);
     }
-    
+
     ref.read(selectedFilesProvider.notifier).state = newSelected;
     setState(() {
       _isSelectionMode = newSelected.isNotEmpty;
@@ -438,8 +445,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   }
 
   void _selectAll(List<FileItem> files) {
-    ref.read(selectedFilesProvider.notifier).state = 
-        files.map((f) => f.path).toSet();
+    ref.read(selectedFilesProvider.notifier).state = files
+        .map((f) => f.path)
+        .toSet();
     setState(() {
       _isSelectionMode = true;
     });
@@ -465,16 +473,16 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           title: const Text('Delete Files'),
           content: Text('Delete ${selected.length} item(s)?'),
           actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
         ),
       ),
     );
@@ -482,14 +490,18 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
     if (confirmed != true) return;
 
     final grpcService = ref.read(grpcServiceProvider);
-    if (grpcService == null) return;
 
     final fileList = await ref.read(fileListProvider.future);
-    final filesToDelete = fileList.where((f) => selected.contains(f.path)).toList();
+    final filesToDelete = fileList
+        .where((f) => selected.contains(f.path))
+        .toList();
 
     for (final file in filesToDelete) {
       try {
-        final response = await grpcService.deleteFile(file.path, isDirectory: file.isDirectory);
+        final response = await grpcService.deleteFile(
+          file.path,
+          isDirectory: file.isDirectory,
+        );
         if (!response.success) {
           throw Exception(response.error);
         }
@@ -497,7 +509,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to delete ${file.name}: $e', style: TextStyle(color: Colors.white)),
+              content: Text(
+                'Failed to delete ${file.name}: $e',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Colors.red.shade700,
             ),
           );
@@ -595,7 +610,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         children: [
           // Storage Bar
           const StorageBar(),
-          
+
           // Breadcrumb & Search Row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -608,7 +623,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               ],
             ),
           ),
-          
+
           // File list
           Expanded(
             child: RefreshIndicator(
@@ -627,13 +642,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           const GrpcFileTransferPanel(),
         ],
       ),
-
     );
   }
 
   Widget _buildBreadcrumb(String path) {
     final parts = path.split('/').where((p) => p.isNotEmpty).toList();
-    
+
     return SingleChildScrollView(
       controller: _breadcrumbScrollController,
       scrollDirection: Axis.horizontal,
@@ -645,45 +659,62 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             tooltip: 'Up one level',
             style: IconButton.styleFrom(
               backgroundColor: AppTheme.glassLight,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(width: 8),
           ActionChip(
-            avatar: const Icon(Icons.home, size: 16, color: AppTheme.primaryIndigo),
+            avatar: const Icon(
+              Icons.home,
+              size: 16,
+              color: AppTheme.primaryIndigo,
+            ),
             label: const Text('/'),
             onPressed: () => _navigateToDirectory('/'),
             backgroundColor: AppTheme.glassLight,
             side: BorderSide.none,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
           ),
           ...parts.asMap().entries.map((entry) {
             final index = entry.key;
             final part = entry.value;
             final pathUpTo = '/${parts.sublist(0, index + 1).join('/')}';
-            
+
             return Row(
               children: [
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, size: 16, color: AppTheme.textTertiary),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppTheme.textTertiary,
+                ),
                 const SizedBox(width: 4),
                 ActionChip(
                   label: Text(
-                    part, 
+                    part,
                     style: TextStyle(
-                      color: index == parts.length - 1 
-                          ? AppTheme.textPrimary 
-                          : AppTheme.textSecondary
+                      color: index == parts.length - 1
+                          ? AppTheme.textPrimary
+                          : AppTheme.textSecondary,
                     ),
                   ),
                   onPressed: () => _navigateToDirectory(pathUpTo),
-                  backgroundColor: index == parts.length - 1 
-                      ? AppTheme.primaryIndigo.withOpacity(0.2)
+                  backgroundColor: index == parts.length - 1
+                      ? AppTheme.primaryIndigo.withValues(alpha: 0.2)
                       : AppTheme.glassLight,
                   side: index == parts.length - 1
-                      ? const BorderSide(color: AppTheme.primaryIndigo, width: 1)
+                      ? const BorderSide(
+                          color: AppTheme.primaryIndigo,
+                          width: 1,
+                        )
                       : BorderSide.none,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
               ],
             );
@@ -734,7 +765,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       itemBuilder: (context, index) {
         final file = files[index];
         final isSelected = selectedFiles.contains(file.path);
-        
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: InkWell(
@@ -756,13 +787,13 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isSelected 
-                    ? AppTheme.primaryIndigo.withOpacity(0.15) 
+                color: isSelected
+                    ? AppTheme.primaryIndigo.withValues(alpha: 0.15)
                     : AppTheme.glassLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected 
-                      ? AppTheme.primaryIndigo 
+                  color: isSelected
+                      ? AppTheme.primaryIndigo
                       : AppTheme.glassBorder,
                 ),
               ),
@@ -774,26 +805,31 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                       child: Checkbox(
                         value: isSelected,
                         onChanged: (_) => _toggleSelection(file.path),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                       ),
                     ),
-                  
+
                   // Icon
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: (file.isDirectory ? Colors.amber : Colors.blue).withOpacity(0.1),
+                      color: (file.isDirectory ? Colors.amber : Colors.blue)
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      file.icon, 
-                      color: file.isDirectory ? Colors.amber : Colors.blueAccent,
+                      file.icon,
+                      color: file.isDirectory
+                          ? Colors.amber
+                          : Colors.blueAccent,
                       size: 24,
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Text Info
                   Expanded(
                     child: Column(
@@ -802,7 +838,9 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                         Text(
                           file.name,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
                             fontSize: 15,
                             color: AppTheme.textPrimary,
                           ),
@@ -821,10 +859,17 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Text('•', style: TextStyle(color: AppTheme.textTertiary)),
+                              const Text(
+                                '•',
+                                style: TextStyle(color: AppTheme.textTertiary),
+                              ),
                               const SizedBox(width: 8),
                             ],
-                            const Icon(Icons.shield_outlined, size: 12, color: AppTheme.textTertiary),
+                            const Icon(
+                              Icons.shield_outlined,
+                              size: 12,
+                              color: AppTheme.textTertiary,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               file.permissionsString,
@@ -839,10 +884,13 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                       ],
                     ),
                   ),
-                  
+
                   // Actions from right
                   IconButton(
-                    icon: const Icon(Icons.more_vert, color: AppTheme.textSecondary),
+                    icon: const Icon(
+                      Icons.more_vert,
+                      color: AppTheme.textSecondary,
+                    ),
                     onPressed: () => _showFileOptions(file),
                   ),
                 ],
@@ -861,12 +909,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       builder: (context) => Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E).withOpacity(0.95),
+          color: const Color(0xFF1E1E1E).withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -877,7 +925,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-               Container(
+              Container(
                 width: 40,
                 height: 4,
                 margin: const EdgeInsets.only(top: 8, bottom: 24),
@@ -927,7 +975,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppTheme.primaryIndigo.withOpacity(0.1),
+          color: AppTheme.primaryIndigo.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: AppTheme.primaryIndigo),
@@ -1000,34 +1048,37 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: FileOperationDialog(
-        file: file,
-        onDownload: () => _downloadFile(file),
-        onDelete: () async {
-          final grpcService = ref.read(grpcServiceProvider);
-          if (grpcService != null) {
-            final response = await grpcService.deleteFile(file.path, isDirectory: file.isDirectory);
+          file: file,
+          onDownload: () => _downloadFile(file),
+          onDelete: () async {
+            final grpcService = ref.read(grpcServiceProvider);
+            final response = await grpcService.deleteFile(
+              file.path,
+              isDirectory: file.isDirectory,
+            );
             if (response.success) {
               ref.invalidate(fileListProvider);
             } else {
               debugPrint('Delete failed: ${response.error}');
             }
-          }
-        },
-        onRename: (newName) async {
-          final sftp = ref.read(sftpServiceProvider);
-          if (sftp != null) {
-            final newPath = file.path.substring(0, file.path.lastIndexOf('/') + 1) + newName;
-            await sftp.rename(file.path, newPath);
-            ref.invalidate(fileListProvider);
-          }
-        },
-        onChmod: (permissions) async {
-          final sftp = ref.read(sftpServiceProvider);
-          if (sftp != null) {
-            await sftp.chmod(file.path, permissions);
-            ref.invalidate(fileListProvider);
-          }
-        },
+          },
+          onRename: (newName) async {
+            final sftp = ref.read(sftpServiceProvider);
+            if (sftp != null) {
+              final newPath =
+                  file.path.substring(0, file.path.lastIndexOf('/') + 1) +
+                  newName;
+              await sftp.rename(file.path, newPath);
+              ref.invalidate(fileListProvider);
+            }
+          },
+          onChmod: (permissions) async {
+            final sftp = ref.read(sftpServiceProvider);
+            if (sftp != null) {
+              await sftp.chmod(file.path, permissions);
+              ref.invalidate(fileListProvider);
+            }
+          },
         ),
       ),
     );
@@ -1087,7 +1138,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Not connected to server', style: TextStyle(color: Colors.white)),
+              content: Text(
+                'Not connected to server',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -1106,7 +1160,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Folder "$result" created successfully', style: TextStyle(color: Colors.black)),
+              content: Text(
+                'Folder "$result" created successfully',
+                style: TextStyle(color: Colors.black),
+              ),
               backgroundColor: Colors.green.shade700,
             ),
           );
@@ -1118,7 +1175,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to create folder: $e', style: TextStyle(color: Colors.white)),
+              content: Text(
+                'Failed to create folder: $e',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: Colors.red.shade700,
               duration: const Duration(seconds: 5),
             ),

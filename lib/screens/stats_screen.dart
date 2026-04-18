@@ -30,9 +30,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     // Calculate max data points based on stats history setting
     // Assuming stats update every 2 seconds (default gRPC stream interval)
     final maxDataPoints = (settings.statsHistory / 2).round();
-    
+
     // Clear history if settings changed
-    if (_lastStatsHistorySetting != null && _lastStatsHistorySetting != settings.statsHistory) {
+    if (_lastStatsHistorySetting != null &&
+        _lastStatsHistorySetting != settings.statsHistory) {
       _cpuHistory.clear();
       _memHistory.clear();
       _uploadHistory.clear();
@@ -112,7 +113,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
   void _updateHistory(LiveStats stats, int maxDataPoints) {
     _cpuHistory.add(stats.cpuUsage);
-    final memPercent = stats.ramTotal > 0 ? (stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100) : 0.0;
+    final memPercent = stats.ramTotal > 0
+        ? (stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100)
+        : 0.0;
     _memHistory.add(memPercent);
 
     // Convert bytes/sec to KB/sec for better readability
@@ -180,7 +183,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       '${stats.load1min.toStringAsFixed(2)} / ${stats.load5min.toStringAsFixed(2)} / ${stats.load15min.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: stats.load1min > 4.0 ? AppTheme.errorRose : AppTheme.successGreen,
+                        color: stats.load1min > 4.0
+                            ? AppTheme.errorRose
+                            : AppTheme.successGreen,
                       ),
                     ),
                   ],
@@ -205,9 +210,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               Expanded(
                 child: StatCard(
                   title: 'RAM',
-                  value: '${(stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100).toStringAsFixed(1)}%',
+                  value:
+                      '${(stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100).toStringAsFixed(1)}%',
                   icon: Icons.storage,
-                  color: AppTheme.getMemoryColor(stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100),
+                  color: AppTheme.getMemoryColor(
+                    stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100,
+                  ),
                 ),
               ),
             ],
@@ -228,15 +236,19 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 child: StatCard(
                   title: stats.gpuTemp > 0 ? 'GPU Temp' : 'Swap',
                   value: stats.gpuTemp > 0
-                    ? '${stats.gpuTemp.toStringAsFixed(1)}°C'
-                    : stats.swapTotal > 0
+                      ? '${stats.gpuTemp.toStringAsFixed(1)}°C'
+                      : stats.swapTotal > 0
                       ? '${(stats.swapUsed.toDouble() / stats.swapTotal.toDouble() * 100).toStringAsFixed(1)}%'
                       : 'N/A',
                   icon: stats.gpuTemp > 0 ? Icons.thermostat : Icons.swap_horiz,
                   color: stats.gpuTemp > 0
-                    ? AppTheme.getTempColor(stats.gpuTemp)
-                    : stats.swapTotal > 0
-                      ? AppTheme.getMemoryColor(stats.swapUsed.toDouble() / stats.swapTotal.toDouble() * 100)
+                      ? AppTheme.getTempColor(stats.gpuTemp)
+                      : stats.swapTotal > 0
+                      ? AppTheme.getMemoryColor(
+                          stats.swapUsed.toDouble() /
+                              stats.swapTotal.toDouble() *
+                              100,
+                        )
                       : AppTheme.textTertiary,
                 ),
               ),
@@ -246,10 +258,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
           // Per-Core CPU Usage
           if (stats.cpuPerCore.isNotEmpty) ...[
-            Text(
-              'CPU Cores',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('CPU Cores', style: Theme.of(context).textTheme.titleLarge),
             const Gap(12),
             GlassCard(
               padding: const EdgeInsets.all(16),
@@ -305,25 +314,42 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ],
 
           // Memory Details
-          Text(
-            'Memory Details',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Memory Details', style: Theme.of(context).textTheme.titleLarge),
           const Gap(12),
           GlassCard(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildMemoryRow('Used', stats.ramUsed, stats.ramTotal, AppTheme.primaryIndigo),
+                _buildMemoryRow(
+                  'Used',
+                  stats.ramUsed,
+                  stats.ramTotal,
+                  AppTheme.primaryIndigo,
+                ),
                 const Gap(8),
-                _buildMemoryRow('Cached', stats.ramCached, stats.ramTotal, AppTheme.secondaryTeal),
+                _buildMemoryRow(
+                  'Cached',
+                  stats.ramCached,
+                  stats.ramTotal,
+                  AppTheme.secondaryTeal,
+                ),
                 const Gap(8),
-                _buildMemoryRow('Free', stats.ramFree, stats.ramTotal, AppTheme.successGreen),
+                _buildMemoryRow(
+                  'Free',
+                  stats.ramFree,
+                  stats.ramTotal,
+                  AppTheme.successGreen,
+                ),
                 if (stats.swapTotal > 0) ...[
                   const Gap(12),
                   const Divider(color: AppTheme.glassBorder),
                   const Gap(12),
-                  _buildMemoryRow('Swap Used', stats.swapUsed, stats.swapTotal, AppTheme.warningAmber),
+                  _buildMemoryRow(
+                    'Swap Used',
+                    stats.swapUsed,
+                    stats.swapTotal,
+                    AppTheme.warningAmber,
+                  ),
                 ],
               ],
             ),
@@ -331,14 +357,27 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           const Gap(24),
 
           // CPU Chart
-          Text(
-            'CPU Usage',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const Gap(12),
           GlassCard(
-            child: SizedBox(
-              height: 200,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.memory,
+                      color: AppTheme.primaryIndigo,
+                      size: 18,
+                    ),
+                    const Gap(8),
+                    Text(
+                      'CPU Usage',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ],
+                ),
+                const Gap(12),
+                SizedBox(
+                  height: 200,
               child: _cpuHistory.length > 1
                   ? Padding(
                       padding: const EdgeInsets.all(16),
@@ -394,7 +433,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                                color: AppTheme.primaryIndigo.withValues(
+                                  alpha: 0.2,
+                                ),
                               ),
                             ),
                           ],
@@ -402,21 +443,38 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       ),
                     )
                   : const Center(
-                      child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryIndigo,
+                      ),
                     ),
+                    ),
+              ],
             ),
           ),
           const Gap(24),
 
           // Memory Chart
-          Text(
-            'Memory Usage',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const Gap(12),
           GlassCard(
-            child: SizedBox(
-              height: 200,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.storage,
+                      color: AppTheme.secondaryTeal,
+                      size: 18,
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Memory Usage',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ],
+                ),
+                const Gap(12),
+                SizedBox(
+                  height: 200,
               child: _memHistory.length > 1
                   ? Padding(
                       padding: const EdgeInsets.all(16),
@@ -472,7 +530,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: AppTheme.secondaryTeal.withValues(alpha: 0.2),
+                                color: AppTheme.secondaryTeal.withValues(
+                                  alpha: 0.2,
+                                ),
                               ),
                             ),
                           ],
@@ -480,21 +540,38 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       ),
                     )
                   : const Center(
-                      child: CircularProgressIndicator(color: AppTheme.secondaryTeal),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.secondaryTeal,
+                      ),
                     ),
+                    ),
+              ],
             ),
           ),
           const Gap(24),
 
           // Network
-          Text(
-            'Network',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const Gap(12),
           GlassCard(
-            child: SizedBox(
-              height: 250,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.network_check,
+                      color: AppTheme.warningAmber,
+                      size: 18,
+                    ),
+                    const Gap(8),
+                    Text(
+                      'Network Activity',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ],
+                ),
+                const Gap(12),
+                SizedBox(
+                  height: 250,
               child: _uploadHistory.length > 1 && _downloadHistory.length > 1
                   ? Padding(
                       padding: const EdgeInsets.all(16),
@@ -505,21 +582,35 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.arrow_upward, color: AppTheme.primaryIndigo, size: 16),
+                                  const Icon(
+                                    Icons.arrow_upward,
+                                    color: AppTheme.primaryIndigo,
+                                    size: 16,
+                                  ),
                                   const Gap(4),
                                   Text(
                                     'Upload: ${_formatBytes(stats.netBytesSent.toDouble())}',
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.primaryIndigo),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.primaryIndigo,
+                                    ),
                                   ),
                                 ],
                               ),
                               Row(
                                 children: [
-                                  const Icon(Icons.arrow_downward, color: AppTheme.secondaryTeal, size: 16),
+                                  const Icon(
+                                    Icons.arrow_downward,
+                                    color: AppTheme.secondaryTeal,
+                                    size: 16,
+                                  ),
                                   const Gap(4),
                                   Text(
                                     'Download: ${_formatBytes(stats.netBytesRecv.toDouble())}',
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.secondaryTeal),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.secondaryTeal,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -570,7 +661,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                         .toList()
                                         .asMap()
                                         .entries
-                                        .map((e) => FlSpot(e.key.toDouble(), e.value))
+                                        .map(
+                                          (e) =>
+                                              FlSpot(e.key.toDouble(), e.value),
+                                        )
                                         .toList(),
                                     isCurved: true,
                                     color: AppTheme.primaryIndigo,
@@ -578,7 +672,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                     dotData: const FlDotData(show: false),
                                     belowBarData: BarAreaData(
                                       show: true,
-                                      color: AppTheme.primaryIndigo.withValues(alpha: 0.1),
+                                      color: AppTheme.primaryIndigo.withValues(
+                                        alpha: 0.1,
+                                      ),
                                     ),
                                   ),
                                   // Download line
@@ -587,7 +683,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                         .toList()
                                         .asMap()
                                         .entries
-                                        .map((e) => FlSpot(e.key.toDouble(), e.value))
+                                        .map(
+                                          (e) =>
+                                              FlSpot(e.key.toDouble(), e.value),
+                                        )
                                         .toList(),
                                     isCurved: true,
                                     color: AppTheme.secondaryTeal,
@@ -595,7 +694,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                     dotData: const FlDotData(show: false),
                                     belowBarData: BarAreaData(
                                       show: true,
-                                      color: AppTheme.secondaryTeal.withValues(alpha: 0.1),
+                                      color: AppTheme.secondaryTeal.withValues(
+                                        alpha: 0.1,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -606,23 +707,38 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       ),
                     )
                   : const Center(
-                      child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.primaryIndigo,
+                      ),
                     ),
-            ),
-          ),
+                ), // End of SizedBox
+              ], // End of Column children
+            ), // End of Column
+          ), // End of GlassCard
           const Gap(24),
 
           // Disk I/O Stats
           if (stats.diskIo.isNotEmpty) ...[
-            Text(
-              'Disk I/O',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const Gap(12),
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.storage,
+                        color: AppTheme.secondaryTeal,
+                        size: 18,
+                      ),
+                      const Gap(8),
+                      Text(
+                        'Disk I/O',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ],
+                  ),
+                  const Gap(16),
                   for (int i = 0; i < stats.diskIo.length; i++) ...[
                     _buildDiskIOStat(stats.diskIo[i]),
                     if (i < stats.diskIo.length - 1) ...[
@@ -643,31 +759,36 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               if (diskInfo.partitions.isEmpty) {
                 return const SizedBox.shrink();
               }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Disk Usage',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Gap(12),
-                  GlassCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+              return GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        for (int i = 0; i < diskInfo.partitions.length; i++) ...[
-                          _buildDiskPartition(diskInfo.partitions[i]),
-                          if (i < diskInfo.partitions.length - 1) ...[
-                            const Gap(12),
-                            const Divider(color: AppTheme.glassBorder),
-                            const Gap(12),
-                          ],
-                        ],
+                        const Icon(
+                          Icons.pie_chart,
+                          color: AppTheme.primaryIndigo,
+                          size: 18,
+                        ),
+                        const Gap(8),
+                        Text(
+                          'Disk Usage',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
                       ],
                     ),
-                  ),
-                  const Gap(24),
-                ],
+                    const Gap(16),
+                    for (int i = 0; i < diskInfo.partitions.length; i++) ...[
+                      _buildDiskPartition(diskInfo.partitions[i]),
+                      if (i < diskInfo.partitions.length - 1) ...[
+                        const Gap(12),
+                        const Divider(color: AppTheme.glassBorder),
+                        const Gap(12),
+                      ],
+                    ],
+                  ],
+                ),
               );
             },
             loading: () => const SizedBox.shrink(),
@@ -675,39 +796,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMemoryBar(String label, double used, double total, Color color) {
-    final percent = (used / total * 100).clamp(0, 100);
-
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(label),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: used / total,
-              backgroundColor: AppTheme.glassLight,
-              valueColor: AlwaysStoppedAnimation(color),
-              minHeight: 8,
-            ),
-          ),
-        ),
-        const Gap(12),
-        SizedBox(
-          width: 120,
-          child: Text(
-            '${used.toStringAsFixed(2)}GB / ${total.toStringAsFixed(2)}GB (${percent.toStringAsFixed(0)}%)',
-            textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: 11),
-          ),
-        ),
-      ],
     );
   }
 
@@ -735,7 +823,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     }
   }
 
-  Widget _buildMemoryRow(String label, dynamic usedBytes, dynamic totalBytes, Color color) {
+  Widget _buildMemoryRow(
+    String label,
+    dynamic usedBytes,
+    dynamic totalBytes,
+    Color color,
+  ) {
     if (totalBytes.toInt() == 0) return const SizedBox.shrink();
 
     final percent = (usedBytes.toDouble() / totalBytes.toDouble() * 100);
@@ -748,10 +841,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           width: 80,
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
           ),
         ),
         Expanded(
@@ -788,10 +878,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       children: [
         Text(
           diskIO.device,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const Gap(8),
         Row(
@@ -799,7 +886,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_upward, color: AppTheme.primaryIndigo, size: 16),
+                  const Icon(
+                    Icons.arrow_upward,
+                    color: AppTheme.primaryIndigo,
+                    size: 16,
+                  ),
                   const Gap(4),
                   Expanded(
                     child: Column(
@@ -829,7 +920,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_downward, color: AppTheme.secondaryTeal, size: 16),
+                  const Icon(
+                    Icons.arrow_downward,
+                    color: AppTheme.secondaryTeal,
+                    size: 16,
+                  ),
                   const Gap(4),
                   Expanded(
                     child: Column(
@@ -923,10 +1018,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         const Gap(4),
         Text(
           '${usedGB.toStringAsFixed(2)} GB / ${totalGB.toStringAsFixed(2)} GB',
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppTheme.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
         ),
       ],
     );
