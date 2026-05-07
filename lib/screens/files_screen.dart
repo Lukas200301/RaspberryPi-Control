@@ -666,10 +666,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           ),
           const SizedBox(width: 8),
           ActionChip(
-            avatar: const Icon(
+            avatar: Icon(
               Icons.home,
               size: 16,
-              color: AppTheme.primaryIndigo,
+              color: Theme.of(context).colorScheme.primary,
             ),
             label: const Text('/'),
             onPressed: () => _navigateToDirectory('/'),
@@ -704,11 +704,11 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
                   ),
                   onPressed: () => _navigateToDirectory(pathUpTo),
                   backgroundColor: index == parts.length - 1
-                      ? AppTheme.primaryIndigo.withValues(alpha: 0.2)
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
                       : AppTheme.glassLight,
                   side: index == parts.length - 1
-                      ? const BorderSide(
-                          color: AppTheme.primaryIndigo,
+                      ? BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
                           width: 1,
                         )
                       : BorderSide.none,
@@ -788,12 +788,12 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.primaryIndigo.withValues(alpha: 0.15)
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
                     : AppTheme.glassLight,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
-                      ? AppTheme.primaryIndigo
+                      ? Theme.of(context).colorScheme.primary
                       : AppTheme.glassBorder,
                 ),
               ),
@@ -975,10 +975,10 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppTheme.primaryIndigo.withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: AppTheme.primaryIndigo),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary),
       ),
       title: Text(
         label,
@@ -1000,7 +1000,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
           Icon(
             Icons.folder_open,
             size: 64,
-            color: AppTheme.primaryIndigo.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(

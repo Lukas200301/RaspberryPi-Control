@@ -29,7 +29,7 @@ class StatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(title, style: Theme.of(context).textTheme.labelMedium),
-              Icon(icon, color: color ?? AppTheme.primaryIndigo, size: 20),
+              Icon(icon, color: color ?? Theme.of(context).colorScheme.primary, size: 20),
             ],
           ),
           const Gap(12),

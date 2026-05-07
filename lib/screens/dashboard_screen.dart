@@ -89,7 +89,7 @@ class DashboardScreen extends ConsumerWidget {
             return Material(
               elevation: 6 * animation.value,
               borderRadius: BorderRadius.circular(16),
-              shadowColor: AppTheme.primaryIndigo.withValues(alpha: 0.5),
+              shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
               color: Colors.transparent,
               child: child,
             );
@@ -131,9 +131,9 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.widgets_outlined,
-                      color: AppTheme.primaryIndigo,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 20,
                     ),
                     const Gap(8),
@@ -156,14 +156,14 @@ class DashboardScreen extends ConsumerWidget {
                     leading: Icon(
                       _iconForWidget(type),
                       color: isVisible
-                          ? AppTheme.primaryIndigo
+                          ? Theme.of(context).colorScheme.primary
                           : AppTheme.textTertiary,
                     ),
                     title: Text(type.displayName),
                     trailing: Switch(
                       value: isVisible,
                       onChanged: (_) => notifier.toggleWidget(type),
-                      activeColor: AppTheme.primaryIndigo,
+                      activeColor: Theme.of(context).colorScheme.primary,
                     ),
                   );
                 }),
@@ -193,7 +193,7 @@ class DashboardScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Disconnect?'),
         content: const Text(
           'Are you sure you want to disconnect from this device?',
@@ -206,7 +206,7 @@ class DashboardScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text('Disconnect'),
           ),

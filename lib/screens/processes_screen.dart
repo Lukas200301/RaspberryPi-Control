@@ -91,14 +91,14 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                         'CPU',
                         'cpu',
                         Icons.memory,
-                        AppTheme.primaryIndigo,
+                        Theme.of(context).colorScheme.primary,
                       ),
                       const Gap(8),
                       _buildSortChip(
                         'Memory',
                         'memory',
                         Icons.storage,
-                        AppTheme.secondaryTeal,
+                        Theme.of(context).colorScheme.secondary,
                       ),
                       const Gap(8),
                       _buildSortChip(
@@ -186,8 +186,8 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
       future: grpcService.getProcessList(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+          return Center(
+            child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
           );
         }
 
@@ -198,10 +198,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: AppTheme.errorRose,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                   const Gap(16),
                   Text(
@@ -342,15 +342,15 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
   Widget _buildProcessCard(ProcessNode node) {
     final process = node.process;
     Color getCpuColor(double cpu) {
-      if (cpu > 80) return AppTheme.errorRose;
+      if (cpu > 80) return Theme.of(context).colorScheme.error;
       if (cpu > 50) return AppTheme.warningAmber;
-      return AppTheme.primaryIndigo;
+      return Theme.of(context).colorScheme.primary;
     }
 
     Color getMemoryColor(double mem) {
-      if (mem > 80) return AppTheme.errorRose;
+      if (mem > 80) return Theme.of(context).colorScheme.error;
       if (mem > 50) return AppTheme.warningAmber;
-      return AppTheme.secondaryTeal;
+      return Theme.of(context).colorScheme.secondary;
     }
 
     final memoryMB = (process.memoryBytes.toDouble() / 1024 / 1024);
@@ -482,7 +482,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                           IconButton(
                             icon: const Icon(Icons.close, size: 20),
                             onPressed: () => _killProcess(process),
-                            color: AppTheme.errorRose,
+                            color: Theme.of(context).colorScheme.error,
                             tooltip: 'Kill process',
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
@@ -540,10 +540,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.memory,
                                       size: 14,
-                                      color: AppTheme.primaryIndigo,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                     const Gap(4),
                                     const Text(
@@ -574,10 +574,10 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       Icons.storage,
                                       size: 14,
-                                      color: AppTheme.secondaryTeal,
+                                      color: Theme.of(context).colorScheme.secondary,
                                     ),
                                     const Gap(4),
                                     const Text(
@@ -620,7 +620,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
     final process = node.process;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -629,7 +629,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.apps, color: AppTheme.primaryIndigo),
+                Icon(Icons.apps, color: Theme.of(context).colorScheme.primary),
                 const Gap(12),
                 Expanded(
                   child: Text(
@@ -729,7 +729,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                     icon: const Icon(Icons.close),
                     label: const Text('Kill'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.errorRose,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -788,7 +788,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
               'Failed to pause: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -819,7 +819,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
               'Failed to resume: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -830,7 +830,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Kill Process?'),
         content: Text(
           'Are you sure you want to kill "${process.name}" (PID: ${process.pid})?\n\nThis action cannot be undone.',
@@ -843,7 +843,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
             ),
             child: const Text('Kill'),
@@ -878,7 +878,7 @@ class _ProcessesScreenState extends ConsumerState<ProcessesScreen> {
                 'Failed to kill process: $e',
                 style: const TextStyle(color: Colors.white),
               ),
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }

@@ -120,8 +120,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   },
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              loading: () => Center(
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               ),
               error: (error, stack) => Center(
                 child: Padding(
@@ -129,10 +129,10 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.error_outline,
                         size: 64,
-                        color: AppTheme.errorRose,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                       const Gap(16),
                       Text(
@@ -173,14 +173,14 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
         });
       },
       backgroundColor: AppTheme.glassLight,
-      selectedColor: AppTheme.primaryIndigo.withValues(alpha: 0.3),
-      checkmarkColor: AppTheme.primaryIndigo,
+      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+      checkmarkColor: Theme.of(context).colorScheme.primary,
       labelStyle: TextStyle(
-        color: isSelected ? AppTheme.primaryIndigo : AppTheme.textSecondary,
+        color: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.textSecondary,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
       side: BorderSide(
-        color: isSelected ? AppTheme.primaryIndigo : AppTheme.glassBorder,
+        color: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.glassBorder,
       ),
     );
   }
@@ -278,7 +278,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   'Enabled',
                   service.enabled ? 'yes' : 'no',
                   service.enabled
-                      ? AppTheme.primaryIndigo
+                      ? Theme.of(context).colorScheme.primary
                       : AppTheme.textTertiary,
                 ),
               ],
@@ -320,7 +320,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   void _showServiceOptions(ServiceInfo service) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -332,9 +332,9 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.settings_applications,
-                  color: AppTheme.primaryIndigo,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 28,
                 ),
                 const Gap(12),
@@ -369,7 +369,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   child: _buildActionButton(
                     icon: Icons.stop,
                     label: 'Stop',
-                    color: AppTheme.errorRose,
+                    color: Theme.of(context).colorScheme.error,
                     onPressed: () {
                       Navigator.pop(context);
                       _manageService(service, ServiceAction.STOP);
@@ -397,7 +397,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                   child: _buildActionButton(
                     icon: Icons.replay,
                     label: 'Reload',
-                    color: AppTheme.secondaryTeal,
+                    color: Theme.of(context).colorScheme.secondary,
                     onPressed: () {
                       Navigator.pop(context);
                       _manageService(service, ServiceAction.RELOAD);
@@ -425,11 +425,11 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
               icon: const Icon(Icons.article, size: 20),
               label: const Text('View Logs'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.secondaryTeal.withValues(alpha: 0.2),
-                foregroundColor: AppTheme.secondaryTeal,
+                backgroundColor: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+                foregroundColor: Theme.of(context).colorScheme.secondary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 side: BorderSide(
-                  color: AppTheme.secondaryTeal.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -449,8 +449,8 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
                     icon: const Icon(Icons.check_circle_outline, size: 20),
                     label: const Text('Enable on Boot'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryIndigo,
-                      side: const BorderSide(color: AppTheme.primaryIndigo),
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -515,7 +515,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
 
@@ -533,7 +533,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

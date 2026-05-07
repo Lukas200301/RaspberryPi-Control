@@ -118,14 +118,14 @@ class _NetworkConnectionsScreenState
                         'TCP',
                         'tcp',
                         Icons.swap_horiz,
-                        AppTheme.primaryIndigo,
+                        Theme.of(context).colorScheme.primary,
                       ),
                       const Gap(8),
                       _buildFilterChip(
                         'UDP',
                         'udp',
                         Icons.swap_vert,
-                        AppTheme.secondaryTeal,
+                        Theme.of(context).colorScheme.secondary,
                       ),
                       const Gap(16),
                       _buildStatusChip('All States', 'all', Icons.circle),
@@ -158,7 +158,7 @@ class _NetworkConnectionsScreenState
         onPressed: () {
           setState(() {});
         },
-        backgroundColor: AppTheme.primaryIndigo,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.refresh),
       ),
     );
@@ -249,8 +249,8 @@ class _NetworkConnectionsScreenState
       future: grpcService.getNetworkConnections(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+          return Center(
+            child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
           );
         }
 
@@ -261,10 +261,10 @@ class _NetworkConnectionsScreenState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     size: 64,
-                    color: AppTheme.errorRose,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                   const Gap(16),
                   Text(
@@ -364,7 +364,7 @@ class _NetworkConnectionsScreenState
       statusColor = AppTheme.warningAmber;
       statusIcon = Icons.hearing;
     } else if (status.contains('close') || status.contains('time_wait')) {
-      statusColor = AppTheme.errorRose;
+      statusColor = Theme.of(context).colorScheme.error;
       statusIcon = Icons.close;
     } else {
       statusColor = AppTheme.textSecondary;
@@ -372,8 +372,8 @@ class _NetworkConnectionsScreenState
     }
 
     final protocolColor = conn.protocol.contains('TCP')
-        ? AppTheme.primaryIndigo
-        : AppTheme.secondaryTeal;
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.secondary;
 
     // Get port descriptions for display in top right
     final localPortDesc = _getPortDescription(conn.localPort);
@@ -434,12 +434,12 @@ class _NetworkConnectionsScreenState
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryIndigo.withValues(
+                            color: Theme.of(context).colorScheme.primary.withValues(
                               alpha: 0.15,
                             ),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: AppTheme.primaryIndigo.withValues(
+                              color: Theme.of(context).colorScheme.primary.withValues(
                                 alpha: 0.3,
                               ),
                               width: 1,
@@ -447,9 +447,9 @@ class _NetworkConnectionsScreenState
                           ),
                           child: Text(
                             localPortDesc,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppTheme.primaryIndigo,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -463,12 +463,12 @@ class _NetworkConnectionsScreenState
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.secondaryTeal.withValues(
+                            color: Theme.of(context).colorScheme.secondary.withValues(
                               alpha: 0.15,
                             ),
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: AppTheme.secondaryTeal.withValues(
+                              color: Theme.of(context).colorScheme.secondary.withValues(
                                 alpha: 0.3,
                               ),
                               width: 1,
@@ -476,9 +476,9 @@ class _NetworkConnectionsScreenState
                           ),
                           child: Text(
                             remotePortDesc,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppTheme.secondaryTeal,
+                              color: Theme.of(context).colorScheme.secondary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -510,10 +510,10 @@ class _NetworkConnectionsScreenState
             // Local Address
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.computer,
                   size: 16,
-                  color: AppTheme.primaryIndigo,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const Gap(8),
                 const Text(
@@ -537,10 +537,10 @@ class _NetworkConnectionsScreenState
             // Remote Address
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.public,
                   size: 16,
-                  color: AppTheme.secondaryTeal,
+                  color: Theme.of(context).colorScheme.secondary,
                 ),
                 const Gap(8),
                 const Text(

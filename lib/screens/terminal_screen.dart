@@ -76,7 +76,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
               'Failed to connect terminal: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -186,7 +186,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
         ],
       ),
       endDrawer: Drawer(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: Consumer(
           builder: (context, ref, _) {
             final snippets = ref.watch(terminalSnippetsProvider);
@@ -207,9 +207,9 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.add,
-                            color: AppTheme.primaryIndigo,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: () => _showAddSnippetDialog(ref),
                         ),
@@ -232,10 +232,10 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                             ),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.delete,
                               size: 16,
-                              color: AppTheme.errorRose,
+                              color: Theme.of(context).colorScheme.error,
                             ),
                             onPressed: () {
                               ref
@@ -363,7 +363,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Material(
-        color: isActive ? AppTheme.primaryIndigo : AppTheme.glassLight,
+        color: isActive ? Theme.of(context).colorScheme.primary : AppTheme.glassLight,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: () {
@@ -380,14 +380,14 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
                 ? Icon(
                     icon,
                     size: 16,
-                    color: isActive ? Colors.white : AppTheme.primaryIndigo,
+                    color: isActive ? Colors.white : Theme.of(context).colorScheme.primary,
                   )
                 : Text(
                     label,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : AppTheme.primaryIndigo,
+                      color: isActive ? Colors.white : Theme.of(context).colorScheme.primary,
                     ),
                   ),
           ),
@@ -401,7 +401,7 @@ class _TerminalScreenState extends ConsumerState<TerminalScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Add Snippet'),
         content: TextField(
           controller: controller,

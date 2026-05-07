@@ -105,7 +105,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
           ref.read(currentScreenProvider.notifier).setScreen(index);
         },
         backgroundColor: AppTheme.glassLight,
-        indicatorColor: AppTheme.primaryIndigo.withValues(alpha: 0.3),
+        indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),

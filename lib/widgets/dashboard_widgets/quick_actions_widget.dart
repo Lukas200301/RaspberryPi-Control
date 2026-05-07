@@ -58,7 +58,7 @@ class QuickActionsWidget extends ConsumerWidget {
     _Action(
       Icons.analytics,
       'Stats',
-      AppTheme.primaryIndigo,
+      Theme.of(context).colorScheme.primary,
       () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const StatsScreen()),
@@ -67,7 +67,7 @@ class QuickActionsWidget extends ConsumerWidget {
     _Action(
       Icons.settings_applications,
       'Services',
-      AppTheme.secondaryTeal,
+      Theme.of(context).colorScheme.secondary,
       () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ServicesScreen()),
@@ -76,7 +76,7 @@ class QuickActionsWidget extends ConsumerWidget {
     _Action(
       Icons.apps,
       'Processes',
-      AppTheme.errorRose,
+      Theme.of(context).colorScheme.error,
       () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ProcessesScreen()),

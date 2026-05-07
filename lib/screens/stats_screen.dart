@@ -65,11 +65,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           _updateHistory(stats, maxDataPoints);
           return _buildStats(context, stats);
         },
-        loading: () => const Center(
+        loading: () => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               Gap(16),
               Text('Connecting to agent...'),
             ],
@@ -81,10 +81,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline,
                   size: 64,
-                  color: AppTheme.errorRose,
+                  color: Theme.of(context).colorScheme.error,
                 ),
                 const Gap(16),
                 Text(
@@ -164,7 +164,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       _formatUptime(stats.uptime.toInt()),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryIndigo,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ],
@@ -184,7 +184,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: stats.load1min > 4.0
-                            ? AppTheme.errorRose
+                            ? Theme.of(context).colorScheme.error
                             : AppTheme.successGreen,
                       ),
                     ),
@@ -324,14 +324,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   'Used',
                   stats.ramUsed,
                   stats.ramTotal,
-                  AppTheme.primaryIndigo,
+                  Theme.of(context).colorScheme.primary,
                 ),
                 const Gap(8),
                 _buildMemoryRow(
                   'Cached',
                   stats.ramCached,
                   stats.ramTotal,
-                  AppTheme.secondaryTeal,
+                  Theme.of(context).colorScheme.secondary,
                 ),
                 const Gap(8),
                 _buildMemoryRow(
@@ -363,9 +363,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.memory,
-                      color: AppTheme.primaryIndigo,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 18,
                     ),
                     const Gap(8),
@@ -428,12 +428,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                   .map((e) => FlSpot(e.key.toDouble(), e.value))
                                   .toList(),
                               isCurved: true,
-                              color: AppTheme.primaryIndigo,
+                              color: Theme.of(context).colorScheme.primary,
                               barWidth: 3,
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: AppTheme.primaryIndigo.withValues(
+                                color: Theme.of(context).colorScheme.primary.withValues(
                                   alpha: 0.2,
                                 ),
                               ),
@@ -442,9 +442,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         ),
                       ),
                     )
-                  : const Center(
+                  : Center(
                       child: CircularProgressIndicator(
-                        color: AppTheme.primaryIndigo,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     ),
@@ -460,9 +460,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.storage,
-                      color: AppTheme.secondaryTeal,
+                      color: Theme.of(context).colorScheme.secondary,
                       size: 18,
                     ),
                     const Gap(8),
@@ -525,12 +525,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                   .map((e) => FlSpot(e.key.toDouble(), e.value))
                                   .toList(),
                               isCurved: true,
-                              color: AppTheme.secondaryTeal,
+                              color: Theme.of(context).colorScheme.secondary,
                               barWidth: 3,
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: AppTheme.secondaryTeal.withValues(
+                                color: Theme.of(context).colorScheme.secondary.withValues(
                                   alpha: 0.2,
                                 ),
                               ),
@@ -539,9 +539,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         ),
                       ),
                     )
-                  : const Center(
+                  : Center(
                       child: CircularProgressIndicator(
-                        color: AppTheme.secondaryTeal,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     ),
@@ -582,34 +582,34 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                             children: [
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.arrow_upward,
-                                    color: AppTheme.primaryIndigo,
+                                    color: Theme.of(context).colorScheme.primary,
                                     size: 16,
                                   ),
                                   const Gap(4),
                                   Text(
                                     'Upload: ${_formatBytes(stats.netBytesSent.toDouble())}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: AppTheme.primaryIndigo,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                 ],
                               ),
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.arrow_downward,
-                                    color: AppTheme.secondaryTeal,
+                                    color: Theme.of(context).colorScheme.secondary,
                                     size: 16,
                                   ),
                                   const Gap(4),
                                   Text(
                                     'Download: ${_formatBytes(stats.netBytesRecv.toDouble())}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: AppTheme.secondaryTeal,
+                                      color: Theme.of(context).colorScheme.secondary,
                                     ),
                                   ),
                                 ],
@@ -667,12 +667,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                         )
                                         .toList(),
                                     isCurved: true,
-                                    color: AppTheme.primaryIndigo,
+                                    color: Theme.of(context).colorScheme.primary,
                                     barWidth: 2,
                                     dotData: const FlDotData(show: false),
                                     belowBarData: BarAreaData(
                                       show: true,
-                                      color: AppTheme.primaryIndigo.withValues(
+                                      color: Theme.of(context).colorScheme.primary.withValues(
                                         alpha: 0.1,
                                       ),
                                     ),
@@ -689,12 +689,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                         )
                                         .toList(),
                                     isCurved: true,
-                                    color: AppTheme.secondaryTeal,
+                                    color: Theme.of(context).colorScheme.secondary,
                                     barWidth: 2,
                                     dotData: const FlDotData(show: false),
                                     belowBarData: BarAreaData(
                                       show: true,
-                                      color: AppTheme.secondaryTeal.withValues(
+                                      color: Theme.of(context).colorScheme.secondary.withValues(
                                         alpha: 0.1,
                                       ),
                                     ),
@@ -706,9 +706,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         ],
                       ),
                     )
-                  : const Center(
+                  : Center(
                       child: CircularProgressIndicator(
-                        color: AppTheme.primaryIndigo,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                 ), // End of SizedBox
@@ -726,9 +726,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.storage,
-                        color: AppTheme.secondaryTeal,
+                        color: Theme.of(context).colorScheme.secondary,
                         size: 18,
                       ),
                       const Gap(8),
@@ -766,9 +766,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.pie_chart,
-                          color: AppTheme.primaryIndigo,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 18,
                         ),
                         const Gap(8),
@@ -886,9 +886,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.arrow_upward,
-                    color: AppTheme.primaryIndigo,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 16,
                   ),
                   const Gap(4),
@@ -898,9 +898,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       children: [
                         Text(
                           'Write: ${_formatBytes(diskIO.writeBytes.toDouble())}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.primaryIndigo,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         Text(
@@ -920,9 +920,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Expanded(
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.arrow_downward,
-                    color: AppTheme.secondaryTeal,
+                    color: Theme.of(context).colorScheme.secondary,
                     size: 16,
                   ),
                   const Gap(4),
@@ -932,9 +932,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       children: [
                         Text(
                           'Read: ${_formatBytes(diskIO.readBytes.toDouble())}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.secondaryTeal,
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                         Text(
@@ -962,7 +962,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final percent = partition.usagePercent;
 
     Color getColor() {
-      if (percent > 90) return AppTheme.errorRose;
+      if (percent > 90) return Theme.of(context).colorScheme.error;
       if (percent > 75) return AppTheme.warningAmber;
       return AppTheme.successGreen;
     }

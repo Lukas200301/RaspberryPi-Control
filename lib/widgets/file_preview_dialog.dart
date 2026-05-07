@@ -220,7 +220,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
             icon: const Icon(Icons.download),
             label: const Text('Download & Open'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryIndigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -273,7 +273,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
       case 'json':
       case 'yaml':
       case 'yml':
-        return AppTheme.secondaryTeal;
+        return Theme.of(context).colorScheme.secondary;
       case 'log':
         return Colors.grey;
       case 'sh':
@@ -287,7 +287,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
 
 /// Simple syntax highlighter for code files
 class SyntaxHighlighter {
-  static TextSpan highlight(String code, String extension) {
+  static TextSpan highlight(String code, String extension, Color primaryColor) {
     final lines = code.split('\n');
     final spans = <TextSpan>[];
 
@@ -303,7 +303,7 @@ class SyntaxHighlighter {
       );
 
       // Syntax highlighting based on extension
-      spans.add(_highlightLine(line, extension));
+      spans.add(_highlightLine(line, extension, primaryColor));
 
       if (i < lines.length - 1) {
         spans.add(const TextSpan(text: '\n'));
@@ -313,7 +313,7 @@ class SyntaxHighlighter {
     return TextSpan(children: spans);
   }
 
-  static TextSpan _highlightLine(String line, String extension) {
+  static TextSpan _highlightLine(String line, String extension, Color primaryColor) {
     // Basic keyword highlighting
     final keywords = _getKeywords(extension);
     final comments = _getCommentStyle(extension);
@@ -341,8 +341,8 @@ class SyntaxHighlighter {
         spans.add(
           TextSpan(
             text: word,
-            style: const TextStyle(
-              color: AppTheme.primaryIndigo,
+            style: TextStyle(
+              color: primaryColor,
               fontWeight: FontWeight.bold,
               fontFamily: 'monospace',
             ),

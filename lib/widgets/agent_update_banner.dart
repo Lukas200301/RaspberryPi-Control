@@ -138,9 +138,9 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                 borderRadius: BorderRadius.circular(20),
                 side: const BorderSide(color: AppTheme.glassBorder, width: 1),
               ),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.error_outline, color: AppTheme.errorRose),
+                  Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
                   Gap(12),
                   Text('Update Failed'),
                 ],
@@ -153,8 +153,8 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                   const Gap(8),
                   Text(
                     e.toString(),
-                    style: const TextStyle(
-                      color: AppTheme.errorRose,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                       fontSize: 12,
                     ),
                   ),

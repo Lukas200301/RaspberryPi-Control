@@ -22,10 +22,10 @@ class ConnectionInfoWidget extends ConsumerWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [AppTheme.primaryIndigo, AppTheme.secondaryTeal],
+                colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
               ),
             ),
             child: const Icon(Icons.computer, color: Colors.white, size: 22),
@@ -60,7 +60,7 @@ class ConnectionInfoWidget extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.logout, size: 20),
-            color: AppTheme.errorRose,
+            color: Theme.of(context).colorScheme.error,
             tooltip: 'Disconnect',
             onPressed: onDisconnect,
           ),

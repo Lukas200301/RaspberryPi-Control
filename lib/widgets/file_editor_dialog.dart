@@ -182,7 +182,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          Icon(Icons.edit_note, color: AppTheme.primaryIndigo),
+          Icon(Icons.edit_note, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -237,7 +237,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
               icon: const Icon(Icons.save),
               onPressed: _saveFile,
               tooltip: 'Save (Ctrl+S)',
-              color: AppTheme.secondaryTeal,
+              color: Theme.of(context).colorScheme.secondary,
             ),
           if (_isSaving)
             const Padding(

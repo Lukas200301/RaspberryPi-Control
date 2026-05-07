@@ -78,7 +78,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             content: Text(result.message),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -91,7 +91,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -127,8 +127,8 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
         barrierDismissible: false,
         builder: (context) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: const AlertDialog(
-            backgroundColor: AppTheme.background,
+          child: AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -156,7 +156,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -173,7 +173,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -186,7 +186,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: const Text('Install Package'),
           content: Text('Install $packageName?'),
           actions: [
@@ -211,8 +211,8 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
         barrierDismissible: false,
         builder: (context) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: const AlertDialog(
-            backgroundColor: AppTheme.background,
+          child: AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -240,7 +240,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -257,7 +257,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -279,7 +279,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
       builder: (context) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
         child: AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: const Text('Remove Package'),
           content: Text('Remove $packageName?'),
           actions: [
@@ -290,7 +290,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.errorRose,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
               child: const Text('Remove'),
             ),
@@ -307,8 +307,8 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
         barrierDismissible: false,
         builder: (context) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: const AlertDialog(
-            backgroundColor: AppTheme.background,
+          child: AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -336,7 +336,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -353,7 +353,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -413,10 +413,10 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.errorRose.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
                     border: Border(
                       bottom: BorderSide(
-                        color: AppTheme.errorRose.withValues(alpha: 0.3),
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                         width: 1,
                       ),
                     ),
@@ -425,7 +425,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                     children: [
                       Icon(
                         Icons.warning_amber_rounded,
-                        color: AppTheme.errorRose,
+                        color: Theme.of(context).colorScheme.error,
                         size: 20,
                       ),
                       const Gap(12),
@@ -434,7 +434,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                           warningMessage,
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: AppTheme.errorRose,
+                                color: Theme.of(context).colorScheme.error,
                                 fontSize: 12,
                               ),
                         ),
@@ -462,10 +462,10 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorRose.withValues(alpha: 0.15),
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
                   border: Border(
                     bottom: BorderSide(
-                      color: AppTheme.errorRose.withValues(alpha: 0.3),
+                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -474,7 +474,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                   children: [
                     Icon(
                       Icons.warning_amber_rounded,
-                      color: AppTheme.errorRose,
+                      color: Theme.of(context).colorScheme.error,
                       size: 20,
                     ),
                     const Gap(12),
@@ -482,7 +482,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                       child: Text(
                         warningMessage,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.errorRose,
+                          color: Theme.of(context).colorScheme.error,
                           fontSize: 12,
                         ),
                       ),
@@ -588,10 +588,10 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
                             size: 64,
-                            color: AppTheme.errorRose,
+                            color: Theme.of(context).colorScheme.error,
                           ),
                           const Gap(16),
                           Text(
@@ -768,7 +768,7 @@ class _PackagesScreenState extends ConsumerState<PackagesScreen> {
             if (package.installed)
               IconButton(
                 icon: const Icon(Icons.delete_outline),
-                color: AppTheme.errorRose,
+                color: Theme.of(context).colorScheme.error,
                 onPressed: () => _removePackage(package.name),
               )
             else

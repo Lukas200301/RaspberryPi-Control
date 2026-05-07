@@ -45,9 +45,9 @@ class DiskUsageWidget extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.storage,
-                    color: AppTheme.secondaryTeal,
+                    color: Theme.of(context).colorScheme.secondary,
                     size: 18,
                   ),
                   const Gap(8),
@@ -108,7 +108,7 @@ class DiskUsageWidget extends ConsumerWidget {
           height: 80,
           child: Center(
             child: CircularProgressIndicator(
-              color: AppTheme.secondaryTeal,
+              color: Theme.of(context).colorScheme.secondary,
               strokeWidth: 2,
             ),
           ),
@@ -117,7 +117,7 @@ class DiskUsageWidget extends ConsumerWidget {
       error: (e, _) => GlassCard(
         child: Text(
           'Disk error',
-          style: const TextStyle(color: AppTheme.errorRose),
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
         ),
       ),
     );

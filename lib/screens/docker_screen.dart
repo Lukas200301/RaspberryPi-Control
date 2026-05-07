@@ -41,10 +41,10 @@ class DockerScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
                 size: 48,
-                color: AppTheme.errorRose,
+                color: Theme.of(context).colorScheme.error,
               ),
               const Gap(16),
               Text(
@@ -181,7 +181,7 @@ class DockerScreen extends ConsumerWidget {
                       label: const Text('Stop'),
                       onPressed: () => _stopContainer(context, ref, container),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.errorRose,
+                        foregroundColor: Theme.of(context).colorScheme.error,
                       ),
                     ),
                   ] else ...[
@@ -233,7 +233,7 @@ class DockerScreen extends ConsumerWidget {
         color = Colors.blue;
         break;
       case 'dead':
-        color = AppTheme.errorRose;
+        color = Theme.of(context).colorScheme.error;
         break;
       default:
         color = AppTheme.textSecondary;
@@ -301,7 +301,7 @@ class DockerScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -331,7 +331,7 @@ class DockerScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -361,7 +361,7 @@ class DockerScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -415,7 +415,7 @@ class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Error streaming logs: $e'),
-                  backgroundColor: AppTheme.errorRose,
+                  backgroundColor: Theme.of(context).colorScheme.error,
                 ),
               );
             }
@@ -464,7 +464,7 @@ class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
           itemBuilder: (context, index) {
             final log = _logs[index];
             final color = log.level == 'error'
-                ? AppTheme.errorRose
+                ? Theme.of(context).colorScheme.error
                 : Colors.white;
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),

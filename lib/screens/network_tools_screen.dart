@@ -44,9 +44,9 @@ class _NetworkToolsScreenState extends ConsumerState<NetworkToolsScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: false,
-          indicatorColor: AppTheme.primaryIndigo,
+          indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
-          labelColor: AppTheme.primaryIndigo,
+          labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: AppTheme.textSecondary,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
@@ -148,7 +148,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
               'Ping failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -187,9 +187,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
                   decoration: InputDecoration(
                     hintText:
                         'Enter hostname or IP (e.g., google.com, 8.8.8.8)',
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.dns,
-                      color: AppTheme.primaryIndigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
@@ -208,9 +208,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         controller: _countController,
                         decoration: InputDecoration(
                           labelText: 'Count',
-                          prefixIcon: const Icon(
+                          prefixIcon: Icon(
                             Icons.numbers,
-                            color: AppTheme.secondaryTeal,
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                           filled: true,
                           fillColor: AppTheme.glassLight,
@@ -231,7 +231,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                       icon: Icon(_isPinging ? Icons.stop : Icons.play_arrow),
                       label: Text(_isPinging ? 'Stop' : 'Start Ping'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryIndigo,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -267,7 +267,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         'Sent',
                         '${stats.packetsSent}',
                         Icons.send,
-                        AppTheme.primaryIndigo,
+                        Theme.of(context).colorScheme.primary,
                       ),
                       _buildStatCard(
                         'Received',
@@ -279,7 +279,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         'Loss',
                         '${stats.packetLoss.toStringAsFixed(1)}%',
                         Icons.error_outline,
-                        AppTheme.errorRose,
+                        Theme.of(context).colorScheme.error,
                       ),
                     ],
                   ),
@@ -354,21 +354,21 @@ class _PingTabState extends ConsumerState<_PingTab> {
                               .map((e) => FlSpot(e.key.toDouble(), e.value))
                               .toList(),
                           isCurved: true,
-                          color: AppTheme.primaryIndigo,
+                          color: Theme.of(context).colorScheme.primary,
                           barWidth: 3,
                           dotData: FlDotData(
                             show: true,
                             getDotPainter: (spot, percent, barData, index) =>
                                 FlDotCirclePainter(
                                   radius: 3,
-                                  color: AppTheme.primaryIndigo,
+                                  color: Theme.of(context).colorScheme.primary,
                                   strokeWidth: 1,
                                   strokeColor: Colors.white,
                                 ),
                           ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: AppTheme.primaryIndigo.withValues(
+                            color: Theme.of(context).colorScheme.primary.withValues(
                               alpha: 0.2,
                             ),
                           ),
@@ -400,7 +400,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                             result.success ? Icons.check_circle : Icons.error,
                             color: result.success
                                 ? AppTheme.successGreen
-                                : AppTheme.errorRose,
+                                : Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
                           const Gap(8),
@@ -413,7 +413,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                                 fontSize: 12,
                                 color: result.success
                                     ? AppTheme.textPrimary
-                                    : AppTheme.errorRose,
+                                    : Theme.of(context).colorScheme.error,
                                 fontFamily: 'monospace',
                               ),
                             ),
@@ -466,10 +466,10 @@ class _PingTabState extends ConsumerState<_PingTab> {
         const Gap(4),
         Text(
           '${latency.toStringAsFixed(2)}ms',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: AppTheme.primaryIndigo,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
       ],
@@ -550,7 +550,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
               'Port scan failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -583,9 +583,9 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   controller: _hostController,
                   decoration: InputDecoration(
                     hintText: 'Target hostname or IP',
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.dns,
-                      color: AppTheme.primaryIndigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
@@ -608,7 +608,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                               if (selected)
                                 setState(() => _scanMode = 'common');
                             },
-                      selectedColor: AppTheme.primaryIndigo,
+                      selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _scanMode == 'common'
                             ? Colors.white
@@ -624,7 +624,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                           : (selected) {
                               if (selected) setState(() => _scanMode = 'range');
                             },
-                      selectedColor: AppTheme.primaryIndigo,
+                      selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _scanMode == 'range'
                             ? Colors.white
@@ -687,7 +687,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                       _isScanning ? 'Scanning... $_progress%' : 'Start Scan',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryIndigo,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -701,8 +701,8 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   LinearProgressIndicator(
                     value: _progress / 100,
                     backgroundColor: AppTheme.glassLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppTheme.primaryIndigo,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -840,7 +840,7 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
               'DNS lookup failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -873,9 +873,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                   controller: _hostnameController,
                   decoration: InputDecoration(
                     hintText: 'Enter hostname (e.g., google.com)',
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.language,
-                      color: AppTheme.primaryIndigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
                     fillColor: AppTheme.glassLight,
@@ -900,7 +900,7 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                           : (selected) {
                               if (selected) setState(() => _recordType = type);
                             },
-                      selectedColor: AppTheme.primaryIndigo,
+                      selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _recordType == type
                             ? Colors.white
@@ -919,7 +919,7 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                     ),
                     label: Text(_isLookingUp ? 'Looking up...' : 'Lookup'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryIndigo,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -992,17 +992,17 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryIndigo.withValues(
+                              color: Theme.of(context).colorScheme.primary.withValues(
                                 alpha: 0.2,
                               ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               _result!.records[i].type,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryIndigo,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ),
@@ -1042,9 +1042,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                           padding: const EdgeInsets.symmetric(vertical: 4),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.dns,
-                                color: AppTheme.primaryIndigo,
+                                color: Theme.of(context).colorScheme.primary,
                                 size: 16,
                               ),
                               const Gap(8),
@@ -1066,9 +1066,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
               GlassCard(
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.error,
-                      color: AppTheme.errorRose,
+                      color: Theme.of(context).colorScheme.error,
                       size: 32,
                     ),
                     const Gap(16),
@@ -1076,11 +1076,11 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Lookup failed',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.errorRose,
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
                           const Gap(4),
@@ -1192,7 +1192,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
               'Speed test failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1300,10 +1300,10 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                       ),
                       child: Text(
                         '${_duration}s',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryIndigo,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -1319,7 +1319,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                     icon: Icon(_isTesting ? Icons.stop : Icons.play_arrow),
                     label: Text(_isTesting ? 'Testing...' : 'Start Test'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryIndigo,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -1341,13 +1341,13 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                 children: [
                   Row(
                     children: [
-                      const SizedBox(
+                      SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryIndigo,
+                            Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -1379,8 +1379,8 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                   LinearProgressIndicator(
                     value: _progress / 100,
                     backgroundColor: AppTheme.glassLight,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppTheme.primaryIndigo,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ],
@@ -1409,7 +1409,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                             'Download',
                             '${_downloadSpeed.toStringAsFixed(2)}',
                             'Mbps',
-                            AppTheme.primaryIndigo,
+                            Theme.of(context).colorScheme.primary,
                             Icons.download,
                           ),
                         ),
@@ -1455,10 +1455,10 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                               const Gap(4),
                               Text(
                                 '${_latency.toStringAsFixed(1)}ms',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.secondaryTeal,
+                                  color: Theme.of(context).colorScheme.secondary,
                                 ),
                               ),
                             ],
@@ -1595,7 +1595,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                       )
                                       .toList(),
                                   isCurved: true,
-                                  color: AppTheme.primaryIndigo,
+                                  color: Theme.of(context).colorScheme.primary,
                                   barWidth: 3,
                                   dotData: FlDotData(
                                     show: true,
@@ -1603,14 +1603,14 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                         (spot, percent, barData, index) =>
                                             FlDotCirclePainter(
                                               radius: 3,
-                                              color: AppTheme.primaryIndigo,
+                                              color: Theme.of(context).colorScheme.primary,
                                               strokeWidth: 2,
                                               strokeColor: Colors.white,
                                             ),
                                   ),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: AppTheme.primaryIndigo.withValues(
+                                    color: Theme.of(context).colorScheme.primary.withValues(
                                       alpha: 0.2,
                                     ),
                                   ),
@@ -1665,7 +1665,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                 width: 12,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryIndigo,
+                                  color: Theme.of(context).colorScheme.primary,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -1716,17 +1716,17 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
             GlassCard(
               child: Row(
                 children: [
-                  const Icon(Icons.error, color: AppTheme.errorRose, size: 32),
+                  Icon(Icons.error, color: Theme.of(context).colorScheme.error, size: 32),
                   const Gap(16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Test Failed',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.errorRose,
+                            color: Theme.of(context).colorScheme.error,
                           ),
                         ),
                         const Gap(4),
@@ -1838,7 +1838,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
               'Failed to load WiFi info: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1853,7 +1853,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
   Color _getSignalColor(int strength) {
     if (strength > -50) return AppTheme.successGreen;
     if (strength > -70) return AppTheme.warningAmber;
-    return AppTheme.errorRose;
+    return Theme.of(context).colorScheme.error;
   }
 
   IconData _getSignalIcon(int quality) {
@@ -1866,8 +1866,8 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+      return Center(
+        child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
       );
     }
 
@@ -1888,7 +1888,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryIndigo,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -1899,7 +1899,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
 
     return RefreshIndicator(
       onRefresh: _loadWifiInfo,
-      color: AppTheme.primaryIndigo,
+      color: Theme.of(context).colorScheme.primary,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [

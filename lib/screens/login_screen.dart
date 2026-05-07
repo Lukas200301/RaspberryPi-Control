@@ -72,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Scanning local network...',
@@ -121,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _showDiscoveredDevicesSheet(List<DiscoveredDevice> devices) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -147,9 +147,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.devices,
-                    color: AppTheme.primaryIndigo,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 28,
                   ),
                   const Gap(12),
@@ -161,7 +161,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Text(
                     '${devices.length} found',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.secondaryTeal,
+                      color: Theme.of(context).colorScheme.secondary,
                     ),
                   ),
                 ],
@@ -193,14 +193,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryIndigo.withValues(
+                              color: Theme.of(context).colorScheme.primary.withValues(
                                 alpha: 0.2,
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.computer,
-                              color: AppTheme.primaryIndigo,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           const Gap(16),
@@ -218,7 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 Text(
                                   device.host,
                                   style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: AppTheme.secondaryTeal),
+                                      ?.copyWith(color: Theme.of(context).colorScheme.secondary),
                                 ),
                                 if (device.type != null) ...[
                                   const Gap(2),
@@ -234,10 +234,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.add_circle_outline,
                             size: 20,
-                            color: AppTheme.primaryIndigo,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ],
                       ),
@@ -269,7 +269,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -288,9 +288,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.add_circle,
-                        color: AppTheme.primaryIndigo,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 28,
                       ),
                       const Gap(12),
@@ -423,7 +423,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Connecting to ${connection.name}...',
@@ -494,8 +494,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(
-                    color: AppTheme.primaryIndigo,
+                  CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   const Gap(16),
                   Text(
@@ -561,7 +561,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Failed to start agent: $e',
                   style: const TextStyle(color: Colors.white),
                 ),
-                backgroundColor: AppTheme.errorRose,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
@@ -591,7 +591,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Failed to setup tunnel: $e',
                   style: const TextStyle(color: Colors.white),
                 ),
-                backgroundColor: AppTheme.errorRose,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
@@ -613,7 +613,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Failed to connect to agent: $e',
                   style: const TextStyle(color: Colors.white),
                 ),
-                backgroundColor: AppTheme.errorRose,
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
@@ -664,7 +664,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'Connection failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -675,7 +675,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Enable SSH Forwarding?'),
         content: Text(
           'SSH port forwarding is currently disabled on your Raspberry Pi.\n\n'
@@ -694,7 +694,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryIndigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
             child: const Text('Enable'),
           ),
@@ -758,7 +758,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'Failed to enable forwarding: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -770,7 +770,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Enable Real-Time Monitoring?'),
         content: Text(
           'To visualize system stats in real-time for $deviceName, install Agent (takes ~5 seconds).',
@@ -794,10 +794,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Row(
           children: [
-            Icon(Icons.admin_panel_settings, color: AppTheme.errorRose),
+            Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.error),
             const Gap(12),
             const Text('Sudo Access Required'),
           ],
@@ -831,7 +831,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Installing agent on $deviceName...',
@@ -855,7 +855,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'Installation failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -868,7 +868,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(color: AppTheme.background),
+        decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,12 +916,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 color: AppTheme.glassLight,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const SizedBox(
+                              child: SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: AppTheme.primaryIndigo,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             )
@@ -934,7 +934,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: IconButton(
                                 onPressed: _checkConnectionStatus,
                                 icon: const Icon(Icons.refresh),
-                                color: AppTheme.primaryIndigo,
+                                color: Theme.of(context).colorScheme.primary,
                                 tooltip: 'Refresh status',
                               ),
                             ),
@@ -957,7 +957,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ?.copyWith(
                               fontWeight: FontWeight.bold,
                               letterSpacing: -1,
-                              color: AppTheme.primaryIndigo,
+                              color: Theme.of(context).colorScheme.primary,
                               height: 1.1,
                             ),
                       ),
@@ -996,14 +996,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     decoration: BoxDecoration(
                                       color: isOnline
                                           ? AppTheme.successGreen
-                                          : AppTheme.errorRose,
+                                          : Theme.of(context).colorScheme.error,
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
                                           color:
                                               (isOnline
                                                       ? AppTheme.successGreen
-                                                      : AppTheme.errorRose)
+                                                      : Theme.of(context).colorScheme.error)
                                                   .withValues(alpha: 0.5),
                                           blurRadius: 8,
                                           spreadRadius: 2,
@@ -1018,7 +1018,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ?.copyWith(
                                           color: isOnline
                                               ? AppTheme.successGreen
-                                              : AppTheme.errorRose,
+                                              : Theme.of(context).colorScheme.error,
                                           fontWeight: FontWeight.w600,
                                         ),
                                   ),
@@ -1036,7 +1036,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryIndigo,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -1157,18 +1157,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: GlassCard(
                         onTap: () => _showAddConnectionSheet(),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             vertical: 14,
                             horizontal: 12,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(
                                 Icons.add_circle_outline,
                                 size: 18,
-                                color: AppTheme.primaryIndigo,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                               Gap(8),
                               Text(
@@ -1176,7 +1176,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryIndigo,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
@@ -1202,7 +1202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 size: 18,
                                 color: _isDiscovering
                                     ? AppTheme.textTertiary
-                                    : AppTheme.primaryIndigo,
+                                    : Theme.of(context).colorScheme.primary,
                               ),
                               const Gap(8),
                               Flexible(
@@ -1213,7 +1213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     fontWeight: FontWeight.w600,
                                     color: _isDiscovering
                                         ? AppTheme.textTertiary
-                                        : AppTheme.primaryIndigo,
+                                        : Theme.of(context).colorScheme.primary,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),

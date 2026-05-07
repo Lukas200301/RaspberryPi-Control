@@ -224,6 +224,7 @@ class AppTheme {
   static ThemeData getTheme({
     Color primary = primaryIndigo,
     Color secondary = secondaryTeal,
+    Color error = errorRose,
     Color bg = background,
   }) {
     return ThemeData(
@@ -233,7 +234,7 @@ class AppTheme {
       colorScheme: ColorScheme.dark(
         primary: primary,
         secondary: secondary,
-        error: errorRose,
+        error: error,
         surface: bg,
         onSurface: textPrimary,
         surfaceContainer: bg,
@@ -402,6 +403,7 @@ class AppTheme {
     return getTheme(
       primary: preset.primary,
       secondary: preset.secondary,
+      error: preset.accent,
       bg: preset.background,
     );
   }

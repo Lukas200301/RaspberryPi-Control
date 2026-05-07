@@ -133,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         settings.animationsEnabled = value;
                       });
                     },
-                    activeTrackColor: AppTheme.primaryIndigo,
+                    activeTrackColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const Divider(color: AppTheme.glassBorder),
@@ -311,12 +311,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // Logout
           GlassCard(
             child: ListTile(
-              leading: const Icon(Icons.logout, color: AppTheme.errorRose),
+              leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
               title: Text(
                 'Disconnect',
                 style: Theme.of(
                   context,
-                ).textTheme.titleMedium?.copyWith(color: AppTheme.errorRose),
+                ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
               ),
               onTap: () {
                 // Clear file transfers before disconnecting
@@ -450,7 +450,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     VoidCallback? onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.primaryIndigo),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title, style: Theme.of(context).textTheme.titleSmall),
       subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
       trailing: trailing,
@@ -462,7 +462,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Stats History'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -541,7 +541,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Terminal Font Size'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -550,7 +550,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 (size) => ListTile(
                   title: Text('${size.toInt()}px'),
                   trailing: settings.terminalFontSize == size
-                      ? const Icon(Icons.check, color: AppTheme.primaryIndigo)
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                       : null,
                   onTap: () {
                     setState(() => settings.terminalFontSize = size);
@@ -577,7 +577,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Reinstall Agent?'),
         content: const Text(
           'This will remove the current agent and prepare for a fresh installation. You will need to reconnect after this.',
@@ -601,12 +601,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: AppTheme.background,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppTheme.primaryIndigo),
+            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
             Gap(16),
             Text('Preparing agent reinstall...'),
           ],
@@ -663,7 +663,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.background,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             title: const Row(
               children: [
                 Icon(Icons.check_circle, color: AppTheme.successGreen),
@@ -701,7 +701,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Failed to reinstall agent: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -712,7 +712,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Reset Settings?'),
         content: const Text('This will reset all app settings to defaults.'),
         actions: [
@@ -723,7 +723,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text('Reset'),
           ),
@@ -755,7 +755,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Failed to reset settings: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -774,7 +774,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Could not open link: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -793,12 +793,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (updateInfo == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Could not check for updates',
               style: TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
         return;
@@ -826,7 +826,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Error checking for updates: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -837,10 +837,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Row(
           children: [
-            const Icon(Icons.system_update, color: AppTheme.primaryIndigo),
+            Icon(Icons.system_update, color: Theme.of(context).colorScheme.primary),
             const Gap(12),
             const Text('Update Available'),
           ],
@@ -883,14 +883,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           'v${note.version}',
                           style: Theme.of(context).textTheme.labelSmall
                               ?.copyWith(
-                                color: AppTheme.primaryIndigo,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
@@ -929,7 +929,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: const Icon(Icons.download),
             label: const Text('Update Now'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryIndigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           ),
         ],
@@ -940,12 +940,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _downloadAndInstallUpdate(UpdateInfo updateInfo) async {
     if (updateInfo.downloadUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
             'Download URL not found',
             style: TextStyle(color: Colors.white),
           ),
-          backgroundColor: AppTheme.errorRose,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -955,12 +955,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        backgroundColor: AppTheme.background,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppTheme.primaryIndigo),
+            CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
             Gap(16),
             Text('Downloading update...'),
           ],
@@ -1023,7 +1023,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  backgroundColor: AppTheme.background,
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                   title: const Text('Install Update'),
                   content: Text(
                     'Update downloaded. Please manually install:\n${file.path}\n\nThe file will be automatically deleted after 30 seconds.',
@@ -1049,7 +1049,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Download failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -1071,7 +1071,7 @@ class _ThemeEditorDialogState extends ConsumerState<ThemeEditorDialog> {
     final themeNotifier = ref.read(themeProvider.notifier);
 
     return AlertDialog(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       title: const Text('Customize Theme'),
       content: SingleChildScrollView(
         child: Column(

@@ -113,7 +113,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                   ? Icons.vertical_align_bottom
                   : Icons.vertical_align_top,
               color: _autoScroll
-                  ? AppTheme.primaryIndigo
+                  ? Theme.of(context).colorScheme.primary
                   : AppTheme.textSecondary,
             ),
             onPressed: () {
@@ -158,7 +158,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                     'Errors',
                     'error',
                     Icons.error,
-                    AppTheme.errorRose,
+                    Theme.of(context).colorScheme.error,
                   ),
                   const Gap(8),
                   _buildFilterChip(
@@ -172,7 +172,7 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
                     'Info',
                     'info',
                     Icons.info,
-                    AppTheme.primaryIndigo,
+                    Theme.of(context).colorScheme.primary,
                   ),
                 ],
               ),
@@ -234,10 +234,10 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
                 size: 64,
-                color: AppTheme.errorRose,
+                color: Theme.of(context).colorScheme.error,
               ),
               const Gap(16),
               Text(
@@ -271,11 +271,11 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
     // Show empty state
     if (_logs.isEmpty) {
       if (!_isConnected && _errorMessage == null) {
-        return const Center(
+        return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               Gap(16),
               Text('Connecting to log stream...'),
             ],
@@ -353,13 +353,13 @@ class _LogsScreenState extends ConsumerState<LogsScreen> {
         level.contains('crit') ||
         level.contains('alert') ||
         level.contains('emerg')) {
-      levelColor = AppTheme.errorRose;
+      levelColor = Theme.of(context).colorScheme.error;
       levelIcon = Icons.error;
     } else if (level.contains('warn')) {
       levelColor = AppTheme.warningAmber;
       levelIcon = Icons.warning;
     } else {
-      levelColor = AppTheme.primaryIndigo;
+      levelColor = Theme.of(context).colorScheme.primary;
       levelIcon = Icons.info;
     }
 

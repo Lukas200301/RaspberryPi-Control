@@ -29,7 +29,7 @@ class SystemVitalsWidget extends ConsumerWidget {
         final cpuColor = AppTheme.getCPUColor(stats.cpuUsage);
 
         return GlassCard(
-          glowColor: stats.cpuTemp > 70 ? AppTheme.errorRose : null,
+          glowColor: stats.cpuTemp > 70 ? Theme.of(context).colorScheme.error : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -84,8 +84,8 @@ class SystemVitalsWidget extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(
-                  color: AppTheme.primaryIndigo,
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
                   strokeWidth: 2,
                 ),
                 const Gap(12),
@@ -103,7 +103,7 @@ class SystemVitalsWidget extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           child: Text(
             'Error: $e',
-            style: const TextStyle(color: AppTheme.errorRose),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),
       ),
@@ -113,9 +113,9 @@ class SystemVitalsWidget extends ConsumerWidget {
   Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.monitor_heart,
-          color: AppTheme.primaryIndigo,
+          color: Theme.of(context).colorScheme.primary,
           size: 18,
         ),
         const Gap(8),

@@ -36,7 +36,7 @@ class ConnectionsScreen extends ConsumerWidget {
         onPressed: () => _showAddConnectionDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add Connection'),
-        backgroundColor: AppTheme.primaryIndigo,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -78,10 +78,10 @@ class ConnectionsScreen extends ConsumerWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.computer, color: AppTheme.primaryIndigo),
+            child: Icon(Icons.computer, color: Theme.of(context).colorScheme.primary),
           ),
           const Gap(16),
           Expanded(
@@ -211,13 +211,13 @@ class ConnectionsScreen extends ConsumerWidget {
                     horizontal: 16,
                     vertical: 12,
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.delete, size: 20, color: AppTheme.errorRose),
+                      Icon(Icons.delete, size: 20, color: Theme.of(context).colorScheme.error),
                       Gap(12),
                       Text(
                         'Delete',
-                        style: TextStyle(color: AppTheme.errorRose),
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
                       ),
                     ],
                   ),
@@ -292,7 +292,7 @@ class ConnectionsScreen extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Connecting to ${connection.name}...',
@@ -418,7 +418,7 @@ class ConnectionsScreen extends ConsumerWidget {
               content: Text(
                 'Authentication failed. Please check your username and password.',
               ),
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
               duration: Duration(seconds: 5),
             ),
           );
@@ -426,7 +426,7 @@ class ConnectionsScreen extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Connection failed: $e'),
-              backgroundColor: AppTheme.errorRose,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -438,10 +438,10 @@ class ConnectionsScreen extends ConsumerWidget {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: Row(
           children: [
-            Icon(Icons.admin_panel_settings, color: AppTheme.errorRose),
+            Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.error),
             const Gap(12),
             const Text('Sudo Access Required'),
           ],
@@ -482,7 +482,7 @@ class ConnectionsScreen extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Completing connection...',
@@ -531,7 +531,7 @@ class ConnectionsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Connection failed: $e'),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -542,7 +542,7 @@ class ConnectionsScreen extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Enable SSH Forwarding?'),
         content: Text(
           'SSH port forwarding is currently disabled on your Raspberry Pi.\n\n'
@@ -561,7 +561,7 @@ class ConnectionsScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryIndigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
             child: const Text('Enable'),
           ),
@@ -577,7 +577,7 @@ class ConnectionsScreen extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Enable Real-Time Monitoring?'),
         content: Text(
           'To visualize system stats in real-time, the app needs to copy a small helper tool (Agent) to your Raspberry Pi. This takes about 5 seconds.',
@@ -617,7 +617,7 @@ class ConnectionsScreen extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(color: AppTheme.primaryIndigo),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
               const Gap(16),
               Text(
                 'Installing agent...',
@@ -648,7 +648,7 @@ class ConnectionsScreen extends ConsumerWidget {
               'Agent installation failed: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -666,7 +666,7 @@ class ConnectionsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: const Text('Add Connection'),
           content: SingleChildScrollView(
             child: Column(
@@ -747,7 +747,7 @@ class ConnectionsScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           title: const Text('Edit Connection'),
           content: SingleChildScrollView(
             child: Column(

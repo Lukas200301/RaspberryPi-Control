@@ -33,11 +33,11 @@ class _BackgroundChartWidgetState extends ConsumerState<BackgroundChartWidget> {
     });
 
     if (_cpuHistory.isEmpty) {
-      return Container(color: AppTheme.background);
+      return Container(color: Theme.of(context).scaffoldBackgroundColor);
     }
 
     return Container(
-      color: AppTheme.background,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Opacity(
         opacity: 0.15, // Subtle background
         child: LineChart(
@@ -56,12 +56,12 @@ class _BackgroundChartWidgetState extends ConsumerState<BackgroundChartWidget> {
                     .map((e) => FlSpot(e.key.toDouble(), e.value))
                     .toList(),
                 isCurved: true,
-                color: AppTheme.primaryIndigo,
+                color: Theme.of(context).colorScheme.primary,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                 ),
               ),
             ],

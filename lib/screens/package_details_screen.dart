@@ -77,7 +77,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Install Package'),
         content: Text('Install ${widget.packageName}?'),
         actions: [
@@ -111,7 +111,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
 
@@ -127,7 +127,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -138,7 +138,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Remove Package'),
         content: Text('Remove ${widget.packageName}?'),
         actions: [
@@ -148,7 +148,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.errorRose),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Remove'),
           ),
         ],
@@ -170,7 +170,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
 
@@ -186,7 +186,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -212,7 +212,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         title: const Text('Update Package'),
         content: Text('Update ${widget.packageName} to the latest version?'),
         actions: [
@@ -223,7 +223,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.primaryIndigo,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
             child: const Text('Update'),
           ),
@@ -246,7 +246,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
 
@@ -262,7 +262,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -308,18 +308,18 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryIndigo),
+          ? Center(
+              child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
             )
           : _error != null
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.error_outline,
                     size: 48,
-                    color: AppTheme.errorRose,
+                    color: Theme.of(context).colorScheme.error,
                   ),
                   const Gap(16),
                   Text(
@@ -458,9 +458,9 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                   ],
                   if (_details!.homepage.isNotEmpty)
                     ListTile(
-                      leading: const Icon(
+                      leading: Icon(
                         Icons.link,
-                        color: AppTheme.primaryIndigo,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       title: const Text('Homepage'),
                       subtitle: Text(_details!.homepage),
@@ -500,16 +500,16 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryIndigo.withValues(alpha: 0.2),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.primaryIndigo.withValues(alpha: 0.4),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                     ),
                   ),
                   child: Text(
                     tag,
-                    style: const TextStyle(
-                      color: AppTheme.primaryIndigo,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 12,
                     ),
                   ),
@@ -537,7 +537,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'These packages must be installed for ${widget.packageName} to work',
               _dependencies!.depends,
               Icons.arrow_downward,
-              AppTheme.errorRose,
+              Theme.of(context).colorScheme.error,
             ),
             const Gap(24),
           ],
@@ -561,7 +561,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'These packages are recommended for full functionality',
               _dependencies!.recommends,
               Icons.thumb_up_outlined,
-              AppTheme.secondaryTeal,
+              Theme.of(context).colorScheme.secondary,
             ),
             const Gap(24),
           ],
@@ -573,7 +573,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'These packages enhance ${widget.packageName}',
               _dependencies!.suggests,
               Icons.lightbulb_outline,
-              AppTheme.primaryIndigo,
+              Theme.of(context).colorScheme.primary,
             ),
             const Gap(24),
           ],
@@ -585,7 +585,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
               'These packages conflict with ${widget.packageName}',
               _dependencies!.conflicts,
               Icons.warning_outlined,
-              AppTheme.errorRose,
+              Theme.of(context).colorScheme.error,
             ),
           ],
 
@@ -754,7 +754,7 @@ class _PackageDetailsScreenState extends ConsumerState<PackageDetailsScreen>
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.primaryIndigo),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(label),
       subtitle: Text(value),
     );

@@ -113,7 +113,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
             ),
             backgroundColor: result.success
                 ? AppTheme.successGreen
-                : AppTheme.errorRose,
+                : Theme.of(context).colorScheme.error,
           ),
         );
         if (result.success) _checkForUpdates();
@@ -126,7 +126,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
               'Error: $e',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppTheme.errorRose,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -163,7 +163,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRose),
+          Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
           const Gap(16),
           Text(
             'Failed to load update status',
@@ -216,12 +216,12 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryIndigo.withValues(alpha: 0.15),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.computer,
-                    color: AppTheme.primaryIndigo,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 24,
                   ),
                 ),
@@ -360,7 +360,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                   label: Text(_isUpgrading ? _getPhaseLabel() : 'Upgrade All'),
                   onPressed: _isUpgrading ? null : _startUpgrade,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.primaryIndigo,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -507,7 +507,7 @@ class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
                           line,
                           style: TextStyle(
                             color: line.startsWith('Error')
-                                ? AppTheme.errorRose
+                                ? Theme.of(context).colorScheme.error
                                 : Colors.white70,
                             fontFamily: 'Courier',
                             fontSize: 11,
