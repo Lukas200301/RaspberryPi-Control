@@ -52,7 +52,8 @@ class AgentManager {
   Future<bool> _isAgentRunning() async {
     try {
       final result = await sshService.execute(
-        'pgrep -f "${AppConstants.agentInstallPath}" || echo "NOT_RUNNING"',
+        // Anchored, so the shell running this command does not match itself
+        'pgrep -f "^${AppConstants.agentInstallPath} " >/dev/null && echo RUNNING || echo NOT_RUNNING',
       );
       return !result.contains('NOT_RUNNING');
     } catch (e) {
@@ -111,7 +112,7 @@ class AgentManager {
             SftpFileOpenMode.write,
       );
 
-      await remoteFile.write(Stream.value(bytes));
+      await remoteFile.write(_chunked(bytes, (percent) => onProgress?.call('Uploading agent binary… $percent%')));
       await remoteFile.close();
 
       onProgress?.call('Installing agent to system directory...');
@@ -140,7 +141,30 @@ class AgentManager {
     }
   }
 
-  /// Start the agent on the Pi
+  /// Feeds [bytes] to SFTP in small pieces. SSH encryption runs on the UI
+  /// isolate, so one 14 MB write froze the app; pausing between chunks lets
+  /// frames render.
+  static Stream<Uint8List> _chunked(Uint8List bytes, void Function(int percent) onPercent) async* {
+    const chunk = 64 * 1024;
+    var lastPercent = -1;
+    for (var offset = 0; offset < bytes.length; offset += chunk) {
+      final end = offset + chunk < bytes.length ? offset + chunk : bytes.length;
+      yield Uint8List.sublistView(bytes, offset, end);
+      final percent = end * 100 ~/ bytes.length;
+      if (percent != lastPercent) {
+        lastPercent = percent;
+        onPercent(percent);
+      }
+      await Future<void>.delayed(Duration.zero);
+    }
+  }
+
+  /// Starts the agent only when it is not running (e.g. after a reconnect)
+  Future<void> ensureAgentRunning() async {
+    if (await _isAgentRunning()) return;
+    await startAgent();
+  }
+
   Future<void> startAgent() async {
     try {
       // Kill existing agent if running
@@ -151,9 +175,10 @@ class AgentManager {
       await sshService.execute('sudo chmod 666 /opt/pi-control/agent.log');
 
       // Start agent with sudo (required for /opt/pi-control/)
-      // Bind to 0.0.0.0 to accept connections from SSH tunnel
+      // Loopback only: the app reaches the agent through the SSH tunnel, and
+      // the agent has no authentication of its own
       final command =
-          'sudo nohup ${AppConstants.agentInstallPath} --host 0.0.0.0 --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
+          'sudo nohup ${AppConstants.agentInstallPath} --host 127.0.0.1 --port ${AppConstants.agentPort} > /opt/pi-control/agent.log 2>&1 &';
 
       // Start agent in background
       await sshService.execute(command);
@@ -184,7 +209,8 @@ class AgentManager {
   Future<void> _stopAgent() async {
     try {
       await sshService.execute(
-        'sudo pkill -f "${AppConstants.agentInstallPath}" || true',
+        // Anchored: an unanchored pattern also matches (and kills) this command's own shell
+        'sudo pkill -f "^${AppConstants.agentInstallPath} " || true',
       );
       await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
@@ -220,7 +246,7 @@ class AgentManager {
       debugPrint('Setting up SSH tunnel...');
       final localPort = await sshService.forwardLocal(
         AppConstants.agentPort,
-        'localhost',
+        '127.0.0.1',
         AppConstants.agentPort,
       );
       debugPrint('SSH tunnel established on port $localPort');

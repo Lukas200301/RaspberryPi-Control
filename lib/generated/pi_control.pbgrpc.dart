@@ -1009,6 +1009,61 @@ class DockerServiceClient extends $grpc.Client {
         options: options);
   }
 
+  /// Engine version and counts; fails when Docker is missing or not reachable
+  $grpc.ResponseFuture<$0.DockerInfo> getDockerInfo(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getDockerInfo, request, options: options);
+  }
+
+  /// Pause, unpause, kill or remove a container
+  $grpc.ResponseFuture<$0.ActionStatus> containerAction(
+    $0.ContainerActionRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$containerAction, request, options: options);
+  }
+
+  /// Configuration and state of one container
+  $grpc.ResponseFuture<$0.ContainerDetails> inspectContainer(
+    $0.ContainerId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$inspectContainer, request, options: options);
+  }
+
+  /// One sample of a running container's resource usage
+  $grpc.ResponseFuture<$0.ContainerStats> getContainerStats(
+    $0.ContainerId request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getContainerStats, request, options: options);
+  }
+
+  /// Images
+  $grpc.ResponseFuture<$0.ImageList> listImages(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listImages, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.ActionStatus> removeImage(
+    $0.ImageRemoveRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$removeImage, request, options: options);
+  }
+
+  /// Delete unused containers, images, volumes, networks or build cache
+  $grpc.ResponseFuture<$0.PruneResult> prune(
+    $0.PruneRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$prune, request, options: options);
+  }
+
   // method descriptors
 
   static final _$listContainers =
@@ -1036,6 +1091,38 @@ class DockerServiceClient extends $grpc.Client {
           '/picontrol.DockerService/GetContainerLogs',
           ($0.LogRequest value) => value.writeToBuffer(),
           $0.LogEntry.fromBuffer);
+  static final _$getDockerInfo = $grpc.ClientMethod<$0.Empty, $0.DockerInfo>(
+      '/picontrol.DockerService/GetDockerInfo',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.DockerInfo.fromBuffer);
+  static final _$containerAction =
+      $grpc.ClientMethod<$0.ContainerActionRequest, $0.ActionStatus>(
+          '/picontrol.DockerService/ContainerAction',
+          ($0.ContainerActionRequest value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$inspectContainer =
+      $grpc.ClientMethod<$0.ContainerId, $0.ContainerDetails>(
+          '/picontrol.DockerService/InspectContainer',
+          ($0.ContainerId value) => value.writeToBuffer(),
+          $0.ContainerDetails.fromBuffer);
+  static final _$getContainerStats =
+      $grpc.ClientMethod<$0.ContainerId, $0.ContainerStats>(
+          '/picontrol.DockerService/GetContainerStats',
+          ($0.ContainerId value) => value.writeToBuffer(),
+          $0.ContainerStats.fromBuffer);
+  static final _$listImages = $grpc.ClientMethod<$0.Empty, $0.ImageList>(
+      '/picontrol.DockerService/ListImages',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.ImageList.fromBuffer);
+  static final _$removeImage =
+      $grpc.ClientMethod<$0.ImageRemoveRequest, $0.ActionStatus>(
+          '/picontrol.DockerService/RemoveImage',
+          ($0.ImageRemoveRequest value) => value.writeToBuffer(),
+          $0.ActionStatus.fromBuffer);
+  static final _$prune = $grpc.ClientMethod<$0.PruneRequest, $0.PruneResult>(
+      '/picontrol.DockerService/Prune',
+      ($0.PruneRequest value) => value.writeToBuffer(),
+      $0.PruneResult.fromBuffer);
 }
 
 @$pb.GrpcServiceName('picontrol.DockerService')
@@ -1078,6 +1165,57 @@ abstract class DockerServiceBase extends $grpc.Service {
         true,
         ($core.List<$core.int> value) => $0.LogRequest.fromBuffer(value),
         ($0.LogEntry value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.DockerInfo>(
+        'GetDockerInfo',
+        getDockerInfo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.DockerInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerActionRequest, $0.ActionStatus>(
+        'ContainerAction',
+        containerAction_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ContainerActionRequest.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerId, $0.ContainerDetails>(
+        'InspectContainer',
+        inspectContainer_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ContainerId.fromBuffer(value),
+        ($0.ContainerDetails value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ContainerId, $0.ContainerStats>(
+        'GetContainerStats',
+        getContainerStats_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ContainerId.fromBuffer(value),
+        ($0.ContainerStats value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.ImageList>(
+        'ListImages',
+        listImages_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.ImageList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ImageRemoveRequest, $0.ActionStatus>(
+        'RemoveImage',
+        removeImage_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) =>
+            $0.ImageRemoveRequest.fromBuffer(value),
+        ($0.ActionStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.PruneRequest, $0.PruneResult>(
+        'Prune',
+        prune_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.PruneRequest.fromBuffer(value),
+        ($0.PruneResult value) => value.writeToBuffer()));
   }
 
   $async.Future<$0.ContainerList> listContainers_Pre(
@@ -1119,4 +1257,608 @@ abstract class DockerServiceBase extends $grpc.Service {
 
   $async.Stream<$0.LogEntry> getContainerLogs(
       $grpc.ServiceCall call, $0.LogRequest request);
+
+  $async.Future<$0.DockerInfo> getDockerInfo_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getDockerInfo($call, await $request);
+  }
+
+  $async.Future<$0.DockerInfo> getDockerInfo(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.ActionStatus> containerAction_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ContainerActionRequest> $request) async {
+    return containerAction($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> containerAction(
+      $grpc.ServiceCall call, $0.ContainerActionRequest request);
+
+  $async.Future<$0.ContainerDetails> inspectContainer_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ContainerId> $request) async {
+    return inspectContainer($call, await $request);
+  }
+
+  $async.Future<$0.ContainerDetails> inspectContainer(
+      $grpc.ServiceCall call, $0.ContainerId request);
+
+  $async.Future<$0.ContainerStats> getContainerStats_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.ContainerId> $request) async {
+    return getContainerStats($call, await $request);
+  }
+
+  $async.Future<$0.ContainerStats> getContainerStats(
+      $grpc.ServiceCall call, $0.ContainerId request);
+
+  $async.Future<$0.ImageList> listImages_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return listImages($call, await $request);
+  }
+
+  $async.Future<$0.ImageList> listImages(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.ActionStatus> removeImage_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.ImageRemoveRequest> $request) async {
+    return removeImage($call, await $request);
+  }
+
+  $async.Future<$0.ActionStatus> removeImage(
+      $grpc.ServiceCall call, $0.ImageRemoveRequest request);
+
+  $async.Future<$0.PruneResult> prune_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.PruneRequest> $request) async {
+    return prune($call, await $request);
+  }
+
+  $async.Future<$0.PruneResult> prune(
+      $grpc.ServiceCall call, $0.PruneRequest request);
+}
+
+/// PM2 is per-user: the agent runs PM2 as the user that started the agent
+/// via sudo (SUDO_USER), so the app sees the same processes as `pm2 ls` over SSH.
+@$pb.GrpcServiceName('picontrol.Pm2Service')
+class Pm2ServiceClient extends $grpc.Client {
+  /// The hostname for this service.
+  static const $core.String defaultHost = '';
+
+  /// OAuth scopes needed for the client.
+  static const $core.List<$core.String> oauthScopes = [
+    '',
+  ];
+
+  Pm2ServiceClient(super.channel, {super.options, super.interceptors});
+
+  /// PM2 installation, daemon, startup and dump status
+  $grpc.ResponseFuture<$0.Pm2Info> getPm2Info(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getPm2Info, request, options: options);
+  }
+
+  /// List all processes and modules (pm2 jlist)
+  $grpc.ResponseFuture<$0.Pm2ProcessList> listPm2Processes(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listPm2Processes, request, options: options);
+  }
+
+  /// Full details of one process incl. environment (pm2 describe / pm2 env)
+  $grpc.ResponseFuture<$0.Pm2ProcessDetails> describePm2Process(
+    $0.Pm2Target request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$describePm2Process, request, options: options);
+  }
+
+  /// Start a script/binary, an ecosystem file or a static file server
+  $grpc.ResponseFuture<$0.Pm2CommandResult> startPm2Process(
+    $0.Pm2StartRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$startPm2Process, request, options: options);
+  }
+
+  /// Act on existing process(es): restart, reload, stop, delete, scale, ...
+  $grpc.ResponseFuture<$0.Pm2CommandResult> controlPm2Process(
+    $0.Pm2ControlRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$controlPm2Process, request, options: options);
+  }
+
+  /// Stream process log files (pm2 logs)
+  $grpc.ResponseStream<$0.Pm2LogLine> streamPm2Logs(
+    $0.Pm2LogRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$streamPm2Logs, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  /// Daemon, persistence, startup, modules, config, deploy and diagnostics.
+  /// Streams the command output, the last message has done = true.
+  $grpc.ResponseStream<$0.Pm2OutputLine> runPm2Operation(
+    $0.Pm2OperationRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createStreamingCall(
+        _$runPm2Operation, $async.Stream.fromIterable([request]),
+        options: options);
+  }
+
+  // method descriptors
+
+  static final _$getPm2Info = $grpc.ClientMethod<$0.Empty, $0.Pm2Info>(
+      '/picontrol.Pm2Service/GetPm2Info',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.Pm2Info.fromBuffer);
+  static final _$listPm2Processes =
+      $grpc.ClientMethod<$0.Empty, $0.Pm2ProcessList>(
+          '/picontrol.Pm2Service/ListPm2Processes',
+          ($0.Empty value) => value.writeToBuffer(),
+          $0.Pm2ProcessList.fromBuffer);
+  static final _$describePm2Process =
+      $grpc.ClientMethod<$0.Pm2Target, $0.Pm2ProcessDetails>(
+          '/picontrol.Pm2Service/DescribePm2Process',
+          ($0.Pm2Target value) => value.writeToBuffer(),
+          $0.Pm2ProcessDetails.fromBuffer);
+  static final _$startPm2Process =
+      $grpc.ClientMethod<$0.Pm2StartRequest, $0.Pm2CommandResult>(
+          '/picontrol.Pm2Service/StartPm2Process',
+          ($0.Pm2StartRequest value) => value.writeToBuffer(),
+          $0.Pm2CommandResult.fromBuffer);
+  static final _$controlPm2Process =
+      $grpc.ClientMethod<$0.Pm2ControlRequest, $0.Pm2CommandResult>(
+          '/picontrol.Pm2Service/ControlPm2Process',
+          ($0.Pm2ControlRequest value) => value.writeToBuffer(),
+          $0.Pm2CommandResult.fromBuffer);
+  static final _$streamPm2Logs =
+      $grpc.ClientMethod<$0.Pm2LogRequest, $0.Pm2LogLine>(
+          '/picontrol.Pm2Service/StreamPm2Logs',
+          ($0.Pm2LogRequest value) => value.writeToBuffer(),
+          $0.Pm2LogLine.fromBuffer);
+  static final _$runPm2Operation =
+      $grpc.ClientMethod<$0.Pm2OperationRequest, $0.Pm2OutputLine>(
+          '/picontrol.Pm2Service/RunPm2Operation',
+          ($0.Pm2OperationRequest value) => value.writeToBuffer(),
+          $0.Pm2OutputLine.fromBuffer);
+}
+
+@$pb.GrpcServiceName('picontrol.Pm2Service')
+abstract class Pm2ServiceBase extends $grpc.Service {
+  $core.String get $name => 'picontrol.Pm2Service';
+
+  Pm2ServiceBase() {
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.Pm2Info>(
+        'GetPm2Info',
+        getPm2Info_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.Pm2Info value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.Pm2ProcessList>(
+        'ListPm2Processes',
+        listPm2Processes_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.Pm2ProcessList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Pm2Target, $0.Pm2ProcessDetails>(
+        'DescribePm2Process',
+        describePm2Process_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Pm2Target.fromBuffer(value),
+        ($0.Pm2ProcessDetails value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Pm2StartRequest, $0.Pm2CommandResult>(
+        'StartPm2Process',
+        startPm2Process_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Pm2StartRequest.fromBuffer(value),
+        ($0.Pm2CommandResult value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Pm2ControlRequest, $0.Pm2CommandResult>(
+        'ControlPm2Process',
+        controlPm2Process_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Pm2ControlRequest.fromBuffer(value),
+        ($0.Pm2CommandResult value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Pm2LogRequest, $0.Pm2LogLine>(
+        'StreamPm2Logs',
+        streamPm2Logs_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) => $0.Pm2LogRequest.fromBuffer(value),
+        ($0.Pm2LogLine value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Pm2OperationRequest, $0.Pm2OutputLine>(
+        'RunPm2Operation',
+        runPm2Operation_Pre,
+        false,
+        true,
+        ($core.List<$core.int> value) =>
+            $0.Pm2OperationRequest.fromBuffer(value),
+        ($0.Pm2OutputLine value) => value.writeToBuffer()));
+  }
+
+  $async.Future<$0.Pm2Info> getPm2Info_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getPm2Info($call, await $request);
+  }
+
+  $async.Future<$0.Pm2Info> getPm2Info(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.Pm2ProcessList> listPm2Processes_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return listPm2Processes($call, await $request);
+  }
+
+  $async.Future<$0.Pm2ProcessList> listPm2Processes(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.Pm2ProcessDetails> describePm2Process_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Pm2Target> $request) async {
+    return describePm2Process($call, await $request);
+  }
+
+  $async.Future<$0.Pm2ProcessDetails> describePm2Process(
+      $grpc.ServiceCall call, $0.Pm2Target request);
+
+  $async.Future<$0.Pm2CommandResult> startPm2Process_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.Pm2StartRequest> $request) async {
+    return startPm2Process($call, await $request);
+  }
+
+  $async.Future<$0.Pm2CommandResult> startPm2Process(
+      $grpc.ServiceCall call, $0.Pm2StartRequest request);
+
+  $async.Future<$0.Pm2CommandResult> controlPm2Process_Pre(
+      $grpc.ServiceCall $call,
+      $async.Future<$0.Pm2ControlRequest> $request) async {
+    return controlPm2Process($call, await $request);
+  }
+
+  $async.Future<$0.Pm2CommandResult> controlPm2Process(
+      $grpc.ServiceCall call, $0.Pm2ControlRequest request);
+
+  $async.Stream<$0.Pm2LogLine> streamPm2Logs_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.Pm2LogRequest> $request) async* {
+    yield* streamPm2Logs($call, await $request);
+  }
+
+  $async.Stream<$0.Pm2LogLine> streamPm2Logs(
+      $grpc.ServiceCall call, $0.Pm2LogRequest request);
+
+  $async.Stream<$0.Pm2OutputLine> runPm2Operation_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.Pm2OperationRequest> $request) async* {
+    yield* runPm2Operation($call, await $request);
+  }
+
+  $async.Stream<$0.Pm2OutputLine> runPm2Operation(
+      $grpc.ServiceCall call, $0.Pm2OperationRequest request);
+}
+
+@$pb.GrpcServiceName('picontrol.SystemAdmin')
+class SystemAdminClient extends $grpc.Client {
+  /// The hostname for this service.
+  static const $core.String defaultHost = '';
+
+  /// OAuth scopes needed for the client.
+  static const $core.List<$core.String> oauthScopes = [
+    '',
+  ];
+
+  SystemAdminClient(super.channel, {super.options, super.interceptors});
+
+  /// Cron jobs of a user plus the system cron files (read only)
+  $grpc.ResponseFuture<$0.Crontab> getCrontab(
+    $0.CrontabRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getCrontab, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.CommandOutput> setCrontab(
+    $0.Crontab request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setCrontab, request, options: options);
+  }
+
+  /// Runs a command once as a user (e.g. to test a cron job)
+  $grpc.ResponseFuture<$0.CommandOutput> runAsUser(
+    $0.RunAsUserRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$runAsUser, request, options: options);
+  }
+
+  /// Firewall (ufw)
+  $grpc.ResponseFuture<$0.FirewallStatus> getFirewall(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getFirewall, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.CommandOutput> firewallAction(
+    $0.FirewallRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$firewallAction, request, options: options);
+  }
+
+  /// Users and groups
+  $grpc.ResponseFuture<$0.UserList> listUsers(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$listUsers, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.CommandOutput> userAction(
+    $0.UserRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$userAction, request, options: options);
+  }
+
+  /// Hardware and GPIO
+  $grpc.ResponseFuture<$0.HardwareInfo> getHardwareInfo(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getHardwareInfo, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.GpioState> getGpio(
+    $0.Empty request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$getGpio, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.CommandOutput> setGpio(
+    $0.GpioRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$setGpio, request, options: options);
+  }
+
+  /// Reboot / shutdown
+  $grpc.ResponseFuture<$0.CommandOutput> power(
+    $0.PowerRequest request, {
+    $grpc.CallOptions? options,
+  }) {
+    return $createUnaryCall(_$power, request, options: options);
+  }
+
+  // method descriptors
+
+  static final _$getCrontab = $grpc.ClientMethod<$0.CrontabRequest, $0.Crontab>(
+      '/picontrol.SystemAdmin/GetCrontab',
+      ($0.CrontabRequest value) => value.writeToBuffer(),
+      $0.Crontab.fromBuffer);
+  static final _$setCrontab = $grpc.ClientMethod<$0.Crontab, $0.CommandOutput>(
+      '/picontrol.SystemAdmin/SetCrontab',
+      ($0.Crontab value) => value.writeToBuffer(),
+      $0.CommandOutput.fromBuffer);
+  static final _$runAsUser =
+      $grpc.ClientMethod<$0.RunAsUserRequest, $0.CommandOutput>(
+          '/picontrol.SystemAdmin/RunAsUser',
+          ($0.RunAsUserRequest value) => value.writeToBuffer(),
+          $0.CommandOutput.fromBuffer);
+  static final _$getFirewall = $grpc.ClientMethod<$0.Empty, $0.FirewallStatus>(
+      '/picontrol.SystemAdmin/GetFirewall',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.FirewallStatus.fromBuffer);
+  static final _$firewallAction =
+      $grpc.ClientMethod<$0.FirewallRequest, $0.CommandOutput>(
+          '/picontrol.SystemAdmin/FirewallAction',
+          ($0.FirewallRequest value) => value.writeToBuffer(),
+          $0.CommandOutput.fromBuffer);
+  static final _$listUsers = $grpc.ClientMethod<$0.Empty, $0.UserList>(
+      '/picontrol.SystemAdmin/ListUsers',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.UserList.fromBuffer);
+  static final _$userAction =
+      $grpc.ClientMethod<$0.UserRequest, $0.CommandOutput>(
+          '/picontrol.SystemAdmin/UserAction',
+          ($0.UserRequest value) => value.writeToBuffer(),
+          $0.CommandOutput.fromBuffer);
+  static final _$getHardwareInfo =
+      $grpc.ClientMethod<$0.Empty, $0.HardwareInfo>(
+          '/picontrol.SystemAdmin/GetHardwareInfo',
+          ($0.Empty value) => value.writeToBuffer(),
+          $0.HardwareInfo.fromBuffer);
+  static final _$getGpio = $grpc.ClientMethod<$0.Empty, $0.GpioState>(
+      '/picontrol.SystemAdmin/GetGpio',
+      ($0.Empty value) => value.writeToBuffer(),
+      $0.GpioState.fromBuffer);
+  static final _$setGpio = $grpc.ClientMethod<$0.GpioRequest, $0.CommandOutput>(
+      '/picontrol.SystemAdmin/SetGpio',
+      ($0.GpioRequest value) => value.writeToBuffer(),
+      $0.CommandOutput.fromBuffer);
+  static final _$power = $grpc.ClientMethod<$0.PowerRequest, $0.CommandOutput>(
+      '/picontrol.SystemAdmin/Power',
+      ($0.PowerRequest value) => value.writeToBuffer(),
+      $0.CommandOutput.fromBuffer);
+}
+
+@$pb.GrpcServiceName('picontrol.SystemAdmin')
+abstract class SystemAdminServiceBase extends $grpc.Service {
+  $core.String get $name => 'picontrol.SystemAdmin';
+
+  SystemAdminServiceBase() {
+    $addMethod($grpc.ServiceMethod<$0.CrontabRequest, $0.Crontab>(
+        'GetCrontab',
+        getCrontab_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.CrontabRequest.fromBuffer(value),
+        ($0.Crontab value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Crontab, $0.CommandOutput>(
+        'SetCrontab',
+        setCrontab_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Crontab.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.RunAsUserRequest, $0.CommandOutput>(
+        'RunAsUser',
+        runAsUser_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.RunAsUserRequest.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.FirewallStatus>(
+        'GetFirewall',
+        getFirewall_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.FirewallStatus value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.FirewallRequest, $0.CommandOutput>(
+        'FirewallAction',
+        firewallAction_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.FirewallRequest.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.UserList>(
+        'ListUsers',
+        listUsers_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.UserList value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.UserRequest, $0.CommandOutput>(
+        'UserAction',
+        userAction_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.UserRequest.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.HardwareInfo>(
+        'GetHardwareInfo',
+        getHardwareInfo_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.HardwareInfo value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.Empty, $0.GpioState>(
+        'GetGpio',
+        getGpio_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.Empty.fromBuffer(value),
+        ($0.GpioState value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.GpioRequest, $0.CommandOutput>(
+        'SetGpio',
+        setGpio_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.GpioRequest.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.PowerRequest, $0.CommandOutput>(
+        'Power',
+        power_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.PowerRequest.fromBuffer(value),
+        ($0.CommandOutput value) => value.writeToBuffer()));
+  }
+
+  $async.Future<$0.Crontab> getCrontab_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.CrontabRequest> $request) async {
+    return getCrontab($call, await $request);
+  }
+
+  $async.Future<$0.Crontab> getCrontab(
+      $grpc.ServiceCall call, $0.CrontabRequest request);
+
+  $async.Future<$0.CommandOutput> setCrontab_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Crontab> $request) async {
+    return setCrontab($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> setCrontab(
+      $grpc.ServiceCall call, $0.Crontab request);
+
+  $async.Future<$0.CommandOutput> runAsUser_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.RunAsUserRequest> $request) async {
+    return runAsUser($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> runAsUser(
+      $grpc.ServiceCall call, $0.RunAsUserRequest request);
+
+  $async.Future<$0.FirewallStatus> getFirewall_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getFirewall($call, await $request);
+  }
+
+  $async.Future<$0.FirewallStatus> getFirewall(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.CommandOutput> firewallAction_Pre($grpc.ServiceCall $call,
+      $async.Future<$0.FirewallRequest> $request) async {
+    return firewallAction($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> firewallAction(
+      $grpc.ServiceCall call, $0.FirewallRequest request);
+
+  $async.Future<$0.UserList> listUsers_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return listUsers($call, await $request);
+  }
+
+  $async.Future<$0.UserList> listUsers(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.CommandOutput> userAction_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.UserRequest> $request) async {
+    return userAction($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> userAction(
+      $grpc.ServiceCall call, $0.UserRequest request);
+
+  $async.Future<$0.HardwareInfo> getHardwareInfo_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getHardwareInfo($call, await $request);
+  }
+
+  $async.Future<$0.HardwareInfo> getHardwareInfo(
+      $grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.GpioState> getGpio_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.Empty> $request) async {
+    return getGpio($call, await $request);
+  }
+
+  $async.Future<$0.GpioState> getGpio($grpc.ServiceCall call, $0.Empty request);
+
+  $async.Future<$0.CommandOutput> setGpio_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.GpioRequest> $request) async {
+    return setGpio($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> setGpio(
+      $grpc.ServiceCall call, $0.GpioRequest request);
+
+  $async.Future<$0.CommandOutput> power_Pre(
+      $grpc.ServiceCall $call, $async.Future<$0.PowerRequest> $request) async {
+    return power($call, await $request);
+  }
+
+  $async.Future<$0.CommandOutput> power(
+      $grpc.ServiceCall call, $0.PowerRequest request);
 }

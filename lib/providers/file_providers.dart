@@ -4,13 +4,23 @@ import '../services/sftp_service.dart';
 import 'app_providers.dart';
 
 /// Provider for current directory path
-final currentDirectoryProvider = StateProvider<String>((ref) => '/home');
+final currentDirectoryProvider = StateProvider<String>((ref) {
+  // Every device starts in /home
+  ref.watch(grpcSessionProvider);
+  return '/home';
+});
 
 /// Provider for navigation history (for back button)
-final navigationHistoryProvider = StateProvider<List<String>>((ref) => []);
+final navigationHistoryProvider = StateProvider<List<String>>((ref) {
+  ref.watch(grpcSessionProvider);
+  return [];
+});
 
 /// Provider for selected files (for multi-select operations)
-final selectedFilesProvider = StateProvider<Set<String>>((ref) => {});
+final selectedFilesProvider = StateProvider<Set<String>>((ref) {
+  ref.watch(grpcSessionProvider);
+  return {};
+});
 
 /// Provider for file sort order
 final fileSortProvider = StateProvider<FileSortOption>(
@@ -29,10 +39,19 @@ enum FileSortOption {
 
 /// Provider for SFTP service
 final sftpServiceProvider = Provider<SftpService?>((ref) {
+  // A new connection has a new SSH client
+  ref.watch(grpcSessionProvider);
   final sshService = ref.watch(sshServiceProvider);
   final sshClient = sshService.client;
   if (sshClient == null) return null;
   return SftpService(sshClient);
+});
+
+/// The SSH user's home folder on the connected device
+final homeDirectoryProvider = FutureProvider<String>((ref) async {
+  final sftp = ref.watch(sftpServiceProvider);
+  if (sftp == null) return '/';
+  return sftp.getHomeDirectory();
 });
 
 /// Provider for file list in current directory

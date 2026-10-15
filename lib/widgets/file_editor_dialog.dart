@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../ui/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/file_item.dart';
 import '../providers/file_providers.dart';
-import '../theme/app_theme.dart';
 import 'glass_card.dart';
 
 class FileEditorDialog extends ConsumerStatefulWidget {
@@ -90,12 +90,9 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('File saved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('File saved successfully'), backgroundColor: context.ac.success));
       }
     } catch (e) {
       setState(() {
@@ -104,10 +101,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Failed to save: $e'), backgroundColor: Theme.of(context).colorScheme.error),
         );
       }
     }
@@ -120,17 +114,12 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved changes. Do you want to discard them?',
-        ),
+        content: const Text('You have unsaved changes. Do you want to discard them?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Discard'),
           ),
         ],
@@ -155,6 +144,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.all(16),
         child: GlassCard(
+          solid: true,
           child: SizedBox(
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.height * 0.85,
@@ -193,40 +183,26 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
                     Expanded(
                       child: Text(
                         widget.file.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (_hasUnsavedChanges)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.2),
+                          color: context.ac.warning.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange),
+                          border: Border.all(color: context.ac.warning),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Modified',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 10, color: context.ac.warning, fontWeight: FontWeight.bold),
                         ),
                       ),
                   ],
                 ),
-                Text(
-                  widget.file.path,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(widget.file.path, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -242,11 +218,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
           if (_isSaving)
             const Padding(
               padding: EdgeInsets.all(12),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
             ),
           // Close button
           IconButton(
@@ -273,11 +245,11 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            Icon(Icons.error_outline, size: 64, color: context.cs.error),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: context.cs.error),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -303,10 +275,7 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
         maxLines: null,
         expands: true,
         style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16),
-        ),
+        decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.all(16)),
       ),
     );
   }
@@ -321,20 +290,13 @@ class _FileEditorDialogState extends ConsumerState<FileEditorDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.2),
-        border: const Border(top: BorderSide(color: Colors.white10)),
+        border: Border(top: BorderSide(color: context.cs.outlineVariant)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Lines: $lines | Characters: $chars',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          if (cursor >= 0)
-            Text(
-              'Cursor: $cursor',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+          Text('Lines: $lines | Characters: $chars', style: Theme.of(context).textTheme.bodySmall),
+          if (cursor >= 0) Text('Cursor: $cursor', style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );

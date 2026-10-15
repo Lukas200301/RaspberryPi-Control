@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../ui/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
@@ -47,7 +47,7 @@ class _NetworkToolsScreenState extends ConsumerState<NetworkToolsScreen>
           indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
           labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.cs.onSurfaceVariant,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 12,
@@ -137,21 +137,16 @@ class _PingTabState extends ConsumerState<_PingTab> {
 
         if (response.finished) {
           setState(() => _isPinging = false);
+          // e.g. invalid host or "Name or service not known"
+          if (response.error.isNotEmpty && mounted) {
+            showToast(context, 'Ping failed: ${response.error}', tone: Tone.danger);
+          }
           break;
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Ping failed: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showToast(context, 'Ping failed: ${describeError(e)}', tone: Tone.danger);
       }
     } finally {
       if (mounted) {
@@ -192,10 +187,10 @@ class _PingTabState extends ConsumerState<_PingTab> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
-                    fillColor: AppTheme.glassLight,
+                    fillColor: context.cs.surfaceContainerHighest,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.glassBorder),
+                      borderSide: BorderSide(color: context.cs.outlineVariant),
                     ),
                   ),
                   enabled: !_isPinging,
@@ -213,11 +208,11 @@ class _PingTabState extends ConsumerState<_PingTab> {
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                           filled: true,
-                          fillColor: AppTheme.glassLight,
+                          fillColor: context.cs.surfaceContainerHighest,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: AppTheme.glassBorder,
+                            borderSide: BorderSide(
+                              color: context.cs.outlineVariant,
                             ),
                           ),
                         ),
@@ -232,7 +227,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                       label: Text(_isPinging ? 'Stop' : 'Start Ping'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 16,
@@ -273,18 +268,22 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         'Received',
                         '${stats.packetsReceived}',
                         Icons.download,
-                        AppTheme.successGreen,
+                        context.ac.success,
                       ),
                       _buildStatCard(
                         'Loss',
                         '${stats.packetLoss.toStringAsFixed(1)}%',
-                        Icons.error_outline,
-                        Theme.of(context).colorScheme.error,
+                        stats.packetLoss == 0 ? Icons.check_circle_outline : Icons.error_outline,
+                        stats.packetLoss == 0
+                            ? context.ac.success
+                            : stats.packetLoss < 50
+                            ? context.ac.warning
+                            : Theme.of(context).colorScheme.error,
                       ),
                     ],
                   ),
                   const Gap(12),
-                  const Divider(color: AppTheme.glassBorder),
+                  Divider(color: context.cs.outlineVariant),
                   const Gap(12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -318,7 +317,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                         show: true,
                         drawVerticalLine: false,
                         getDrawingHorizontalLine: (value) =>
-                            FlLine(color: AppTheme.glassBorder, strokeWidth: 1),
+                            FlLine(color: context.cs.outlineVariant, strokeWidth: 1),
                       ),
                       titlesData: FlTitlesData(
                         leftTitles: AxisTitles(
@@ -327,9 +326,9 @@ class _PingTabState extends ConsumerState<_PingTab> {
                             reservedSize: 40,
                             getTitlesWidget: (value, meta) => Text(
                               '${value.toInt()}ms',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
-                                color: AppTheme.textTertiary,
+                                color: context.cs.outline,
                               ),
                             ),
                           ),
@@ -363,7 +362,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                                   radius: 3,
                                   color: Theme.of(context).colorScheme.primary,
                                   strokeWidth: 1,
-                                  strokeColor: Colors.white,
+                                  strokeColor: context.cs.surface,
                                 ),
                           ),
                           belowBarData: BarAreaData(
@@ -383,7 +382,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
           ],
 
           // Results
-          if (_pingResults.isNotEmpty) ...[
+          if (_pingResults.any((r) => !r.finished)) ...[
             Text('Results', style: Theme.of(context).textTheme.titleMedium),
             const Gap(12),
             GlassCard(
@@ -399,7 +398,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                           Icon(
                             result.success ? Icons.check_circle : Icons.error,
                             color: result.success
-                                ? AppTheme.successGreen
+                                ? context.ac.success
                                 : Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
@@ -412,7 +411,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
                               style: TextStyle(
                                 fontSize: 12,
                                 color: result.success
-                                    ? AppTheme.textPrimary
+                                    ? context.cs.onSurface
                                     : Theme.of(context).colorScheme.error,
                                 fontFamily: 'monospace',
                               ),
@@ -450,7 +449,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 12, color: context.cs.onSurfaceVariant),
         ),
       ],
     );
@@ -461,7 +460,7 @@ class _PingTabState extends ConsumerState<_PingTab> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 12, color: context.cs.onSurfaceVariant),
         ),
         const Gap(4),
         Text(
@@ -544,16 +543,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Port scan failed: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showToast(context, 'Port scan failed: $e', tone: Tone.danger);
       }
     } finally {
       if (mounted) {
@@ -588,10 +578,10 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
-                    fillColor: AppTheme.glassLight,
+                    fillColor: context.cs.surfaceContainerHighest,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.glassBorder),
+                      borderSide: BorderSide(color: context.cs.outlineVariant),
                     ),
                   ),
                   enabled: !_isScanning,
@@ -605,14 +595,15 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                       onSelected: _isScanning
                           ? null
                           : (selected) {
-                              if (selected)
+                              if (selected) {
                                 setState(() => _scanMode = 'common');
+                              }
                             },
                       selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _scanMode == 'common'
-                            ? Colors.white
-                            : AppTheme.textSecondary,
+                            ? context.cs.onPrimary
+                            : context.cs.onSurfaceVariant,
                       ),
                     ),
                     const Gap(8),
@@ -627,8 +618,8 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                       selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _scanMode == 'range'
-                            ? Colors.white
-                            : AppTheme.textSecondary,
+                            ? context.cs.onPrimary
+                            : context.cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -643,11 +634,11 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                           decoration: InputDecoration(
                             labelText: 'Start Port',
                             filled: true,
-                            fillColor: AppTheme.glassLight,
+                            fillColor: context.cs.surfaceContainerHighest,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppTheme.glassBorder,
+                              borderSide: BorderSide(
+                                color: context.cs.outlineVariant,
                               ),
                             ),
                           ),
@@ -662,11 +653,11 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                           decoration: InputDecoration(
                             labelText: 'End Port',
                             filled: true,
-                            fillColor: AppTheme.glassLight,
+                            fillColor: context.cs.surfaceContainerHighest,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppTheme.glassBorder,
+                              borderSide: BorderSide(
+                                color: context.cs.outlineVariant,
                               ),
                             ),
                           ),
@@ -688,7 +679,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -700,7 +691,7 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   const Gap(12),
                   LinearProgressIndicator(
                     value: _progress / 100,
-                    backgroundColor: AppTheme.glassLight,
+                    backgroundColor: context.cs.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       Theme.of(context).colorScheme.primary,
                     ),
@@ -729,34 +720,34 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                         height: 40,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppTheme.successGreen.withValues(alpha: 0.2),
+                          color: context.ac.success.withValues(alpha: 0.2),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.lock_open,
-                          color: AppTheme.successGreen,
+                          color: context.ac.success,
                           size: 20,
                         ),
                       ),
                       title: Text(
                         'Port ${_scanResults[i].port}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: context.cs.onSurface,
                         ),
                       ),
                       subtitle: Text(
                         _scanResults[i].service.isNotEmpty
                             ? _scanResults[i].service
                             : 'Unknown service',
-                        style: const TextStyle(color: AppTheme.textSecondary),
+                        style: TextStyle(color: context.cs.onSurfaceVariant),
                       ),
-                      trailing: const Icon(
+                      trailing: Icon(
                         Icons.check_circle,
-                        color: AppTheme.successGreen,
+                        color: context.ac.success,
                       ),
                     ),
                     if (i < _scanResults.length - 1)
-                      const Divider(color: AppTheme.glassBorder, height: 1),
+                      Divider(color: context.cs.outlineVariant, height: 1),
                   ],
                 ],
               ),
@@ -769,13 +760,13 @@ class _PortScannerTabState extends ConsumerState<_PortScannerTab> {
                   Icon(
                     Icons.search,
                     size: 64,
-                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                    color: context.cs.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                   const Gap(16),
                   Text(
                     'No scan results yet',
                     style: TextStyle(
-                      color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                      color: context.cs.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -834,16 +825,7 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'DNS lookup failed: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showToast(context, 'DNS lookup failed: $e', tone: Tone.danger);
       }
     } finally {
       if (mounted) {
@@ -878,10 +860,10 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     filled: true,
-                    fillColor: AppTheme.glassLight,
+                    fillColor: context.cs.surfaceContainerHighest,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.glassBorder),
+                      borderSide: BorderSide(color: context.cs.outlineVariant),
                     ),
                   ),
                   enabled: !_isLookingUp,
@@ -903,8 +885,8 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                       selectedColor: Theme.of(context).colorScheme.primary,
                       labelStyle: TextStyle(
                         color: _recordType == type
-                            ? Colors.white
-                            : AppTheme.textSecondary,
+                            ? context.cs.onPrimary
+                            : context.cs.onSurfaceVariant,
                       ),
                     );
                   }).toList(),
@@ -920,7 +902,7 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                     label: Text(_isLookingUp ? 'Looking up...' : 'Lookup'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -940,9 +922,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
               GlassCard(
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle,
-                      color: AppTheme.successGreen,
+                      color: context.ac.success,
                       size: 32,
                     ),
                     const Gap(16),
@@ -952,17 +934,17 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                         children: [
                           Text(
                             'Query successful',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.successGreen,
+                              color: context.ac.success,
                             ),
                           ),
                           const Gap(4),
                           Text(
                             'Query time: ${_result!.queryTime.toStringAsFixed(2)}ms',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: context.cs.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -1008,21 +990,21 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                           ),
                           title: Text(
                             _result!.records[i].value,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'monospace',
-                              color: AppTheme.textPrimary,
+                              color: context.cs.onSurface,
                             ),
                           ),
                           subtitle: Text(
                             'TTL: ${_result!.records[i].ttl}s${_result!.records[i].priority > 0 ? ' | Priority: ${_result!.records[i].priority}' : ''}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: context.cs.onSurfaceVariant,
                             ),
                           ),
                         ),
                         if (i < _result!.records.length - 1)
-                          const Divider(color: AppTheme.glassBorder, height: 1),
+                          Divider(color: context.cs.outlineVariant, height: 1),
                       ],
                     ],
                   ),
@@ -1050,9 +1032,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                               const Gap(8),
                               Text(
                                 address,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'monospace',
-                                  color: AppTheme.textPrimary,
+                                  color: context.cs.onSurface,
                                 ),
                               ),
                             ],
@@ -1086,9 +1068,9 @@ class _DNSLookupTabState extends ConsumerState<_DNSLookupTab> {
                           const Gap(4),
                           Text(
                             _result!.error,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: context.cs.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -1186,16 +1168,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
           _isTesting = false;
           _error = e.toString();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Speed test failed: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showToast(context, 'Speed test failed: $e', tone: Tone.danger);
       }
     }
   }
@@ -1295,7 +1268,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.glassLight,
+                        color: context.cs.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1320,7 +1293,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                     label: Text(_isTesting ? 'Testing...' : 'Start Test'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1365,9 +1338,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                             const Gap(4),
                             Text(
                               '${_progress.toStringAsFixed(0)}%',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: AppTheme.textSecondary,
+                                color: context.cs.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -1378,7 +1351,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                   const Gap(12),
                   LinearProgressIndicator(
                     value: _progress / 100,
-                    backgroundColor: AppTheme.glassLight,
+                    backgroundColor: context.cs.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(
                       Theme.of(context).colorScheme.primary,
                     ),
@@ -1407,7 +1380,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                         Expanded(
                           child: _buildSpeedCard(
                             'Download',
-                            '${_downloadSpeed.toStringAsFixed(2)}',
+                            _downloadSpeed.toStringAsFixed(2),
                             'Mbps',
                             Theme.of(context).colorScheme.primary,
                             Icons.download,
@@ -1418,9 +1391,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                           Expanded(
                             child: _buildSpeedCard(
                               'Upload',
-                              '${_uploadSpeed.toStringAsFixed(2)}',
+                              _uploadSpeed.toStringAsFixed(2),
                               'Mbps',
-                              AppTheme.successGreen,
+                              context.ac.success,
                               Icons.upload,
                             ),
                           ),
@@ -1431,9 +1404,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                   ] else if (_testUpload && _uploadSpeed > 0) ...[
                     _buildSpeedCard(
                       'Upload',
-                      '${_uploadSpeed.toStringAsFixed(2)}',
+                      _uploadSpeed.toStringAsFixed(2),
                       'Mbps',
-                      AppTheme.successGreen,
+                      context.ac.success,
                       Icons.upload,
                     ),
                     const Gap(16),
@@ -1450,7 +1423,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                               Text(
                                 'Latency',
                                 style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(color: AppTheme.textSecondary),
+                                    ?.copyWith(color: context.cs.onSurfaceVariant),
                               ),
                               const Gap(4),
                               Text(
@@ -1472,15 +1445,15 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                 Text(
                                   'Server',
                                   style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(color: AppTheme.textSecondary),
+                                      ?.copyWith(color: context.cs.onSurfaceVariant),
                                 ),
                                 const Gap(4),
                                 Text(
                                   _server,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
-                                    color: AppTheme.textPrimary,
+                                    color: context.cs.onSurface,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -1519,7 +1492,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                               show: true,
                               drawVerticalLine: false,
                               getDrawingHorizontalLine: (value) => FlLine(
-                                color: AppTheme.glassBorder,
+                                color: context.cs.outlineVariant,
                                 strokeWidth: 1,
                               ),
                             ),
@@ -1530,17 +1503,17 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                   reservedSize: 30,
                                   getTitlesWidget: (value, meta) => Text(
                                     '${value.toInt()}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 9,
-                                      color: AppTheme.textTertiary,
+                                      color: context.cs.outline,
                                     ),
                                   ),
                                 ),
-                                axisNameWidget: const Text(
+                                axisNameWidget: Text(
                                   'Mbps',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: AppTheme.textSecondary,
+                                    color: context.cs.onSurfaceVariant,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1605,7 +1578,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                               radius: 3,
                                               color: Theme.of(context).colorScheme.primary,
                                               strokeWidth: 2,
-                                              strokeColor: Colors.white,
+                                              strokeColor: context.cs.surface,
                                             ),
                                   ),
                                   belowBarData: BarAreaData(
@@ -1626,7 +1599,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                       )
                                       .toList(),
                                   isCurved: true,
-                                  color: AppTheme.successGreen,
+                                  color: context.ac.success,
                                   barWidth: 3,
                                   dotData: FlDotData(
                                     show: true,
@@ -1634,14 +1607,14 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                         (spot, percent, barData, index) =>
                                             FlDotCirclePainter(
                                               radius: 3,
-                                              color: AppTheme.successGreen,
+                                              color: context.ac.success,
                                               strokeWidth: 2,
-                                              strokeColor: Colors.white,
+                                              strokeColor: context.cs.surface,
                                             ),
                                   ),
                                   belowBarData: BarAreaData(
                                     show: true,
-                                    color: AppTheme.successGreen.withValues(
+                                    color: context.ac.success.withValues(
                                       alpha: 0.2,
                                     ),
                                   ),
@@ -1652,7 +1625,7 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                       ),
                     ),
                   ),
-                  const Divider(color: AppTheme.glassBorder),
+                  Divider(color: context.cs.outlineVariant),
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
@@ -1670,11 +1643,11 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                 ),
                               ),
                               const Gap(8),
-                              const Text(
+                              Text(
                                 'Download',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.textSecondary,
+                                  color: context.cs.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -1687,16 +1660,16 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                                 width: 12,
                                 height: 12,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.successGreen,
+                                  color: context.ac.success,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               const Gap(8),
-                              const Text(
+                              Text(
                                 'Upload',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.textSecondary,
+                                  color: context.cs.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -1732,9 +1705,9 @@ class _SpeedTestTabState extends ConsumerState<_SpeedTestTab> {
                         const Gap(4),
                         Text(
                           _error!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.textSecondary,
+                            color: context.cs.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -1832,16 +1805,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to load WiFi info: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showToast(context, 'Failed to load WiFi info: $e', tone: Tone.danger);
       }
     } finally {
       if (mounted) {
@@ -1851,8 +1815,8 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
   }
 
   Color _getSignalColor(int strength) {
-    if (strength > -50) return AppTheme.successGreen;
-    if (strength > -70) return AppTheme.warningAmber;
+    if (strength > -50) return context.ac.success;
+    if (strength > -70) return context.ac.warning;
     return Theme.of(context).colorScheme.error;
   }
 
@@ -1876,11 +1840,11 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.wifi_off, size: 64, color: AppTheme.textSecondary),
+            Icon(Icons.wifi_off, size: 64, color: context.cs.onSurfaceVariant),
             const Gap(16),
-            const Text(
+            Text(
               'No WiFi information available',
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: context.cs.onSurfaceVariant),
             ),
             const Gap(24),
             ElevatedButton.icon(
@@ -1889,7 +1853,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ],
@@ -1936,18 +1900,18 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                           children: [
                             Text(
                               _wifiInfo!.ssid,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.textPrimary,
+                                color: context.cs.onSurface,
                               ),
                             ),
                             const Gap(4),
                             Text(
                               _wifiInfo!.security,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.textSecondary,
+                                color: context.cs.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -1966,9 +1930,9 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                           ),
                           Text(
                             '${_wifiInfo!.signalStrength} dBm',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.textSecondary,
+                              color: context.cs.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -1976,7 +1940,7 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                     ],
                   ),
                   const Gap(16),
-                  const Divider(color: AppTheme.glassBorder),
+                  Divider(color: context.cs.outlineVariant),
                   const Gap(16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -2000,17 +1964,17 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
             GlassCard(
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.wifi_off,
-                    color: AppTheme.warningAmber,
+                    color: context.ac.warning,
                     size: 32,
                   ),
                   const Gap(16),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Not connected to WiFi',
                       style: TextStyle(
-                        color: AppTheme.textSecondary,
+                        color: context.cs.onSurfaceVariant,
                         fontSize: 16,
                       ),
                     ),
@@ -2048,16 +2012,16 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                       ),
                       title: Text(
                         _wifiInfo!.availableNetworks[i].ssid,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                          color: context.cs.onSurface,
                         ),
                       ),
                       subtitle: Text(
                         '${_wifiInfo!.availableNetworks[i].security} • ${_wifiInfo!.availableNetworks[i].frequency} GHz',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.textSecondary,
+                          color: context.cs.onSurfaceVariant,
                         ),
                       ),
                       trailing: Column(
@@ -2075,16 +2039,16 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
                           ),
                           Text(
                             '${_wifiInfo!.availableNetworks[i].signalStrength} dBm',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: AppTheme.textSecondary,
+                              color: context.cs.onSurfaceVariant,
                             ),
                           ),
                         ],
                       ),
                     ),
                     if (i < _wifiInfo!.availableNetworks.length - 1)
-                      const Divider(color: AppTheme.glassBorder, height: 1),
+                      Divider(color: context.cs.outlineVariant, height: 1),
                   ],
                 ],
               ),
@@ -2100,15 +2064,15 @@ class _WiFiTabState extends ConsumerState<_WiFiTab> {
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          style: TextStyle(fontSize: 12, color: context.cs.onSurfaceVariant),
         ),
         const Gap(4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
+            color: context.cs.onSurface,
           ),
         ),
       ],

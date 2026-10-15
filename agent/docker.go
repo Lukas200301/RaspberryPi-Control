@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -71,6 +72,9 @@ func (s *dockerServiceServer) ListContainers(ctx context.Context, req *pb.Docker
 			Status:  c.Status,
 			Created: c.Created,
 			Ports:   ports,
+
+			ComposeProject: c.Labels["com.docker.compose.project"],
+			ComposeService: c.Labels["com.docker.compose.service"],
 		})
 	}
 
@@ -168,6 +172,18 @@ func (s *dockerServiceServer) GetContainerLogs(req *pb.LogRequest, stream pb.Doc
 	}
 	defer logs.Close()
 
+	// Containers with a TTY send plain text instead of the multiplexed format
+	if info, err := s.client.ContainerInspect(stream.Context(), req.ContainerId); err == nil && info.Config != nil && info.Config.Tty {
+		scanner := bufio.NewScanner(logs)
+		scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+		for scanner.Scan() {
+			if err := stream.Send(dockerLogEntry(scanner.Text(), false)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	// Docker log stream format:
 	// [1 byte stream type (1=stdout, 2=stderr)] [3 bytes ignored] [4 bytes payload size (big endian)] [payload]
 
@@ -199,35 +215,26 @@ func (s *dockerServiceServer) GetContainerLogs(req *pb.LogRequest, stream pb.Doc
 			return err
 		}
 
-		// Parse timestamp if present
-		logLine := string(payload)
-
-		var timestamp int64
-		var message string
-
-		parts := strings.SplitN(logLine, " ", 2)
-		if len(parts) == 2 {
-			if t, err := time.Parse(time.RFC3339, parts[0]); err == nil {
-				timestamp = t.Unix()
+		// A frame can hold several lines
+		for _, line := range strings.Split(strings.TrimRight(string(payload), "\n"), "\n") {
+			if err := stream.Send(dockerLogEntry(line, header[0] == 2)); err != nil {
+				return err
 			}
-			message = parts[1]
-		} else {
-			message = logLine
-			timestamp = time.Now().Unix()
-		}
-
-		entry := &pb.LogEntry{
-			Timestamp: timestamp,
-			Message:   strings.TrimSpace(message),
-			Level:     "info",
-		}
-
-		if header[0] == 2 {
-			entry.Level = "error"
-		}
-
-		if err := stream.Send(entry); err != nil {
-			return err
 		}
 	}
+}
+
+// dockerLogEntry parses "<RFC3339 timestamp> <message>" as written with Timestamps: true
+func dockerLogEntry(line string, stderr bool) *pb.LogEntry {
+	entry := &pb.LogEntry{Timestamp: time.Now().Unix(), Level: "info", Message: strings.TrimRight(line, "\r")}
+	if parts := strings.SplitN(line, " ", 2); len(parts) == 2 {
+		if t, err := time.Parse(time.RFC3339Nano, parts[0]); err == nil {
+			entry.Timestamp = t.Unix()
+			entry.Message = strings.TrimRight(parts[1], "\r")
+		}
+	}
+	if stderr {
+		entry.Level = "error"
+	}
+	return entry
 }

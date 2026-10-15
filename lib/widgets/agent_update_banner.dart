@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../ui/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import '../theme/app_theme.dart';
 import '../models/ssh_connection.dart';
 import '../services/agent_version_service.dart';
 import '../providers/app_providers.dart';
@@ -39,7 +39,7 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
       // Stop agent and kill port
       try {
         await sshService.execute(
-          'sudo pkill -f "/opt/pi-control/agent" || true',
+          'sudo pkill -f "^/opt/pi-control/agent " || true',
         );
         await sshService.execute('sudo fuser -k 50051/tcp 2>/dev/null || true');
         await Future.delayed(const Duration(seconds: 1));
@@ -88,14 +88,13 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
           builder: (context) => BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: AlertDialog(
-              backgroundColor: AppTheme.glassLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppTheme.glassBorder, width: 1),
+                side: BorderSide(color: context.cs.outlineVariant, width: 1),
               ),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.check_circle, color: AppTheme.successGreen),
+                  Icon(Icons.check_circle, color: context.ac.success),
                   Gap(12),
                   Text('Update Prepared'),
                 ],
@@ -133,10 +132,9 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
           builder: (context) => BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
             child: AlertDialog(
-              backgroundColor: AppTheme.glassLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppTheme.glassBorder, width: 1),
+                side: BorderSide(color: context.cs.outlineVariant, width: 1),
               ),
               title: Row(
                 children: [
@@ -187,10 +185,10 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.warningAmber.withValues(alpha: 0.1),
+          color: context.ac.warning.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.warningAmber.withValues(alpha: 0.3),
+            color: context.ac.warning.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -200,9 +198,9 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.warning_amber_rounded,
-                  color: AppTheme.warningAmber,
+                  color: context.ac.warning,
                   size: 28,
                 ),
                 const Gap(12),
@@ -210,20 +208,20 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Agent Update Available',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.warningAmber,
+                          color: context.ac.warning,
                         ),
                       ),
                       const Gap(4),
                       Text(
                         'Current v${widget.connection.agentVersion} → Update to v${AgentVersionService.requiredAgentVersion}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AppTheme.textSecondary,
+                          color: context.cs.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -232,7 +230,7 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                 if (!_isUpdating && widget.onDismiss != null)
                   IconButton(
                     icon: const Icon(Icons.close),
-                    color: AppTheme.textTertiary,
+                    color: context.cs.outline,
                     onPressed: widget.onDismiss,
                   ),
               ],
@@ -242,16 +240,16 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const LinearProgressIndicator(
-                    backgroundColor: AppTheme.glassLight,
-                    color: AppTheme.warningAmber,
+                  LinearProgressIndicator(
+                    backgroundColor: context.cs.surfaceContainerHighest,
+                    color: context.ac.warning,
                   ),
                   const Gap(8),
                   Text(
                     _updateStatus ?? 'Updating...',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
+                      color: context.cs.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -266,7 +264,7 @@ class _AgentUpdateBannerState extends ConsumerState<AgentUpdateBanner> {
                     icon: const Icon(Icons.system_update, size: 18),
                     label: const Text('Update Now'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.warningAmber,
+                      backgroundColor: context.ac.warning,
                       foregroundColor: Colors.black,
                     ),
                   ),

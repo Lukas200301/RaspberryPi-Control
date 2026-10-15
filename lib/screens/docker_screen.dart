@@ -2,484 +2,399 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
-import 'package:fixnum/fixnum.dart';
-import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../services/docker_service.dart' as service;
 import '../generated/pi_control.pb.dart';
+import '../services/docker_service.dart';
+import '../ui/ui.dart';
+import 'docker/container_screen.dart';
 
-class DockerScreen extends ConsumerWidget {
+String containerName(ContainerInfo c) =>
+    c.names.isNotEmpty ? c.names.first : (c.id.length > 12 ? c.id.substring(0, 12) : c.id);
+
+Tone containerTone(String state, {String health = ''}) => switch (state) {
+  _ when health == 'unhealthy' => Tone.danger,
+  'running' => Tone.success,
+  'paused' => Tone.warning,
+  'restarting' => Tone.info,
+  'dead' => Tone.danger,
+  _ => Tone.neutral,
+};
+
+enum _Filter { all, running, stopped }
+
+/// Docker: containers (grouped by compose project), images and cleanup
+class DockerScreen extends ConsumerStatefulWidget {
   const DockerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final containersAsync = ref.watch(service.containerListProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Docker Manager'),
-        scrolledUnderElevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(service.containerListProvider),
-          ),
-        ],
-      ),
-      body: containersAsync.when(
-        data: (containers) => containers.isEmpty
-            ? _buildEmptyState(context)
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: containers.length,
-                itemBuilder: (context, index) {
-                  return _buildContainerCard(context, ref, containers[index]);
-                },
-              ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const Gap(16),
-              Text(
-                'Failed to load containers',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const Gap(8),
-              Text(
-                error.toString(),
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.view_in_ar,
-            size: 64,
-            color: AppTheme.textSecondary.withValues(alpha: 0.5),
-          ),
-          const Gap(16),
-          Text(
-            'No containers found',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContainerCard(
-    BuildContext context,
-    WidgetRef ref,
-    ContainerInfo container,
-  ) {
-    final isRunning = container.state == 'running';
-    final statusColor = isRunning
-        ? AppTheme.successGreen
-        : AppTheme.textSecondary;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const Gap(12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          container.names.isNotEmpty
-                              ? container.names.first
-                              : container.id.substring(0, 12),
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          container.image,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _buildStatusBadge(context, container.state),
-                ],
-              ),
-              const Gap(16),
-
-              // Key Stats / Info
-              Row(
-                children: [
-                  _buildInfoItem(context, 'ID', container.id.substring(0, 12)),
-                  const Gap(16),
-                  _buildInfoItem(
-                    context,
-                    'Created',
-                    _formatDate(container.created),
-                  ),
-                ],
-              ),
-              if (container.ports.isNotEmpty) ...[
-                const Gap(8),
-                Text(
-                  'Ports: ${container.ports.join(", ")}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontFamily: 'Courier'),
-                ),
-              ],
-
-              const Divider(height: 24, color: AppTheme.glassBorder),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (isRunning) ...[
-                    TextButton.icon(
-                      icon: const Icon(Icons.restart_alt, size: 18),
-                      label: const Text('Restart'),
-                      onPressed: () =>
-                          _restartContainer(context, ref, container),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.warningAmber,
-                      ),
-                    ),
-                    TextButton.icon(
-                      icon: const Icon(Icons.stop, size: 18),
-                      label: const Text('Stop'),
-                      onPressed: () => _stopContainer(context, ref, container),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ] else ...[
-                    TextButton.icon(
-                      icon: const Icon(Icons.play_arrow, size: 18),
-                      label: const Text('Start'),
-                      onPressed: () => _startContainer(context, ref, container),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.successGreen,
-                      ),
-                    ),
-                  ],
-                  const Gap(8),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.article, size: 18),
-                    label: const Text('Logs'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              DockerLogsScreen(container: container),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context, String state) {
-    Color color;
-    switch (state) {
-      case 'running':
-        color = AppTheme.successGreen;
-        break;
-      case 'exited':
-        color = AppTheme.textSecondary;
-        break;
-      case 'paused':
-        color = AppTheme.warningAmber;
-        break;
-      case 'restarting':
-        color = Colors.blue;
-        break;
-      case 'dead':
-        color = Theme.of(context).colorScheme.error;
-        break;
-      default:
-        color = AppTheme.textSecondary;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        state.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoItem(BuildContext context, String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textSecondary,
-            fontSize: 10,
-          ),
-        ),
-        Text(value, style: Theme.of(context).textTheme.bodyMedium),
-      ],
-    );
-  }
-
-  String _formatDate(Int64 timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp.toInt() * 1000);
-    return DateFormat('MMM d, HH:mm').format(date);
-  }
-
-  Future<void> _startContainer(
-    BuildContext context,
-    WidgetRef ref,
-    ContainerInfo container,
-  ) async {
-    try {
-      final dockerService = ref.read(service.dockerServiceProvider);
-      await dockerService.startContainer(container.id);
-      ref.invalidate(service.containerListProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Started ${container.names.isNotEmpty ? container.names.first : "container"}',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _stopContainer(
-    BuildContext context,
-    WidgetRef ref,
-    ContainerInfo container,
-  ) async {
-    try {
-      final dockerService = ref.read(service.dockerServiceProvider);
-      await dockerService.stopContainer(container.id);
-      ref.invalidate(service.containerListProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Stopped ${container.names.isNotEmpty ? container.names.first : "container"}',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _restartContainer(
-    BuildContext context,
-    WidgetRef ref,
-    ContainerInfo container,
-  ) async {
-    try {
-      final dockerService = ref.read(service.dockerServiceProvider);
-      await dockerService.restartContainer(container.id);
-      ref.invalidate(service.containerListProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Restarted ${container.names.isNotEmpty ? container.names.first : "container"}',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
+  ConsumerState<DockerScreen> createState() => _DockerScreenState();
 }
 
-class DockerLogsScreen extends ConsumerStatefulWidget {
-  final ContainerInfo container;
-
-  const DockerLogsScreen({super.key, required this.container});
-
-  @override
-  ConsumerState<DockerLogsScreen> createState() => _DockerLogsScreenState();
-}
-
-class _DockerLogsScreenState extends ConsumerState<DockerLogsScreen> {
-  final ScrollController _scrollController = ScrollController();
-  final List<LogEntry> _logs = [];
-  bool _autoScroll = true;
+class _DockerScreenState extends ConsumerState<DockerScreen> with SingleTickerProviderStateMixin {
+  late final _tabs = TabController(length: 2, vsync: this);
+  String _query = '';
+  _Filter _filter = _Filter.all;
+  final _busy = <String>{};
 
   @override
   void initState() {
     super.initState();
-    _startLogStream();
+    _tabs.addListener(() => setState(() {}));
   }
 
-  void _startLogStream() {
-    final dockerService = ref.read(service.dockerServiceProvider);
-    dockerService
-        .getContainerLogs(widget.container.id, follow: true, tail: 100)
-        .listen(
-          (entry) {
-            if (mounted) {
-              setState(() {
-                _logs.add(entry);
-                if (_autoScroll) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (_scrollController.hasClients) {
-                      _scrollController.jumpTo(
-                        _scrollController.position.maxScrollExtent,
-                      );
-                    }
-                  });
-                }
-              });
-            }
-          },
-          onError: (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error streaming logs: $e'),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-              );
-            }
-          },
-        );
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run(String id, String label, Future<void> Function() action) async {
+    setState(() => _busy.add(id));
+    try {
+      await action();
+      if (mounted) showToast(context, label, tone: Tone.success);
+      ref.invalidate(containerListProvider);
+      ref.invalidate(dockerInfoProvider);
+    } catch (e) {
+      if (mounted) showToast(context, describeError(e), tone: Tone.danger);
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _cleanup() async {
+    final target = await showChoiceSheet<PruneTarget>(
+      context,
+      title: 'Clean up',
+      value: PruneTarget.PRUNE_CONTAINERS,
+      choices: const [
+        (PruneTarget.PRUNE_CONTAINERS, 'Stopped containers'),
+        (PruneTarget.PRUNE_IMAGES, 'Dangling images (untagged layers)'),
+        (PruneTarget.PRUNE_ALL_IMAGES, 'All images no container uses'),
+        (PruneTarget.PRUNE_VOLUMES, 'Unused anonymous volumes'),
+        (PruneTarget.PRUNE_NETWORKS, 'Unused networks'),
+        (PruneTarget.PRUNE_BUILD_CACHE, 'Build cache'),
+      ],
+    );
+    if (target == null || !mounted) return;
+    final what = switch (target) {
+      PruneTarget.PRUNE_CONTAINERS => 'all stopped containers',
+      PruneTarget.PRUNE_IMAGES => 'all dangling images',
+      PruneTarget.PRUNE_ALL_IMAGES => 'every image that no container uses',
+      PruneTarget.PRUNE_VOLUMES => 'unused anonymous volumes and their data',
+      PruneTarget.PRUNE_NETWORKS => 'unused networks',
+      _ => 'the build cache',
+    };
+    if (!await showConfirmDialog(
+      context,
+      title: 'Delete $what?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    )) {
+      return;
+    }
+    try {
+      final r = await ref.read(dockerServiceProvider).prune(target);
+      if (!mounted) return;
+      showToast(
+        context,
+        '${r.message}${r.spaceReclaimed > 0 ? ' · ${formatBytes(r.spaceReclaimed.toInt())} freed' : ''}',
+        tone: Tone.success,
+      );
+      ref
+        ..invalidate(containerListProvider)
+        ..invalidate(dockerImagesProvider)
+        ..invalidate(dockerInfoProvider);
+    } catch (e) {
+      if (mounted) showToast(context, describeError(e), tone: Tone.danger);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.container.names.first} Logs'),
-        backgroundColor: Colors.black,
-        scrolledUnderElevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _autoScroll
-                  ? Icons.vertical_align_bottom
-                  : Icons.vertical_align_center,
+    final info = ref.watch(dockerInfoProvider);
+    final i = info.valueOrNull;
+    final containers = ref.watch(containerListProvider);
+    final all = containers.valueOrNull ?? const <ContainerInfo>[];
+    final running = all.where((c) => c.state == 'running').length;
+
+    return PageScaffold(
+      title: 'Docker',
+      subtitle: i == null
+          ? null
+          : 'Engine ${i.serverVersion} · $running of ${all.length} running · ${i.images} images',
+      actions: [
+        IconButton(
+          tooltip: 'Refresh',
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref
+            ..invalidate(containerListProvider)
+            ..invalidate(dockerImagesProvider)
+            ..invalidate(dockerInfoProvider),
+        ),
+        IconButton(tooltip: 'Clean up', icon: const Icon(Icons.cleaning_services_outlined), onPressed: _cleanup),
+      ],
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(_tabs.index == 0 ? 160 : 48),
+        child: Column(
+          children: [
+            TabBar(
+              controller: _tabs,
+              tabs: [
+                Tab(text: 'Containers${all.isEmpty ? '' : ' · ${all.length}'}'),
+                Tab(text: 'Images${i == null ? '' : ' · ${i.images}'}'),
+              ],
             ),
-            onPressed: () {
-              setState(() {
-                _autoScroll = !_autoScroll;
-              });
-            },
-            tooltip: 'Auto-scroll',
+            if (_tabs.index == 0)
+              SearchFilterBar<_Filter>(
+                hint: 'Search name, image or project',
+                onSearch: (v) => setState(() => _query = v),
+                selected: _filter,
+                onFilter: (f) => setState(() => _filter = f),
+                filters: [
+                  FilterOption(_Filter.all, 'All', count: all.length),
+                  FilterOption(_Filter.running, 'Running', count: running),
+                  FilterOption(_Filter.stopped, 'Stopped', count: all.length - running),
+                ],
+              ),
+          ],
+        ),
+      ),
+      body: info.hasError && all.isEmpty
+          ? ErrorState(
+              title: 'Docker is not available',
+              error: info.error!,
+              onRetry: () => ref.invalidate(dockerInfoProvider),
+            )
+          : TabBarView(
+              controller: _tabs,
+              children: [_containers(containers), const _ImagesTab()],
+            ),
+    );
+  }
+
+  Widget _containers(AsyncValue<List<ContainerInfo>> async) {
+    return AsyncView(
+      value: async,
+      onRetry: () => ref.invalidate(containerListProvider),
+      loadingMessage: 'Loading containers…',
+      data: (all) {
+        final q = _query.toLowerCase();
+        final shown = all.where((c) {
+          if (_filter == _Filter.running && c.state != 'running') return false;
+          if (_filter == _Filter.stopped && c.state == 'running') return false;
+          if (q.isEmpty) return true;
+          return containerName(c).toLowerCase().contains(q) ||
+              c.image.toLowerCase().contains(q) ||
+              c.composeProject.toLowerCase().contains(q);
+        }).toList();
+        if (all.isEmpty) {
+          return const EmptyState(
+            icon: Icons.view_in_ar_outlined,
+            title: 'No containers',
+            message: 'Containers you create with docker run or docker compose show up here.',
+          );
+        }
+        if (shown.isEmpty) return const EmptyState(icon: Icons.search_off, title: 'No containers match');
+
+        // Compose projects first, then the rest
+        final groups = <String, List<ContainerInfo>>{};
+        for (final c in shown) {
+          groups.putIfAbsent(c.composeProject, () => []).add(c);
+        }
+        final keys = groups.keys.toList()..sort((a, b) => a.isEmpty ? 1 : (b.isEmpty ? -1 : a.compareTo(b)));
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(containerListProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(Insets.page, 0, Insets.page, 96),
+            children: [
+              for (final k in keys) ...[
+                if (keys.length > 1 || k.isNotEmpty)
+                  SectionHeader(
+                    title: k.isEmpty ? 'Other containers' : k,
+                    subtitle: k.isEmpty
+                        ? null
+                        : 'Compose · ${groups[k]!.where((c) => c.state == 'running').length} of ${groups[k]!.length} running',
+                  ),
+                for (final c in groups[k]!)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Insets.sm),
+                    child: _ContainerTile(
+                      container: c,
+                      busy: _busy.contains(c.id),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ContainerScreen(container: c)),
+                      ),
+                      onToggle: () {
+                        final service = ref.read(dockerServiceProvider);
+                        c.state == 'running'
+                            ? _run(c.id, 'Stopped ${containerName(c)}', () => service.stopContainer(c.id))
+                            : c.state == 'paused'
+                            ? _run(
+                                c.id,
+                                'Resumed ${containerName(c)}',
+                                () => service.containerAction(c.id, ContainerOp.CONTAINER_UNPAUSE),
+                              )
+                            : _run(c.id, 'Started ${containerName(c)}', () => service.startContainer(c.id));
+                      },
+                    ),
+                  ),
+              ],
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              setState(() {
-                _logs.clear();
-              });
-            },
-            tooltip: 'Clear logs',
+        );
+      },
+    );
+  }
+}
+
+class _ContainerTile extends StatelessWidget {
+  final ContainerInfo container;
+  final bool busy;
+  final VoidCallback onTap;
+  final VoidCallback onToggle;
+
+  const _ContainerTile({required this.container, required this.busy, required this.onTap, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = container;
+    final unhealthy = c.status.contains('(unhealthy)');
+    final tone = containerTone(c.state, health: unhealthy ? 'unhealthy' : '');
+    final running = c.state == 'running';
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(Insets.lg, Insets.md, Insets.xs, Insets.md),
+      accent: unhealthy || c.state == 'dead' ? context.cs.error : null,
+      child: Row(
+        children: [
+          IconBadge(Icons.view_in_ar_outlined, tone: tone, size: 40),
+          const Gap(Insets.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(containerName(c), style: context.tt.titleSmall, overflow: TextOverflow.ellipsis),
+                Text(
+                  c.image,
+                  style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const Gap(Insets.xs),
+                Wrap(
+                  spacing: Insets.xs,
+                  runSpacing: Insets.xs,
+                  children: [
+                    StatusPill(c.status.isEmpty ? c.state : c.status, tone: tone, dot: true),
+                    for (final p in c.ports.where((p) => p.contains(':')).toSet().take(3)) StatusPill(p, icon: Icons.lan_outlined),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 48,
+            child: busy
+                ? const Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                : IconButton(
+                    tooltip: running ? 'Stop' : (c.state == 'paused' ? 'Resume' : 'Start'),
+                    icon: Icon(running ? Icons.stop : Icons.play_arrow),
+                    color: running ? context.cs.error : context.ac.success,
+                    onPressed: onToggle,
+                  ),
           ),
         ],
       ),
-      body: Container(
-        color: Colors.black,
-        padding: const EdgeInsets.all(8),
-        child: ListView.builder(
-          controller: _scrollController,
-          itemCount: _logs.length,
-          itemBuilder: (context, index) {
-            final log = _logs[index];
-            final color = log.level == 'error'
-                ? Theme.of(context).colorScheme.error
-                : Colors.white;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                log.message,
-                style: TextStyle(
-                  color: color,
-                  fontFamily: 'Courier',
-                  fontSize: 12,
-                ),
+    );
+  }
+}
+
+class _ImagesTab extends ConsumerWidget {
+  const _ImagesTab();
+
+  Future<void> _remove(BuildContext context, WidgetRef ref, DockerImage img) async {
+    final name = img.tags.isEmpty ? img.id.replaceFirst('sha256:', '').substring(0, 12) : img.tags.first;
+    final inUse = img.containers > 0;
+    if (!await showConfirmDialog(
+      context,
+      title: 'Delete $name?',
+      message: inUse
+          ? '${img.containers} ${img.containers == 1 ? 'container uses' : 'containers use'} this image. '
+                'Deleting it forcibly untags it; the containers keep running but cannot be recreated without pulling again.'
+          : 'Frees ${formatBytes(img.size.toInt())}. You can pull it again later.',
+      confirmLabel: inUse ? 'Force delete' : 'Delete',
+      destructive: true,
+    )) {
+      return;
+    }
+    try {
+      await ref.read(dockerServiceProvider).removeImage(img.id, force: inUse);
+      if (context.mounted) showToast(context, 'Deleted $name', tone: Tone.success);
+      ref
+        ..invalidate(dockerImagesProvider)
+        ..invalidate(dockerInfoProvider);
+    } catch (e) {
+      if (context.mounted) showToast(context, describeError(e), tone: Tone.danger);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(dockerImagesProvider);
+    return AsyncView(
+      value: async,
+      onRetry: () => ref.invalidate(dockerImagesProvider),
+      loadingMessage: 'Loading images…',
+      data: (images) {
+        if (images.isEmpty) return const EmptyState(icon: Icons.layers_outlined, title: 'No images');
+        final sorted = [...images]..sort((a, b) => b.size.compareTo(a.size));
+        final total = images.fold<int>(0, (s, i) => s + i.size.toInt());
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(dockerImagesProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(Insets.page, Insets.md, Insets.page, 96),
+            children: [
+              Text(
+                '${images.length} images · ${formatBytes(total)} on disk',
+                style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
               ),
-            );
-          },
-        ),
-      ),
+              const Gap(Insets.sm),
+              TileGroup(
+                children: [
+                  for (final img in sorted)
+                    ListTile(
+                      leading: IconBadge(
+                        Icons.layers_outlined,
+                        tone: img.containers > 0 ? Tone.primary : Tone.neutral,
+                        size: 36,
+                      ),
+                      title: Text(
+                        img.tags.isEmpty ? '<untagged>' : img.tags.join(', '),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        [
+                          formatBytes(img.size.toInt()),
+                          DateFormat.yMMMd().format(DateTime.fromMillisecondsSinceEpoch(img.created.toInt() * 1000)),
+                          img.containers > 0
+                              ? 'used by ${img.containers}'
+                              : 'unused',
+                        ].join(' · '),
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Delete image',
+                        icon: Icon(Icons.delete_outline, color: context.cs.error),
+                        onPressed: () => _remove(context, ref, img),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

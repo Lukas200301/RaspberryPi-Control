@@ -16,10 +16,10 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 3.4.0+4
+version: 4.0.0+5
 
 # Agent version
-agent_version: 3.4.0
+agent_version: 4.0.0
 
 environment:
   sdk: ^3.10.3
@@ -37,9 +37,9 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  dartssh2: ^2.13.0
+  dartssh2: ^4.1.0
   grpc: ^5.1.0
-  protobuf: ^6.0.0
+  protobuf: ^6.1.0
   fixnum: ^1.1.0
   path: ^1.9.0
   flutter_riverpod: ^2.5.1
@@ -49,20 +49,24 @@ dependencies:
   flutter_animate: ^4.5.2
   gap: ^3.0.1
   path_provider: ^2.1.5
-  file_picker: ^10.3.7
+  file_picker: ^13.1.0
   multicast_dns: ^0.3.2+7
-  network_info_plus: ^6.0.2
+  network_info_plus: ^8.2.2
   permission_handler: ^11.3.0
   flutter_background_service: ^5.0.10
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^22.3.2
   xterm: ^4.0.0
-  package_info_plus: ^8.1.2
+  package_info_plus: ^10.2.2
   url_launcher: ^6.3.2
   http: ^1.2.0
-  flutter_downloader: ^1.11.10
   open_filex: ^4.5.0
   uuid: ^4.5.1
   intl: ^0.20.2
+  dynamic_color: ^1.9.0
+  flutter_secure_storage: ^11.2.0
+  local_auth: ^3.0.2
+  cryptography: ^2.9.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:

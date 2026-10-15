@@ -1,1025 +1,430 @@
-import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../widgets/stat_card.dart';
-import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
+import '../models/app_settings.dart';
+import '../providers/app_providers.dart';
+import '../providers/settings_provider.dart';
+import '../providers/stats_history_provider.dart';
+import '../ui/ui.dart';
 
-class StatsScreen extends ConsumerStatefulWidget {
+/// Live system statistics with history charts
+class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
 
   @override
-  ConsumerState<StatsScreen> createState() => _StatsScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final live = ref.watch(liveStatsProvider);
+    final history = ref.watch(statsHistoryProvider);
+    final s = history.latest ?? live.valueOrNull;
+
+    return PageScaffold(
+      title: 'System stats',
+      subtitle: s == null ? null : 'Live · up ${formatDuration(Duration(seconds: s.uptime.toInt()))}',
+      body: s == null
+          ? live.hasError
+                ? ErrorState(
+                    title: 'Stats are not available',
+                    error: live.error!,
+                    onRetry: () => ref.invalidate(liveStatsProvider),
+                  )
+                : const LoadingState(message: 'Waiting for the agent…')
+          : _StatsBody(stats: s, history: history),
+    );
+  }
 }
 
-class _StatsScreenState extends ConsumerState<StatsScreen> {
-  final Queue<double> _cpuHistory = Queue();
-  final Queue<double> _memHistory = Queue();
-  final Queue<double> _uploadHistory = Queue();
-  final Queue<double> _downloadHistory = Queue();
-  int? _lastStatsHistorySetting;
+class _StatsBody extends ConsumerWidget {
+  final LiveStats stats;
+  final StatsHistory history;
+
+  const _StatsBody({required this.stats, required this.history});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final s = stats;
+    final h = history;
+    final series = context.ac.series;
+    final cores = s.cpuPerCore.isEmpty ? 1 : s.cpuPerCore.length;
+    final memPercent = h.memoryPercent;
+    final swapPercent = s.swapTotal.toInt() > 0 ? s.swapUsed.toDouble() / s.swapTotal.toDouble() * 100 : 0.0;
+
+    Tone tempTone(double c) => c >= settings.tempCritical
+        ? Tone.danger
+        : c >= settings.tempWarning
+        ? Tone.warning
+        : Tone.success;
+
+    return PageList(
+      onRefresh: () async => ref.invalidate(diskInfoProvider),
+      children: [
+        ResponsiveGrid(
+          minItemWidth: 165,
+          maxColumns: 4,
+          children: [
+            MetricTile(
+              icon: Icons.memory,
+              label: 'CPU',
+              value: s.cpuUsage.toStringAsFixed(0),
+              unit: '%',
+              caption: '$cores ${cores == 1 ? 'core' : 'cores'} · load ${s.load1min.toStringAsFixed(2)}',
+              tone: usageTone(s.cpuUsage),
+              history: h.cpu,
+              historyMax: 100,
+            ),
+            MetricTile(
+              icon: Icons.developer_board,
+              label: 'Memory',
+              value: memPercent.toStringAsFixed(0),
+              unit: '%',
+              caption: '${formatBytes(s.ramUsed.toInt())} of ${formatBytes(s.ramTotal.toInt())}',
+              tone: usageTone(memPercent, warn: 80),
+              history: h.memory,
+              historyMax: 100,
+            ),
+            MetricTile(
+              icon: Icons.thermostat,
+              label: 'Temperature',
+              value: s.cpuTemp > 0 ? settings.formatTemperature(s.cpuTemp, digits: 1) : 'n/a',
+              caption: s.gpuTemp > 0 ? 'GPU ${settings.formatTemperature(s.gpuTemp, digits: 1)}' : 'CPU',
+              tone: s.cpuTemp > 0 ? tempTone(s.cpuTemp) : Tone.neutral,
+              history: s.cpuTemp > 0 ? h.temperature : null,
+              historyMax: settings.tempCritical + 10,
+            ),
+            MetricTile(
+              icon: Icons.swap_horiz,
+              label: 'Swap',
+              value: s.swapTotal.toInt() > 0 ? swapPercent.toStringAsFixed(0) : 'off',
+              unit: s.swapTotal.toInt() > 0 ? '%' : null,
+              caption: s.swapTotal.toInt() > 0
+                  ? '${formatBytes(s.swapUsed.toInt())} of ${formatBytes(s.swapTotal.toInt())}'
+                  : 'No swap configured',
+              tone: s.swapTotal.toInt() > 0 ? usageTone(swapPercent, warn: 50, critical: 80) : Tone.neutral,
+              progress: s.swapTotal.toInt() > 0 ? swapPercent / 100 : null,
+            ),
+          ],
+        ),
+        const SectionHeader(title: 'History'),
+        ResponsiveGrid(
+          minItemWidth: 340,
+          maxColumns: 2,
+          children: [
+            LineChartCard(
+              title: 'CPU & memory',
+              icon: Icons.show_chart,
+              capacity: settings.statsHistory,
+              maxY: 100,
+              height: 160,
+              axisLabel: (v) => '${v.round()}%',
+              series: [
+                ChartSeries(label: 'CPU', color: series[0], values: h.cpu, current: '${s.cpuUsage.toStringAsFixed(0)}%'),
+                ChartSeries(label: 'Memory', color: series[1], values: h.memory, current: '${memPercent.toStringAsFixed(0)}%'),
+              ],
+            ),
+            if (s.cpuTemp > 0)
+              LineChartCard(
+                title: 'Temperature',
+                icon: Icons.thermostat,
+                capacity: settings.statsHistory,
+                maxY: (settings.tempCritical + 10).ceilToDouble(),
+                height: 160,
+                axisLabel: (v) => settings.formatTemperature(v, digits: 0),
+                series: [
+                  ChartSeries(
+                    label: 'CPU',
+                    color: context.tone(tempTone(s.cpuTemp)),
+                    values: h.temperature,
+                    current: settings.formatTemperature(s.cpuTemp, digits: 1),
+                  ),
+                ],
+              ),
+            LineChartCard(
+              title: 'Network',
+              icon: Icons.swap_vert,
+              capacity: settings.statsHistory,
+              height: 160,
+              axisLabel: (v) => formatBytes(v, decimals: 0),
+              series: [
+                ChartSeries(label: 'Down', color: series[4], values: h.netDown, current: '${formatBytes(s.netBytesRecv.toInt())}/s'),
+                ChartSeries(label: 'Up', color: series[2], values: h.netUp, current: '${formatBytes(s.netBytesSent.toInt())}/s'),
+              ],
+            ),
+            LineChartCard(
+              title: 'Disk activity',
+              icon: Icons.storage,
+              capacity: settings.statsHistory,
+              height: 160,
+              axisLabel: (v) => formatBytes(v, decimals: 0),
+              series: [
+                ChartSeries(
+                  label: 'Read',
+                  color: series[3],
+                  values: h.diskRead,
+                  current: '${formatBytes(h.diskRead.isEmpty ? 0 : h.diskRead.last)}/s',
+                ),
+                ChartSeries(
+                  label: 'Write',
+                  color: series[5 % series.length],
+                  values: h.diskWrite,
+                  current: '${formatBytes(h.diskWrite.isEmpty ? 0 : h.diskWrite.last)}/s',
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (s.cpuPerCore.isNotEmpty) ...[
+          const SectionHeader(title: 'CPU cores'),
+          AppCard(
+            child: ResponsiveGrid(
+              minItemWidth: 220,
+              maxColumns: 2,
+              spacing: Insets.md,
+              children: [
+                for (var i = 0; i < s.cpuPerCore.length; i++)
+                  _BarRow(
+                    label: 'Core $i',
+                    value: s.cpuPerCore[i] / 100,
+                    trailing: '${s.cpuPerCore[i].toStringAsFixed(0)}%',
+                    tone: usageTone(s.cpuPerCore[i]),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SectionHeader(title: 'Memory'),
+        _MemoryCard(stats: s),
+        const SectionHeader(title: 'Load'),
+        _LoadCard(stats: s, cores: cores),
+        const SectionHeader(title: 'Storage'),
+        _StorageSection(stats: s, settings: settings),
+      ],
+    );
+  }
+}
+
+class _BarRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final String trailing;
+  final Tone tone;
+
+  const _BarRow({required this.label, required this.value, required this.trailing, required this.tone});
 
   @override
   Widget build(BuildContext context) {
-    final liveStatsAsync = ref.watch(liveStatsProvider);
-    final settings = ref.watch(appSettingsProvider);
-    // Calculate max data points based on stats history setting
-    // Assuming stats update every 2 seconds (default gRPC stream interval)
-    final maxDataPoints = (settings.statsHistory / 2).round();
-
-    // Clear history if settings changed
-    if (_lastStatsHistorySetting != null &&
-        _lastStatsHistorySetting != settings.statsHistory) {
-      _cpuHistory.clear();
-      _memHistory.clear();
-      _uploadHistory.clear();
-      _downloadHistory.clear();
-    }
-    _lastStatsHistorySetting = settings.statsHistory;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('System Stats'),
-        scrolledUnderElevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                _cpuHistory.clear();
-                _memHistory.clear();
-                _uploadHistory.clear();
-                _downloadHistory.clear();
-              });
-              ref.invalidate(liveStatsProvider);
-            },
-          ),
-        ],
-      ),
-      body: liveStatsAsync.when(
-        data: (stats) {
-          _updateHistory(stats, maxDataPoints);
-          return _buildStats(context, stats);
-        },
-        loading: () => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
-              Gap(16),
-              Text('Connecting to agent...'),
-            ],
-          ),
-        ),
-        error: (error, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-                const Gap(16),
-                Text(
-                  'Error loading stats',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const Gap(8),
-                Text(
-                  error.toString(),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const Gap(16),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(liveStatsProvider),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _updateHistory(LiveStats stats, int maxDataPoints) {
-    _cpuHistory.add(stats.cpuUsage);
-    final memPercent = stats.ramTotal > 0
-        ? (stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100)
-        : 0.0;
-    _memHistory.add(memPercent);
-
-    // Convert bytes/sec to KB/sec for better readability
-    _uploadHistory.add(stats.netBytesSent.toDouble() / 1024);
-    _downloadHistory.add(stats.netBytesRecv.toDouble() / 1024);
-
-    if (_cpuHistory.length > maxDataPoints) {
-      _cpuHistory.removeFirst();
-    }
-    if (_memHistory.length > maxDataPoints) {
-      _memHistory.removeFirst();
-    }
-    if (_uploadHistory.length > maxDataPoints) {
-      _uploadHistory.removeFirst();
-    }
-    if (_downloadHistory.length > maxDataPoints) {
-      _downloadHistory.removeFirst();
-    }
-  }
-
-  Widget _buildStats(BuildContext context, LiveStats stats) {
-    final diskInfoAsync = ref.watch(diskInfoProvider);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // System Info Header
-          GlassCard(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'System Uptime',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      _formatUptime(stats.uptime.toInt()),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Load Average',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const Gap(4),
-                    Text(
-                      '${stats.load1min.toStringAsFixed(2)} / ${stats.load5min.toStringAsFixed(2)} / ${stats.load15min.toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: stats.load1min > 4.0
-                            ? Theme.of(context).colorScheme.error
-                            : AppTheme.successGreen,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Gap(16),
-
-          // Hero Stats
-          Row(
-            children: [
-              Expanded(
-                child: StatCard(
-                  title: 'CPU',
-                  value: '${stats.cpuUsage.toStringAsFixed(1)}%',
-                  icon: Icons.memory,
-                  color: AppTheme.getCPUColor(stats.cpuUsage),
-                ),
-              ),
-              const Gap(12),
-              Expanded(
-                child: StatCard(
-                  title: 'RAM',
-                  value:
-                      '${(stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100).toStringAsFixed(1)}%',
-                  icon: Icons.storage,
-                  color: AppTheme.getMemoryColor(
-                    stats.ramUsed.toDouble() / stats.ramTotal.toDouble() * 100,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Gap(12),
-          Row(
-            children: [
-              Expanded(
-                child: StatCard(
-                  title: 'CPU Temp',
-                  value: '${stats.cpuTemp.toStringAsFixed(1)}°C',
-                  icon: Icons.thermostat,
-                  color: AppTheme.getTempColor(stats.cpuTemp),
-                ),
-              ),
-              const Gap(12),
-              Expanded(
-                child: StatCard(
-                  title: stats.gpuTemp > 0 ? 'GPU Temp' : 'Swap',
-                  value: stats.gpuTemp > 0
-                      ? '${stats.gpuTemp.toStringAsFixed(1)}°C'
-                      : stats.swapTotal > 0
-                      ? '${(stats.swapUsed.toDouble() / stats.swapTotal.toDouble() * 100).toStringAsFixed(1)}%'
-                      : 'N/A',
-                  icon: stats.gpuTemp > 0 ? Icons.thermostat : Icons.swap_horiz,
-                  color: stats.gpuTemp > 0
-                      ? AppTheme.getTempColor(stats.gpuTemp)
-                      : stats.swapTotal > 0
-                      ? AppTheme.getMemoryColor(
-                          stats.swapUsed.toDouble() /
-                              stats.swapTotal.toDouble() *
-                              100,
-                        )
-                      : AppTheme.textTertiary,
-                ),
-              ),
-            ],
-          ),
-          const Gap(24),
-
-          // Per-Core CPU Usage
-          if (stats.cpuPerCore.isNotEmpty) ...[
-            Text('CPU Cores', style: Theme.of(context).textTheme.titleLarge),
-            const Gap(12),
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  for (int i = 0; i < stats.cpuPerCore.length; i++) ...[
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          child: Text(
-                            'Core $i',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: stats.cpuPerCore[i] / 100,
-                              minHeight: 20,
-                              backgroundColor: AppTheme.glassLight,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppTheme.getCPUColor(stats.cpuPerCore[i]),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const Gap(12),
-                        SizedBox(
-                          width: 50,
-                          child: Text(
-                            '${stats.cpuPerCore[i].toStringAsFixed(1)}%',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.getCPUColor(stats.cpuPerCore[i]),
-                            ),
-                            textAlign: TextAlign.right,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (i < stats.cpuPerCore.length - 1) const Gap(8),
-                  ],
-                ],
-              ),
-            ),
-            const Gap(24),
-          ],
-
-          // Memory Details
-          Text('Memory Details', style: Theme.of(context).textTheme.titleLarge),
-          const Gap(12),
-          GlassCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildMemoryRow(
-                  'Used',
-                  stats.ramUsed,
-                  stats.ramTotal,
-                  Theme.of(context).colorScheme.primary,
-                ),
-                const Gap(8),
-                _buildMemoryRow(
-                  'Cached',
-                  stats.ramCached,
-                  stats.ramTotal,
-                  Theme.of(context).colorScheme.secondary,
-                ),
-                const Gap(8),
-                _buildMemoryRow(
-                  'Free',
-                  stats.ramFree,
-                  stats.ramTotal,
-                  AppTheme.successGreen,
-                ),
-                if (stats.swapTotal > 0) ...[
-                  const Gap(12),
-                  const Divider(color: AppTheme.glassBorder),
-                  const Gap(12),
-                  _buildMemoryRow(
-                    'Swap Used',
-                    stats.swapUsed,
-                    stats.swapTotal,
-                    AppTheme.warningAmber,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const Gap(24),
-
-          // CPU Chart
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.memory,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 18,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'CPU Usage',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ],
-                ),
-                const Gap(12),
-                SizedBox(
-                  height: 200,
-              child: _cpuHistory.length > 1
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: LineChart(
-                        LineChartData(
-                          gridData: FlGridData(
-                            show: true,
-                            drawVerticalLine: false,
-                            horizontalInterval: 25,
-                            getDrawingHorizontalLine: (value) => FlLine(
-                              color: AppTheme.glassBorder,
-                              strokeWidth: 1,
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 40,
-                                getTitlesWidget: (value, meta) => Text(
-                                  '${value.toStringAsFixed(2)}%',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.textTertiary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            bottomTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                          ),
-                          borderData: FlBorderData(show: false),
-                          minY: 0,
-                          maxY: 100,
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: _cpuHistory
-                                  .toList()
-                                  .asMap()
-                                  .entries
-                                  .map((e) => FlSpot(e.key.toDouble(), e.value))
-                                  .toList(),
-                              isCurved: true,
-                              color: Theme.of(context).colorScheme.primary,
-                              barWidth: 3,
-                              dotData: const FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: Theme.of(context).colorScheme.primary.withValues(
-                                  alpha: 0.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    ),
-              ],
-            ),
-          ),
-          const Gap(24),
-
-          // Memory Chart
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.storage,
-                      color: Theme.of(context).colorScheme.secondary,
-                      size: 18,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'Memory Usage',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ],
-                ),
-                const Gap(12),
-                SizedBox(
-                  height: 200,
-              child: _memHistory.length > 1
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: LineChart(
-                        LineChartData(
-                          gridData: FlGridData(
-                            show: true,
-                            drawVerticalLine: false,
-                            horizontalInterval: 25,
-                            getDrawingHorizontalLine: (value) => FlLine(
-                              color: AppTheme.glassBorder,
-                              strokeWidth: 1,
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 40,
-                                getTitlesWidget: (value, meta) => Text(
-                                  '${value.toStringAsFixed(2)}%',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.textTertiary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            bottomTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                          ),
-                          borderData: FlBorderData(show: false),
-                          minY: 0,
-                          maxY: 100,
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: _memHistory
-                                  .toList()
-                                  .asMap()
-                                  .entries
-                                  .map((e) => FlSpot(e.key.toDouble(), e.value))
-                                  .toList(),
-                              isCurved: true,
-                              color: Theme.of(context).colorScheme.secondary,
-                              barWidth: 3,
-                              dotData: const FlDotData(show: false),
-                              belowBarData: BarAreaData(
-                                show: true,
-                                color: Theme.of(context).colorScheme.secondary.withValues(
-                                  alpha: 0.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                    ),
-              ],
-            ),
-          ),
-          const Gap(24),
-
-          // Network
-          GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.network_check,
-                      color: AppTheme.warningAmber,
-                      size: 18,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'Network Activity',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ],
-                ),
-                const Gap(12),
-                SizedBox(
-                  height: 250,
-              child: _uploadHistory.length > 1 && _downloadHistory.length > 1
-                  ? Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.arrow_upward,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    size: 16,
-                                  ),
-                                  const Gap(4),
-                                  Text(
-                                    'Upload: ${_formatBytes(stats.netBytesSent.toDouble())}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.arrow_downward,
-                                    color: Theme.of(context).colorScheme.secondary,
-                                    size: 16,
-                                  ),
-                                  const Gap(4),
-                                  Text(
-                                    'Download: ${_formatBytes(stats.netBytesRecv.toDouble())}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).colorScheme.secondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const Gap(12),
-                          Expanded(
-                            child: LineChart(
-                              LineChartData(
-                                gridData: FlGridData(
-                                  show: true,
-                                  drawVerticalLine: false,
-                                  getDrawingHorizontalLine: (value) => FlLine(
-                                    color: AppTheme.glassBorder,
-                                    strokeWidth: 1,
-                                  ),
-                                ),
-                                titlesData: FlTitlesData(
-                                  leftTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 50,
-                                      getTitlesWidget: (value, meta) => Text(
-                                        '${value.toStringAsFixed(0)} KB/s',
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          color: AppTheme.textTertiary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  bottomTitles: const AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false),
-                                  ),
-                                  rightTitles: const AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false),
-                                  ),
-                                  topTitles: const AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false),
-                                  ),
-                                ),
-                                borderData: FlBorderData(show: false),
-                                minY: 0,
-                                lineBarsData: [
-                                  // Upload line
-                                  LineChartBarData(
-                                    spots: _uploadHistory
-                                        .toList()
-                                        .asMap()
-                                        .entries
-                                        .map(
-                                          (e) =>
-                                              FlSpot(e.key.toDouble(), e.value),
-                                        )
-                                        .toList(),
-                                    isCurved: true,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    barWidth: 2,
-                                    dotData: const FlDotData(show: false),
-                                    belowBarData: BarAreaData(
-                                      show: true,
-                                      color: Theme.of(context).colorScheme.primary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                    ),
-                                  ),
-                                  // Download line
-                                  LineChartBarData(
-                                    spots: _downloadHistory
-                                        .toList()
-                                        .asMap()
-                                        .entries
-                                        .map(
-                                          (e) =>
-                                              FlSpot(e.key.toDouble(), e.value),
-                                        )
-                                        .toList(),
-                                    isCurved: true,
-                                    color: Theme.of(context).colorScheme.secondary,
-                                    barWidth: 2,
-                                    dotData: const FlDotData(show: false),
-                                    belowBarData: BarAreaData(
-                                      show: true,
-                                      color: Theme.of(context).colorScheme.secondary.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Center(
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                ), // End of SizedBox
-              ], // End of Column children
-            ), // End of Column
-          ), // End of GlassCard
-          const Gap(24),
-
-          // Disk I/O Stats
-          if (stats.diskIo.isNotEmpty) ...[
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.storage,
-                        color: Theme.of(context).colorScheme.secondary,
-                        size: 18,
-                      ),
-                      const Gap(8),
-                      Text(
-                        'Disk I/O',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                    ],
-                  ),
-                  const Gap(16),
-                  for (int i = 0; i < stats.diskIo.length; i++) ...[
-                    _buildDiskIOStat(stats.diskIo[i]),
-                    if (i < stats.diskIo.length - 1) ...[
-                      const Gap(12),
-                      const Divider(color: AppTheme.glassBorder),
-                      const Gap(12),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-            const Gap(24),
-          ],
-
-          // Disk Usage
-          diskInfoAsync.when(
-            data: (diskInfo) {
-              if (diskInfo.partitions.isEmpty) {
-                return const SizedBox.shrink();
-              }
-              return GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.pie_chart,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 18,
-                        ),
-                        const Gap(8),
-                        Text(
-                          'Disk Usage',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ],
-                    ),
-                    const Gap(16),
-                    for (int i = 0; i < diskInfo.partitions.length; i++) ...[
-                      _buildDiskPartition(diskInfo.partitions[i]),
-                      if (i < diskInfo.partitions.length - 1) ...[
-                        const Gap(12),
-                        const Divider(color: AppTheme.glassBorder),
-                        const Gap(12),
-                      ],
-                    ],
-                  ],
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatBytes(double bytesPerSec) {
-    if (bytesPerSec < 1024) {
-      return '${bytesPerSec.toStringAsFixed(0)} B/s';
-    } else if (bytesPerSec < 1024 * 1024) {
-      return '${(bytesPerSec / 1024).toStringAsFixed(1)} KB/s';
-    } else {
-      return '${(bytesPerSec / 1024 / 1024).toStringAsFixed(2)} MB/s';
-    }
-  }
-
-  String _formatUptime(int seconds) {
-    final days = seconds ~/ 86400;
-    final hours = (seconds % 86400) ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-
-    if (days > 0) {
-      return '${days}d ${hours}h ${minutes}m';
-    } else if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    } else {
-      return '${minutes}m';
-    }
-  }
-
-  Widget _buildMemoryRow(
-    String label,
-    dynamic usedBytes,
-    dynamic totalBytes,
-    Color color,
-  ) {
-    if (totalBytes.toInt() == 0) return const SizedBox.shrink();
-
-    final percent = (usedBytes.toDouble() / totalBytes.toDouble() * 100);
-    final usedMB = (usedBytes.toDouble() / 1024 / 1024);
-    final totalMB = (totalBytes.toDouble() / 1024 / 1024);
-
     return Row(
       children: [
         SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-          ),
+          width: 64,
+          child: Text(label, style: context.tt.labelMedium?.copyWith(color: context.cs.onSurfaceVariant)),
         ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: usedBytes.toDouble() / totalBytes.toDouble(),
-              minHeight: 16,
-              backgroundColor: AppTheme.glassLight,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ),
-        const Gap(12),
+        Expanded(child: UsageBar(value: value.clamp(0, 1), color: context.tone(tone), height: 8)),
         SizedBox(
-          width: 140,
+          width: 48,
           child: Text(
-            '${usedMB.toStringAsFixed(0)} MB / ${totalMB.toStringAsFixed(0)} MB (${percent.toStringAsFixed(1)}%)',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
+            trailing,
             textAlign: TextAlign.right,
+            style: context.tt.labelMedium?.copyWith(fontFeatures: tabularFigures, fontWeight: FontWeight.w600),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildDiskIOStat(DiskIOStat diskIO) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          diskIO.device,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const Gap(8),
-        Row(
-          children: [
-            Expanded(
+class _MemoryCard extends StatelessWidget {
+  final LiveStats stats;
+
+  const _MemoryCard({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = stats;
+    final total = s.ramTotal.toDouble();
+    if (total <= 0) return const AppCard(child: Text('No memory information'));
+    final used = s.ramUsed.toDouble();
+    final cached = s.ramCached.toDouble();
+    final free = s.ramFree.toDouble();
+    final other = (total - used - cached - free).clamp(0, total).toDouble();
+    final parts = [
+      ('Used by apps', used, context.cs.primary),
+      ('Cache', cached, context.ac.info),
+      ('Buffers & other', other, context.cs.tertiary),
+      ('Free', free, context.cs.surfaceContainerHighest),
+    ];
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: Radii.smAll,
+            child: SizedBox(
+              height: 14,
               child: Row(
                 children: [
-                  Icon(
-                    Icons.arrow_upward,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 16,
-                  ),
-                  const Gap(4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Write: ${_formatBytes(diskIO.writeBytes.toDouble())}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        Text(
-                          '${diskIO.writeCount} ops/s',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.textTertiary,
-                          ),
-                        ),
-                      ],
+                  for (final p in parts)
+                    if (p.$2 > 0) Expanded(flex: (p.$2 / total * 1000).round().clamp(1, 1000), child: ColoredBox(color: p.$3)),
+                ],
+              ),
+            ),
+          ),
+          const Gap(Insets.md),
+          for (final p in parts)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Insets.xxs),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: p.$3,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: context.cs.outlineVariant),
                     ),
+                  ),
+                  const Gap(Insets.sm),
+                  Expanded(child: Text(p.$1, style: context.tt.bodyMedium)),
+                  Text(
+                    '${formatBytes(p.$2)}  ·  ${(p.$2 / total * 100).toStringAsFixed(0)}%',
+                    style: context.tt.bodyMedium?.copyWith(fontFeatures: tabularFigures),
                   ),
                 ],
               ),
             ),
-            const Gap(16),
-            Expanded(
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.arrow_downward,
-                    color: Theme.of(context).colorScheme.secondary,
-                    size: 16,
-                  ),
-                  const Gap(4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Read: ${_formatBytes(diskIO.readBytes.toDouble())}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        Text(
-                          '${diskIO.readCount} ops/s',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppTheme.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+          const Divider(height: Insets.xl),
+          InfoRow('Total', formatBytes(total)),
+          if (s.swapTotal.toInt() > 0)
+            InfoRow('Swap', '${formatBytes(s.swapUsed.toInt())} of ${formatBytes(s.swapTotal.toInt())}'),
+        ],
+      ),
     );
   }
+}
 
-  Widget _buildDiskPartition(DiskPartition partition) {
-    final usedGB = partition.usedBytes.toDouble() / 1024 / 1024 / 1024;
-    final totalGB = partition.totalBytes.toDouble() / 1024 / 1024 / 1024;
-    final percent = partition.usagePercent;
+class _LoadCard extends StatelessWidget {
+  final LiveStats stats;
+  final int cores;
 
-    Color getColor() {
-      if (percent > 90) return Theme.of(context).colorScheme.error;
-      if (percent > 75) return AppTheme.warningAmber;
-      return AppTheme.successGreen;
-    }
+  const _LoadCard({required this.stats, required this.cores});
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    partition.mountPoint,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const Gap(2),
-                  Text(
-                    '${partition.device} (${partition.filesystem})',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
+  @override
+  Widget build(BuildContext context) {
+    final loads = [('1 min', stats.load1min), ('5 min', stats.load5min), ('15 min', stats.load15min)];
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final l in loads) ...[
+            _BarRow(
+              label: l.$1,
+              value: l.$2 / cores,
+              trailing: l.$2.toStringAsFixed(2),
+              tone: usageTone(l.$2 / cores * 100),
             ),
-            Text(
-              '${percent.toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: getColor(),
-              ),
-            ),
+            const Gap(Insets.sm),
           ],
-        ),
-        const Gap(8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: percent / 100,
-            minHeight: 20,
-            backgroundColor: AppTheme.glassLight,
-            valueColor: AlwaysStoppedAnimation<Color>(getColor()),
+          Text(
+            'Load counts processes running or waiting. With $cores ${cores == 1 ? 'core' : 'cores'}, '
+            '$cores.00 means the CPU is fully busy.',
+            style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StorageSection extends ConsumerWidget {
+  final LiveStats stats;
+  final AppSettings settings;
+
+  const _StorageSection({required this.stats, required this.settings});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final disks = ref.watch(diskInfoProvider);
+    return Column(
+      children: [
+        disks.when(
+          loading: () => const AppCard(child: LoadingState(message: 'Reading partitions…')),
+          error: (e, _) => AppCard(child: Text('Partitions unavailable: ${describeError(e)}')),
+          data: (info) => info.partitions.isEmpty
+              ? const AppCard(child: Text('No partitions reported'))
+              : TileGroup(
+                  children: [
+                    for (final p in info.partitions)
+                      Padding(
+                        padding: const EdgeInsets.all(Insets.lg),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                IconBadge(Icons.storage, tone: usageTone(p.usagePercent, warn: 75), size: 36),
+                                const Gap(Insets.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(p.mountPoint, style: context.tt.titleSmall),
+                                      Text(
+                                        '${p.device} · ${p.filesystem}',
+                                        style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${p.usagePercent.toStringAsFixed(0)}%',
+                                  style: context.tt.titleMedium?.copyWith(
+                                    color: context.tone(usageTone(p.usagePercent, warn: 75)),
+                                    fontFeatures: tabularFigures,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Gap(Insets.sm),
+                            UsageBar(
+                              value: p.usagePercent / 100,
+                              color: context.tone(usageTone(p.usagePercent, warn: 75)),
+                            ),
+                            const Gap(Insets.xs),
+                            Text(
+                              '${formatBytes(p.usedBytes.toInt())} used · '
+                              '${formatBytes((p.totalBytes - p.usedBytes).toInt())} free · '
+                              '${formatBytes(p.totalBytes.toInt())} total',
+                              style: context.tt.bodySmall?.copyWith(
+                                color: context.cs.onSurfaceVariant,
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
         ),
-        const Gap(4),
-        Text(
-          '${usedGB.toStringAsFixed(2)} GB / ${totalGB.toStringAsFixed(2)} GB',
-          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-        ),
+        if (stats.diskIo.isNotEmpty) ...[
+          const Gap(Insets.md),
+          TileGroup(
+            children: [
+              for (final d in [...stats.diskIo]..sort((a, b) => a.device.compareTo(b.device)))
+                ListTile(
+                  leading: const Icon(Icons.sd_storage_outlined),
+                  title: Text(d.device),
+                  subtitle: Text(
+                    'Read ${formatBytes(d.readBytes.toInt())}/s (${d.readCount} ops) · '
+                    'Write ${formatBytes(d.writeBytes.toInt())}/s (${d.writeCount} ops)',
+                    style: context.tt.bodySmall?.copyWith(fontFeatures: tabularFigures),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }

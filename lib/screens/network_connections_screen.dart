@@ -1,585 +1,282 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
+import '../providers/app_providers.dart';
+import '../providers/settings_provider.dart';
+import '../theme/app_theme.dart';
+import '../ui/ui.dart';
 
+final _connectionsProvider = FutureProvider.autoDispose<List<NetworkConnection>>((ref) async {
+  ref.watch(grpcSessionProvider);
+  final seconds = ref.watch(settingsProvider.select((s) => s.refreshSeconds)).clamp(2, 60);
+  final timer = Timer(Duration(seconds: seconds), ref.invalidateSelf);
+  ref.onDispose(timer.cancel);
+  return (await ref.read(grpcServiceProvider).getNetworkConnections()).connections;
+});
+
+enum _View { listening, connections }
+
+enum _Proto { all, tcp, udp }
+
+bool _isListening(NetworkConnection c) =>
+    c.status == 'LISTEN' || (c.protocol.toLowerCase().startsWith('udp') && c.remotePort == 0);
+
+/// Where a listening socket can be reached from
+(String, Tone) _exposure(String address) {
+  if (address.startsWith('127.') || address == '::1' || address == 'localhost') return ('this device only', Tone.success);
+  if (address == '0.0.0.0' || address == '::' || address == '*' || address.isEmpty) return ('all networks', Tone.warning);
+  return ('$address only', Tone.info);
+}
+
+String _wellKnown(int port) => switch (port) {
+  22 => 'SSH',
+  53 => 'DNS',
+  80 => 'HTTP',
+  443 => 'HTTPS',
+  1883 => 'MQTT',
+  3000 => 'web app',
+  3306 => 'MySQL',
+  5432 => 'PostgreSQL',
+  5900 => 'VNC',
+  6379 => 'Redis',
+  8080 => 'HTTP alt',
+  8123 => 'Home Assistant',
+  27017 => 'MongoDB',
+  50051 => 'Pi Control agent',
+  _ => '',
+};
+
+/// Open ports and live connections
 class NetworkConnectionsScreen extends ConsumerStatefulWidget {
   const NetworkConnectionsScreen({super.key});
 
   @override
-  ConsumerState<NetworkConnectionsScreen> createState() =>
-      _NetworkConnectionsScreenState();
+  ConsumerState<NetworkConnectionsScreen> createState() => _NetworkConnectionsScreenState();
 }
 
-class _NetworkConnectionsScreenState
-    extends ConsumerState<NetworkConnectionsScreen> {
-  String _searchQuery = '';
-  String _filterProtocol = 'all'; // all, tcp, udp
-  String _filterStatus = 'all'; // all, established, listen
+class _NetworkConnectionsScreenState extends ConsumerState<NetworkConnectionsScreen> {
+  _View _view = _View.listening;
+  _Proto _proto = _Proto.all;
+  String _query = '';
 
-  // Well-known port mappings
-  static const Map<int, String> _wellKnownPorts = {
-    20: 'FTP Data',
-    21: 'FTP Control',
-    22: 'SSH',
-    23: 'Telnet',
-    25: 'SMTP',
-    53: 'DNS',
-    67: 'DHCP Server',
-    68: 'DHCP Client',
-    80: 'HTTP',
-    110: 'POP3',
-    123: 'NTP',
-    143: 'IMAP',
-    161: 'SNMP',
-    162: 'SNMP Trap',
-    179: 'BGP',
-    194: 'IRC',
-    389: 'LDAP',
-    443: 'HTTPS',
-    445: 'SMB',
-    465: 'SMTPS',
-    514: 'Syslog',
-    587: 'SMTP',
-    631: 'IPP',
-    636: 'LDAPS',
-    993: 'IMAPS',
-    995: 'POP3S',
-    1433: 'MS SQL',
-    1521: 'Oracle DB',
-    1723: 'PPTP',
-    3306: 'MySQL',
-    3389: 'RDP',
-    5432: 'PostgreSQL',
-    5900: 'VNC',
-    6379: 'Redis',
-    8080: 'HTTP Alt',
-    8443: 'HTTPS Alt',
-    9090: 'Prometheus',
-    27017: 'MongoDB',
-    50051: 'gRPC',
-  };
+  bool _match(NetworkConnection c) {
+    final p = c.protocol.toLowerCase();
+    if (_proto == _Proto.tcp && !p.startsWith('tcp')) return false;
+    if (_proto == _Proto.udp && !p.startsWith('udp')) return false;
+    final q = _query.toLowerCase();
+    if (q.isEmpty) return true;
+    return '${c.localPort}' == q ||
+        '${c.remotePort}' == q ||
+        c.processName.toLowerCase().contains(q) ||
+        c.remoteAddress.contains(q) ||
+        c.localAddress.contains(q) ||
+        _wellKnown(c.localPort).toLowerCase().contains(q);
+  }
 
-  String _getPortDescription(int port) {
-    return _wellKnownPorts[port] ?? '';
+  void _details(NetworkConnection c) {
+    final listening = _isListening(c);
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(Insets.xl, 0, Insets.xl, Insets.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                listening ? 'Port ${c.localPort}/${c.protocol.toLowerCase()}' : '${c.remoteAddress}:${c.remotePort}',
+                style: sheet.tt.titleLarge,
+              ),
+              const Gap(Insets.md),
+              InfoRow('Protocol', c.protocol),
+              InfoRow('State', c.status.isEmpty ? '—' : c.status),
+              InfoRow('Local', '${c.localAddress}:${c.localPort}', mono: true),
+              if (!listening) InfoRow('Remote', '${c.remoteAddress}:${c.remotePort}', mono: true),
+              InfoRow('Process', c.pid > 0 ? '${c.processName.isEmpty ? '?' : c.processName} (PID ${c.pid})' : 'unknown'),
+              if (_wellKnown(c.localPort).isNotEmpty) InfoRow('Usually', _wellKnown(c.localPort)),
+              const Gap(Insets.md),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(
+                    ClipboardData(text: listening ? '${c.localAddress}:${c.localPort}' : '${c.remoteAddress}:${c.remotePort}'),
+                  );
+                  Navigator.pop(sheet);
+                  showToast(context, 'Address copied');
+                },
+                icon: const Icon(Icons.copy),
+                label: const Text('Copy address'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Network Connections'),
-        scrolledUnderElevation: 0,
-      ),
-      body: Column(
-        children: [
-          // Search and Filter Bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Search Field
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search by address, port, or process...',
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: AppTheme.textSecondary,
-                    ),
-                    filled: true,
-                    fillColor: AppTheme.glassLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.glassBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppTheme.glassBorder),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                ),
-                const Gap(12),
-                // Filter Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('All Protocols', 'all', Icons.public),
-                      const Gap(8),
-                      _buildFilterChip(
-                        'TCP',
-                        'tcp',
-                        Icons.swap_horiz,
-                        Theme.of(context).colorScheme.primary,
-                      ),
-                      const Gap(8),
-                      _buildFilterChip(
-                        'UDP',
-                        'udp',
-                        Icons.swap_vert,
-                        Theme.of(context).colorScheme.secondary,
-                      ),
-                      const Gap(16),
-                      _buildStatusChip('All States', 'all', Icons.circle),
-                      const Gap(8),
-                      _buildStatusChip(
-                        'Established',
-                        'established',
-                        Icons.link,
-                        AppTheme.successGreen,
-                      ),
-                      const Gap(8),
-                      _buildStatusChip(
-                        'Listen',
-                        'listen',
-                        Icons.hearing,
-                        AppTheme.warningAmber,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    final async = ref.watch(_connectionsProvider);
+    final all = async.valueOrNull ?? const <NetworkConnection>[];
+    final listening = all.where(_isListening).toList();
+    final active = all.where((c) => !_isListening(c)).toList();
+    final established = active.where((c) => c.status == 'ESTABLISHED').length;
 
-          // Connections List
-          Expanded(child: _buildConnectionsList()),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {});
-        },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        child: const Icon(Icons.refresh),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(
-    String label,
-    String value,
-    IconData icon, [
-    Color? color,
-  ]) {
-    final isSelected = _filterProtocol == value;
-    final chipColor = color ?? AppTheme.textSecondary;
-
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isSelected ? chipColor : AppTheme.textSecondary,
-          ),
-          const Gap(6),
-          Text(label),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _filterProtocol = value;
-        });
-      },
-      backgroundColor: AppTheme.glassLight,
-      selectedColor: chipColor.withValues(alpha: 0.3),
-      checkmarkColor: chipColor,
-      labelStyle: TextStyle(
-        color: isSelected ? chipColor : AppTheme.textSecondary,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      side: BorderSide(color: isSelected ? chipColor : AppTheme.glassBorder),
-    );
-  }
-
-  Widget _buildStatusChip(
-    String label,
-    String value,
-    IconData icon, [
-    Color? color,
-  ]) {
-    final isSelected = _filterStatus == value;
-    final chipColor = color ?? AppTheme.textSecondary;
-
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isSelected ? chipColor : AppTheme.textSecondary,
-          ),
-          const Gap(6),
-          Text(label),
-        ],
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _filterStatus = value;
-        });
-      },
-      backgroundColor: AppTheme.glassLight,
-      selectedColor: chipColor.withValues(alpha: 0.3),
-      checkmarkColor: chipColor,
-      labelStyle: TextStyle(
-        color: isSelected ? chipColor : AppTheme.textSecondary,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      side: BorderSide(color: isSelected ? chipColor : AppTheme.glassBorder),
-    );
-  }
-
-  Widget _buildConnectionsList() {
-    final grpcService = ref.read(grpcServiceProvider);
-
-    return FutureBuilder<NetworkConnectionList>(
-      future: grpcService.getNetworkConnections(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const Gap(16),
-                  Text(
-                    'Error loading connections',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Gap(8),
-                  Text(
-                    snapshot.error.toString(),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        final connections =
-            snapshot.data?.connections.toList() ?? <NetworkConnection>[];
-        final filteredConnections = _filterConnections(connections);
-
-        if (filteredConnections.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.cloud_off,
-                  size: 64,
-                  color: AppTheme.textTertiary.withValues(alpha: 0.5),
-                ),
-                const Gap(16),
-                Text(
-                  'No connections found',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: filteredConnections.length,
-          itemBuilder: (context, index) {
-            return _buildConnectionCard(filteredConnections[index]);
-          },
-        );
-      },
-    );
-  }
-
-  List<NetworkConnection> _filterConnections(
-    List<NetworkConnection> connections,
-  ) {
-    return connections.where((conn) {
-      // Filter by protocol
-      if (_filterProtocol != 'all') {
-        if (!conn.protocol.toLowerCase().contains(_filterProtocol)) {
-          return false;
-        }
-      }
-
-      // Filter by status
-      if (_filterStatus != 'all') {
-        if (!conn.status.toLowerCase().contains(_filterStatus)) {
-          return false;
-        }
-      }
-
-      // Filter by search query
-      if (_searchQuery.isNotEmpty) {
-        final searchLower = _searchQuery.toLowerCase();
-        return conn.localAddress.toLowerCase().contains(searchLower) ||
-            conn.remoteAddress.toLowerCase().contains(searchLower) ||
-            conn.localPort.toString().contains(searchLower) ||
-            conn.remotePort.toString().contains(searchLower) ||
-            conn.processName.toLowerCase().contains(searchLower);
-      }
-
-      return true;
-    }).toList();
-  }
-
-  Widget _buildConnectionCard(NetworkConnection conn) {
-    Color statusColor;
-    IconData statusIcon;
-
-    final status = conn.status.toLowerCase();
-    if (status.contains('established')) {
-      statusColor = AppTheme.successGreen;
-      statusIcon = Icons.check_circle;
-    } else if (status.contains('listen')) {
-      statusColor = AppTheme.warningAmber;
-      statusIcon = Icons.hearing;
-    } else if (status.contains('close') || status.contains('time_wait')) {
-      statusColor = Theme.of(context).colorScheme.error;
-      statusIcon = Icons.close;
-    } else {
-      statusColor = AppTheme.textSecondary;
-      statusIcon = Icons.circle;
-    }
-
-    final protocolColor = conn.protocol.contains('TCP')
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.secondary;
-
-    // Get port descriptions for display in top right
-    final localPortDesc = _getPortDescription(conn.localPort);
-    final remotePortDesc = conn.remoteAddress.isNotEmpty
-        ? _getPortDescription(conn.remotePort)
-        : '';
-    final hasPortDesc = localPortDesc.isNotEmpty || remotePortDesc.isNotEmpty;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
+    return PageScaffold(
+      title: 'Network connections',
+      subtitle: all.isEmpty ? null : '${listening.length} listening · $established established',
+      actions: [
+        IconButton(
+          tooltip: 'Refresh',
+          icon: const Icon(Icons.refresh),
+          onPressed: () => ref.invalidate(_connectionsProvider),
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(170),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Protocol and Status
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Insets.page),
+              child: SegmentedButton<_View>(
+                segments: [
+                  ButtonSegment(
+                    value: _View.listening,
+                    icon: const Icon(Icons.sensors),
+                    label: Text('Listening · ${listening.length}'),
                   ),
-                  decoration: BoxDecoration(
-                    color: protocolColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    conn.protocol,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: protocolColor,
-                    ),
-                  ),
-                ),
-                const Gap(8),
-                Icon(statusIcon, size: 16, color: statusColor),
-                const Gap(4),
-                Text(
-                  conn.status,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                // Known Ports Display - Top Right
-                if (hasPortDesc) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (localPortDesc.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withValues(
-                              alpha: 0.15,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withValues(
-                                alpha: 0.3,
-                              ),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            localPortDesc,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      if (localPortDesc.isNotEmpty && remotePortDesc.isNotEmpty)
-                        const Gap(4),
-                      if (remotePortDesc.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withValues(
-                              alpha: 0.15,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.secondary.withValues(
-                                alpha: 0.3,
-                              ),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            remotePortDesc,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.secondary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const Gap(8),
-                ],
-                if (conn.processName.isNotEmpty) ...[
-                  const Icon(
-                    Icons.apps,
-                    size: 14,
-                    color: AppTheme.textTertiary,
-                  ),
-                  const Gap(4),
-                  Text(
-                    conn.processName,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textTertiary,
-                    ),
+                  ButtonSegment(
+                    value: _View.connections,
+                    icon: const Icon(Icons.swap_horiz),
+                    label: Text('Connections · ${active.length}'),
                   ),
                 ],
-              ],
-            ),
-            const Gap(12),
-            const Divider(color: AppTheme.glassBorder, height: 1),
-            const Gap(12),
-            // Local Address
-            Row(
-              children: [
-                Icon(
-                  Icons.computer,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const Gap(8),
-                const Text(
-                  'Local:',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                ),
-                const Gap(8),
-                Expanded(
-                  child: Text(
-                    '${conn.localAddress}:${conn.localPort}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const Gap(8),
-            // Remote Address
-            Row(
-              children: [
-                Icon(
-                  Icons.public,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-                const Gap(8),
-                const Text(
-                  'Remote:',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                ),
-                const Gap(8),
-                Expanded(
-                  child: Text(
-                    conn.remoteAddress.isEmpty
-                        ? '*:*'
-                        : '${conn.remoteAddress}:${conn.remotePort}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (conn.pid != 0) ...[
-              const Gap(8),
-              Row(
-                children: [
-                  const Icon(Icons.tag, size: 16, color: AppTheme.textTertiary),
-                  const Gap(8),
-                  Text(
-                    'PID: ${conn.pid}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
-                ],
+                selected: {_view},
+                onSelectionChanged: (v) => setState(() => _view = v.first),
               ),
-            ],
+            ),
+            SearchFilterBar<_Proto>(
+              hint: 'Search port, process or address',
+              onSearch: (v) => setState(() => _query = v),
+              selected: _proto,
+              onFilter: (p) => setState(() => _proto = p),
+              filters: const [
+                FilterOption(_Proto.all, 'All'),
+                FilterOption(_Proto.tcp, 'TCP'),
+                FilterOption(_Proto.udp, 'UDP'),
+              ],
+            ),
           ],
         ),
+      ),
+      body: AsyncView(
+        value: async,
+        onRetry: () => ref.invalidate(_connectionsProvider),
+        loadingMessage: 'Reading sockets…',
+        data: (_) => _view == _View.listening ? _listening(listening) : _connections(active),
+      ),
+    );
+  }
+
+  Widget _listening(List<NetworkConnection> list) {
+    // One row per port and protocol (IPv4 and IPv6 sockets of the same service)
+    final byPort = <String, List<NetworkConnection>>{};
+    for (final c in list.where(_match)) {
+      byPort.putIfAbsent('${c.protocol.toLowerCase().replaceAll('6', '')}:${c.localPort}', () => []).add(c);
+    }
+    final keys = byPort.keys.toList()
+      ..sort((a, b) => byPort[a]!.first.localPort.compareTo(byPort[b]!.first.localPort));
+    if (keys.isEmpty) return const EmptyState(icon: Icons.sensors_off, title: 'No listening ports match');
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(_connectionsProvider),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(Insets.page, Insets.xs, Insets.page, 96),
+        itemCount: keys.length,
+        itemBuilder: (context, i) {
+          final group = byPort[keys[i]]!;
+          final c = group.first;
+          // The widest exposure of the group counts
+          final exposures = group.map((g) => _exposure(g.localAddress)).toList();
+          final exposure = exposures.firstWhere((e) => e.$2 == Tone.warning, orElse: () => exposures.first);
+          final known = _wellKnown(c.localPort);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: Insets.xs),
+            child: Material(
+              color: context.cs.surfaceContainer,
+              borderRadius: Radii.mdAll,
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                onTap: () => _details(c),
+                leading: SizedBox(
+                  width: 64,
+                  child: Text(
+                    '${c.localPort}',
+                    style: AppTheme.mono(size: 16, weight: FontWeight.w600, color: context.cs.primary),
+                  ),
+                ),
+                title: Text(
+                  c.processName.isNotEmpty ? c.processName : (known.isNotEmpty ? known : 'unknown process'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  [c.protocol.toUpperCase().replaceAll('6', ''), if (known.isNotEmpty && c.processName.isNotEmpty) known]
+                      .join(' · '),
+                ),
+                trailing: StatusPill(exposure.$1, tone: exposure.$2),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _connections(List<NetworkConnection> list) {
+    final shown = list.where(_match).toList()
+      ..sort((a, b) {
+        if ((a.status == 'ESTABLISHED') != (b.status == 'ESTABLISHED')) return a.status == 'ESTABLISHED' ? -1 : 1;
+        return a.remoteAddress.compareTo(b.remoteAddress);
+      });
+    if (shown.isEmpty) return const EmptyState(icon: Icons.swap_horiz, title: 'No connections match');
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(_connectionsProvider),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(Insets.page, Insets.xs, Insets.page, 96),
+        itemCount: shown.length,
+        itemBuilder: (context, i) {
+          final c = shown[i];
+          final established = c.status == 'ESTABLISHED';
+          return Padding(
+            padding: const EdgeInsets.only(bottom: Insets.xs),
+            child: Material(
+              color: context.cs.surfaceContainer,
+              borderRadius: Radii.mdAll,
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                onTap: () => _details(c),
+                leading: Icon(
+                  established ? Icons.link : Icons.hourglass_bottom,
+                  color: established ? context.ac.success : context.cs.onSurfaceVariant,
+                ),
+                title: Text('${c.remoteAddress}:${c.remotePort}', style: AppTheme.mono(size: 13.5)),
+                subtitle: Text(
+                  '${c.processName.isEmpty ? '?' : c.processName} · local port ${c.localPort} · ${c.protocol.toUpperCase()}',
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: StatusPill(
+                  c.status.isEmpty ? '—' : c.status.toLowerCase().replaceAll('_', ' '),
+                  tone: established ? Tone.success : Tone.neutral,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

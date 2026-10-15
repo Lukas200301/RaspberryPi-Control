@@ -8,8 +8,19 @@ import 'grpc_service.dart';
 
 /// File transfer service using gRPC streaming
 /// Much simpler than SFTP - no background isolates, no complex state management
+/// Thrown by a transfer that was cancelled with [GrpcFileTransferService.cancelTransfer]
+class TransferCancelled implements Exception {
+  const TransferCancelled();
+
+  @override
+  String toString() => 'Cancelled';
+}
+
 class GrpcFileTransferService extends ChangeNotifier {
   final GrpcService _grpcService;
+
+  /// Transfers asked to stop; their loops check this between chunks
+  final Set<String> _cancelled = {};
 
   // Transfer tracking
   final Map<String, FileTransferProgress> _activeTransfers = {};
@@ -81,6 +92,15 @@ class GrpcFileTransferService extends ChangeNotifier {
 
       // Start the upload call
       final responseCall = _grpcService.uploadFileStream(controller.stream);
+      void stopIfCancelled() {
+        if (!_cancelled.contains(transferId)) return;
+        // An error in the request stream aborts the call; the agent then
+        // deletes the partial file
+        responseCall.ignore();
+        controller.addError(const TransferCancelled());
+        controller.close();
+        throw const TransferCancelled();
+      }
 
       // Read and send file chunks with adaptive sizing
       final stream = file.openRead();
@@ -92,6 +112,7 @@ class GrpcFileTransferService extends ChangeNotifier {
 
         // Send chunks when buffer reaches optimal chunk size
         while (buffer.length >= chunkSize) {
+          stopIfCancelled();
           final dataToSend = buffer.sublist(0, chunkSize);
           buffer = buffer.sublist(chunkSize);
 
@@ -112,6 +133,8 @@ class GrpcFileTransferService extends ChangeNotifier {
           notifyListeners();
         }
       }
+
+      stopIfCancelled();
 
       // Send remaining data in buffer
       if (buffer.isNotEmpty) {
@@ -150,11 +173,15 @@ class GrpcFileTransferService extends ChangeNotifier {
       debugPrint(
         'Upload complete: $remotePath (${response.bytesWritten} bytes in ${response.duration.toStringAsFixed(2)}s)',
       );
+    } on TransferCancelled {
+      progress.error = 'Cancelled';
+      rethrow;
     } catch (e) {
       progress.error = e.toString();
       debugPrint('Upload failed: $e');
       rethrow;
     } finally {
+      _cancelled.remove(transferId);
       _activeTransfers.remove(transferId);
       notifyListeners();
     }
@@ -201,6 +228,8 @@ class GrpcFileTransferService extends ChangeNotifier {
       }
 
       await for (final chunk in stream) {
+        // Leaving the loop cancels the gRPC stream
+        if (_cancelled.contains(transferId)) throw const TransferCancelled();
         if (chunk.error.isNotEmpty) {
           throw Exception(chunk.error);
         }
@@ -237,12 +266,22 @@ class GrpcFileTransferService extends ChangeNotifier {
       debugPrint(
         'Download complete: $localPath (${progress.transferredBytes} bytes)',
       );
+    } on TransferCancelled {
+      progress.error = 'Cancelled';
+      await outputFile?.close();
+      outputFile = null;
+      // A half-written file is useless; keep nothing behind
+      try {
+        await File(localPath).delete();
+      } catch (_) {}
+      rethrow;
     } catch (e) {
       progress.error = e.toString();
       debugPrint('Download failed: $e');
       rethrow;
     } finally {
       await outputFile?.close();
+      _cancelled.remove(transferId);
       _activeTransfers.remove(transferId);
       notifyListeners();
     }
@@ -303,15 +342,14 @@ class GrpcFileTransferService extends ChangeNotifier {
     }
   }
 
-  /// Cancel a transfer
+  /// Stops a transfer at the next chunk; its future fails with [TransferCancelled]
   void cancelTransfer(String transferId) {
-    final transfer = _activeTransfers[transferId];
-    if (transfer != null) {
-      transfer.error = 'Cancelled by user';
-      _activeTransfers.remove(transferId);
-      notifyListeners();
-    }
+    if (!_activeTransfers.containsKey(transferId)) return;
+    _cancelled.add(transferId);
+    notifyListeners();
   }
+
+  bool isCancelling(String transferId) => _cancelled.contains(transferId);
 
   /// Clear completed transfers history
   void clearCompleted() {

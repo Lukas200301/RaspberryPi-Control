@@ -1,790 +1,358 @@
 import 'dart:async';
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
+import '../providers/app_providers.dart';
+import '../ui/ui.dart';
 import 'package_details_screen.dart';
+import 'system_update_screen.dart';
 
+/// Tabs of the Packages screen
+enum PackagesTab { updates, installed, find }
+
+/// Runs a package command with a blocking progress dialog and reports the result
+Future<bool> runPackageCommand(
+  BuildContext context, {
+  required String working,
+  required Future<ActionStatus> Function() call,
+  required String done,
+}) async {
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialog) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 3)),
+            const Gap(Insets.lg),
+            Expanded(child: Text(working)),
+          ],
+        ),
+      ),
+    ),
+  );
+  var ok = false;
+  String message;
+  try {
+    final r = await call();
+    ok = r.success;
+    message = ok ? done : r.message;
+  } catch (e) {
+    message = describeError(e);
+  }
+  if (context.mounted) {
+    Navigator.of(context, rootNavigator: true).pop();
+    showToast(context, message, tone: ok ? Tone.success : Tone.danger);
+  }
+  return ok;
+}
+
+/// apt software: updates, installed packages and search in one place
 class PackagesScreen extends ConsumerStatefulWidget {
-  const PackagesScreen({super.key});
+  final PackagesTab initialTab;
+
+  const PackagesScreen({super.key, this.initialTab = PackagesTab.updates});
 
   @override
   ConsumerState<PackagesScreen> createState() => _PackagesScreenState();
 }
 
-class _PackagesScreenState extends ConsumerState<PackagesScreen> {
-  bool _installedOnly = true;
-  String _searchQuery = '';
-  bool _isLoading = false;
-  List<PackageInfo> _packages = [];
-  String? _error;
+class _PackagesScreenState extends ConsumerState<PackagesScreen> with SingleTickerProviderStateMixin {
+  late final _tabs = TabController(length: 3, vsync: this, initialIndex: widget.initialTab.index);
+  String _query = '';
   Timer? _debounce;
+  bool _loading = false;
+  bool _refreshing = false;
+  Object? _error;
+  List<PackageInfo> _packages = [];
+  int _request = 0;
+
+  PackagesTab get _tab => PackagesTab.values[_tabs.index];
 
   @override
   void initState() {
     super.initState();
-    _loadPackages();
-    // Check agent elevation status - delay to ensure connection is fully established
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        ref.read(agentElevationProvider.notifier).refresh();
-      }
+    _tabs.addListener(() {
+      if (_tabs.indexIsChanging) return;
+      setState(() {});
+      if (_tab != PackagesTab.updates) _load();
     });
+    if (_tab != PackagesTab.updates) _load();
+    Future.microtask(() => ref.read(agentElevationProvider.notifier).refresh());
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _tabs.dispose();
     super.dispose();
   }
 
-  Future<void> _loadPackages() async {
+  bool get _needsQuery => _tab == PackagesTab.find && _query.trim().length < 2;
+
+  Future<void> _load() async {
+    if (_tab == PackagesTab.updates) return;
+    if (_needsQuery) {
+      setState(() {
+        _packages = [];
+        _loading = false;
+        _error = null;
+      });
+      return;
+    }
+    final request = ++_request;
     setState(() {
-      _isLoading = true;
+      _loading = true;
       _error = null;
     });
-
     try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final packageList = await grpcService.listPackages(
-        searchTerm: _searchQuery.isEmpty ? null : _searchQuery,
-        installedOnly: _installedOnly,
-      );
-
+      final list = await ref
+          .read(grpcServiceProvider)
+          .listPackages(
+            searchTerm: _query.trim().isEmpty ? null : _query.trim(),
+            installedOnly: _tab == PackagesTab.installed,
+          );
+      // Ignore answers to older searches
+      if (!mounted || request != _request) return;
       setState(() {
-        _packages = packageList.packages;
-        _isLoading = false;
+        _packages = list.packages;
+        _loading = false;
       });
     } catch (e) {
+      if (!mounted || request != _request) return;
       setState(() {
-        _error = e.toString();
-        _isLoading = false;
+        _error = e;
+        _loading = false;
       });
     }
   }
 
-  Future<void> _updatePackageList() async {
-    try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final result = await grpcService.updatePackageList();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message),
-            backgroundColor: result.success
-                ? AppTheme.successGreen
-                : Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-
-      if (result.success) {
-        _loadPackages();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
+  void _search(String v) {
+    _query = v;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), _load);
+    setState(() {});
   }
 
-  Future<void> _upgradePackages() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Upgrade All Packages'),
-        content: const Text(
-          'This will upgrade all installed packages to their latest versions. Continue?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Upgrade'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: AlertDialog(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                Gap(16),
-                Text('Upgrading packages...'),
-              ],
-            ),
-          ),
-        ),
+  /// apt-get update: fresh package lists for all tabs
+  Future<void> _refreshLists() async {
+    setState(() => _refreshing = true);
+    try {
+      final r = await ref.read(grpcServiceProvider).updatePackageList();
+      if (!mounted) return;
+      showToast(
+        context,
+        r.success ? 'Package lists are up to date' : r.message,
+        tone: r.success ? Tone.success : Tone.danger,
       );
-    }
-
-    try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final result = await grpcService.upgradePackages();
-
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.message,
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: result.success
-                ? AppTheme.successGreen
-                : Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-
-      if (result.success) {
-        _loadPackages();
-      }
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      if (mounted) showToast(context, describeError(e), tone: Tone.danger);
+    } finally {
+      ref.invalidate(updateStatusProvider);
+      if (mounted) setState(() => _refreshing = false);
+      _load();
     }
   }
 
-  Future<void> _installPackage(String packageName) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text('Install Package'),
-          content: Text('Install $packageName?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Install'),
-            ),
-          ],
-        ),
-      ),
+  Future<void> _open(PackageInfo p) async {
+    final changed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => PackageDetailsScreen(packageName: p.name)),
     );
-
-    if (confirmed != true) return;
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: AlertDialog(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                Gap(16),
-                Text('Installing package...'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final result = await grpcService.installPackage(packageName);
-
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.message,
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: result.success
-                ? AppTheme.successGreen
-                : Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-
-      if (result.success) {
-        _loadPackages();
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    }
-  }
-
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
-
-  Future<void> _removePackage(String packageName) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          title: const Text('Remove Package'),
-          content: Text('Remove $packageName?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: AlertDialog(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                Gap(16),
-                Text('Removing package...'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final result = await grpcService.removePackage(packageName);
-
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.message,
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: result.success
-                ? AppTheme.successGreen
-                : Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-
-      if (result.success) {
-        _loadPackages();
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+    if (changed == true) {
+      ref.invalidate(updateStatusProvider);
+      _load();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final elevationStatus = ref.watch(agentElevationProvider);
+    final root = ref.watch(agentElevationProvider).valueOrNull;
+    final status = ref.watch(updateStatusProvider).valueOrNull;
+    final upgradable = {for (final u in status?.upgradablePackages ?? const <UpgradablePackage>[]) u.name};
+    final updates = status?.upgradablePackages.length;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Package Manager'),
-        scrolledUnderElevation: 0,
-        actions: [
-          PopupMenuButton(
-            icon: const Icon(Icons.more_vert),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                onTap: _updatePackageList,
-                child: const Row(
-                  children: [
-                    Icon(Icons.sync),
-                    Gap(12),
-                    Text('Update Package List'),
-                  ],
+    return PageScaffold(
+      title: 'Packages',
+      subtitle: switch (_tab) {
+        PackagesTab.updates =>
+          updates == null
+              ? null
+              : updates == 0
+              ? 'Up to date'
+              : '$updates ${updates == 1 ? 'update' : 'updates'} available',
+        PackagesTab.installed => _loading ? 'Loading…' : '${_packages.length} installed',
+        PackagesTab.find =>
+          _loading ? 'Searching…' : (_needsQuery ? 'Search all available software' : '${_packages.length} found'),
+      },
+      actions: [
+        IconButton(
+          tooltip: 'Check for updates (apt update)',
+          onPressed: _refreshing ? null : _refreshLists,
+          icon: _refreshing
+              ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.sync),
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(_tab == PackagesTab.updates ? 48 : 112),
+        child: Column(
+          children: [
+            TabBar(
+              controller: _tabs,
+              tabs: [
+                Tab(
+                  child: Badge(
+                    isLabelVisible: (updates ?? 0) > 0,
+                    label: Text('${updates ?? 0}'),
+                    offset: const Offset(14, -6),
+                    child: const Text('Updates'),
+                  ),
+                ),
+                const Tab(text: 'Installed'),
+                const Tab(text: 'Find'),
+              ],
+            ),
+            if (_tab != PackagesTab.updates)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Insets.page, Insets.sm, Insets.page, Insets.sm),
+                child: SearchField(
+                  key: ValueKey(_tab),
+                  hint: _tab == PackagesTab.find ? 'Search all software (e.g. nginx)' : 'Search installed packages',
+                  initial: _query,
+                  onChanged: _search,
                 ),
               ),
-              PopupMenuItem(
-                onTap: _upgradePackages,
-                child: const Row(
-                  children: [
-                    Icon(Icons.system_update),
-                    Gap(12),
-                    Text('Upgrade All'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
       body: Column(
         children: [
-          // Warning banner if agent is not running as root
-          elevationStatus.when(
-            data: (isRoot) {
-              debugPrint('PackagesScreen: Elevation status - isRoot: $isRoot');
-              if (!isRoot) {
-                const warningMessage =
-                    '⚠️ Limited Functionality: The agent is not running with elevated privileges. You can browse packages, but installing or removing them may fail.';
-
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        color: Theme.of(context).colorScheme.error,
-                        size: 20,
-                      ),
-                      const Gap(12),
-                      Expanded(
-                        child: Text(
-                          warningMessage,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.error,
-                                fontSize: 12,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            loading: () {
-              debugPrint('PackagesScreen: Elevation status loading...');
-              return const SizedBox.shrink();
-            },
-            error: (error, stack) {
-              debugPrint('PackagesScreen: Elevation check error: $error');
-              // Show warning if we can't check (assume not root to be safe)
-              const warningMessage =
-                  '⚠️ Limited Functionality: Could not verify agent privileges. Package operations may fail.';
-
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.error.withValues(alpha: 0.15),
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Theme.of(context).colorScheme.error,
-                      size: 20,
-                    ),
-                    const Gap(12),
-                    Expanded(
-                      child: Text(
-                        warningMessage,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          // Search and filter
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search packages...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              setState(() => _searchQuery = '');
-                              _debounce?.cancel();
-                              _loadPackages();
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    // Cancel previous timer
-                    _debounce?.cancel();
-
-                    setState(() => _searchQuery = value);
-
-                    // Only search after user stops typing for 500ms
-                    _debounce = Timer(const Duration(milliseconds: 500), () {
-                      _loadPackages();
-                    });
-                  },
-                  onSubmitted: (value) {
-                    _debounce?.cancel();
-                    setState(() => _searchQuery = value);
-                    _loadPackages();
-                  },
-                ),
-                const Gap(12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SegmentedButton<bool>(
-                        segments: const [
-                          ButtonSegment(
-                            value: true,
-                            label: Text('Installed'),
-                            icon: Icon(Icons.check_circle_outline),
-                          ),
-                          ButtonSegment(
-                            value: false,
-                            label: Text('All'),
-                            icon: Icon(Icons.apps),
-                          ),
-                        ],
-                        selected: {_installedOnly},
-                        onSelectionChanged: (Set<bool> newSelection) {
-                          setState(() => _installedOnly = newSelection.first);
-                          _loadPackages();
-                        },
-                      ),
-                    ),
-                    const Gap(12),
-                    IconButton.filled(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _loadPackages,
-                    ),
-                  ],
+          if (root == false)
+            MaterialBanner(
+              leading: const Icon(Icons.admin_panel_settings_outlined),
+              content: const Text(
+                'The agent is not running as root, so installing and removing packages will fail. '
+                'Reinstall it under Settings > Agent.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => ref.read(agentElevationProvider.notifier).refresh(),
+                  child: const Text('Check again'),
                 ),
               ],
             ),
-          ),
-
-          // Package list
           Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        Gap(16),
-                        Text('Loading packages...'),
-                      ],
-                    ),
-                  )
-                : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          const Gap(16),
-                          Text(
-                            'Error loading packages',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const Gap(8),
-                          Text(
-                            _error!,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const Gap(16),
-                          FilledButton.icon(
-                            onPressed: _loadPackages,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : _packages.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          size: 64,
-                          color: Colors.grey[600],
-                        ),
-                        const Gap(16),
-                        Text(
-                          'No packages found',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _packages.length,
-                    itemBuilder: (context, index) {
-                      final package = _packages[index];
-                      return _buildPackageItem(package);
-                    },
-                  ),
+            // IndexedStack keeps a running upgrade alive while you look at other tabs
+            child: IndexedStack(
+              index: _tabs.index,
+              children: [
+                const UpdatesView(),
+                _tab == PackagesTab.installed ? _listTab(upgradable) : const SizedBox.shrink(),
+                _tab == PackagesTab.find ? _listTab(upgradable) : const SizedBox.shrink(),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPackageItem(PackageInfo package) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: GlassCard(
-        padding: const EdgeInsets.all(12),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PackageDetailsScreen(
-                packageName: package.name,
-                isInstalled: package.installed,
-              ),
-            ),
-          ).then((_) {
-            // Reload packages when returning from details screen
-            _loadPackages();
-          });
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: package.installed
-                    ? AppTheme.successGreen.withValues(alpha: 0.2)
-                    : AppTheme.glassLight,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                package.installed ? Icons.check_circle : Icons.apps,
-                color: package.installed ? AppTheme.successGreen : Colors.grey,
-                size: 24,
-              ),
-            ),
-            const Gap(12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          package.name,
-                          style: Theme.of(context).textTheme.titleMedium,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (package.version.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.glassLight,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            package.version,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (package.description.isNotEmpty) ...[
-                    const Gap(4),
-                    Text(
-                      package.description,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.grey[400]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (package.installed && package.installedSize > 0) ...[
-                    const Gap(4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.sd_storage,
-                          size: 12,
-                          color: Colors.grey[500],
-                        ),
-                        const Gap(4),
-                        Text(
-                          _formatBytes(package.installedSize.toInt()),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[500], fontSize: 11),
-                        ),
-                        if (package.section.isNotEmpty) ...[
-                          const Gap(8),
-                          Icon(
-                            Icons.folder_outlined,
-                            size: 12,
-                            color: Colors.grey[500],
-                          ),
-                          const Gap(4),
-                          Expanded(
-                            child: Text(
-                              package.section,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Colors.grey[500],
-                                    fontSize: 11,
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const Gap(8),
-            if (package.installed)
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                color: Theme.of(context).colorScheme.error,
-                onPressed: () => _removePackage(package.name),
+  Widget _listTab(Set<String> upgradable) {
+    return Column(
+      children: [
+        if (_loading) const LinearProgressIndicator(),
+        Expanded(child: _list(_packages, upgradable)),
+      ],
+    );
+  }
+
+  Widget _list(List<PackageInfo> shown, Set<String> upgradable) {
+    if (_error != null && shown.isEmpty) {
+      return ErrorState(title: 'Packages could not be listed', error: _error!, onRetry: _load);
+    }
+    if (_needsQuery) {
+      return const EmptyState(
+        icon: Icons.travel_explore,
+        title: 'Find software',
+        message: 'Type at least two letters to search everything apt can install.',
+      );
+    }
+    if (shown.isEmpty && !_loading) {
+      final installedTab = _tab == PackagesTab.installed;
+      return EmptyState(
+        icon: Icons.search_off,
+        title: 'No packages found',
+        message: installedTab && _query.isNotEmpty ? 'Search "Find" to install it.' : null,
+        action: installedTab && _query.isNotEmpty
+            ? OutlinedButton(
+                onPressed: () => _tabs.animateTo(PackagesTab.find.index),
+                child: const Text('Search all software'),
               )
-            else
-              FilledButton.icon(
-                onPressed: () => _installPackage(package.name),
-                icon: const Icon(Icons.download, size: 18),
-                label: const Text('Install'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+            : null,
+      );
+    }
+    // Packages with an update first
+    final sorted = [...shown]
+      ..sort((a, b) {
+        final ua = upgradable.contains(a.name), ub = upgradable.contains(b.name);
+        if (ua != ub) return ua ? -1 : 1;
+        return a.name.compareTo(b.name);
+      });
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(Insets.page, Insets.xs, Insets.page, 96),
+        itemCount: sorted.length,
+        itemBuilder: (context, i) {
+          final p = sorted[i];
+          final update = p.installed && upgradable.contains(p.name);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: Insets.xs),
+            child: Material(
+              color: context.cs.surfaceContainer,
+              borderRadius: Radii.mdAll,
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                onTap: () => _open(p),
+                leading: IconBadge(
+                  p.installed ? Icons.inventory_2 : Icons.inventory_2_outlined,
+                  tone: update
+                      ? Tone.warning
+                      : p.installed
+                      ? Tone.primary
+                      : Tone.neutral,
+                  size: 36,
                 ),
+                title: Row(
+                  children: [
+                    Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
+                    if (update) ...[const Gap(Insets.xs), const StatusPill('update', tone: Tone.warning)],
+                    if (_tab == PackagesTab.find && p.installed) ...[
+                      const Gap(Insets.xs),
+                      const StatusPill('installed', tone: Tone.success),
+                    ],
+                  ],
+                ),
+                subtitle: Text(
+                  [if (p.version.isNotEmpty) p.version, if (p.description.isNotEmpty) p.description].join(' · '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: p.installed && p.installedSize > 0
+                    ? Text(
+                        formatBytes(p.installedSize.toInt()),
+                        style: context.tt.labelMedium?.copyWith(color: context.cs.onSurfaceVariant),
+                      )
+                    : const Icon(Icons.chevron_right),
               ),
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
   }

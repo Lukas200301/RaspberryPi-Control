@@ -16,7 +16,7 @@ class TerminalSnippetsNotifier extends Notifier<List<String>> {
       'docker ps -a',
       'df -h',
       'top -o %CPU',
-      'curl -ifconfig.me',
+      'curl -s ifconfig.me',
     ]; // Default snippets
   }
 

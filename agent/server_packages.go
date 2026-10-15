@@ -19,6 +19,9 @@ import (
 
 // ListPackages returns a list of packages (installed or searchable)
 func (s *systemMonitorServer) ListPackages(ctx context.Context, req *pb.PackageFilter) (*pb.PackageList, error) {
+	if !validSearchTerm(req.SearchTerm) {
+		return nil, fmt.Errorf("invalid search term")
+	}
 	var cmd *exec.Cmd
 
 	if req.InstalledOnly || req.SearchTerm == "" {
@@ -26,7 +29,7 @@ func (s *systemMonitorServer) ListPackages(ctx context.Context, req *pb.PackageF
 		cmd = exec.Command("dpkg-query", "-W", "-f=${Package}\t${Version}\t${Architecture}\t${Status}\t${binary:Summary}\t${Installed-Size}\t${Section}\n")
 	} else {
 		// Search for packages
-		cmd = exec.Command("apt-cache", "search", req.SearchTerm)
+		cmd = exec.Command("apt-cache", "search", "--", req.SearchTerm)
 	}
 
 	output, err := cmd.Output()
@@ -131,6 +134,9 @@ func (s *systemMonitorServer) ListPackages(ctx context.Context, req *pb.PackageF
 
 // InstallPackage installs a package using apt
 func (s *systemMonitorServer) InstallPackage(ctx context.Context, req *pb.PackageCommand) (*pb.ActionStatus, error) {
+	if !validPackageName(req.PackageName) {
+		return &pb.ActionStatus{Success: false, Message: "Invalid package name", ErrorCode: 1}, nil
+	}
 	cmd := exec.Command("apt-get", "install", "-y", req.PackageName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -149,6 +155,9 @@ func (s *systemMonitorServer) InstallPackage(ctx context.Context, req *pb.Packag
 
 // RemovePackage removes a package using apt
 func (s *systemMonitorServer) RemovePackage(ctx context.Context, req *pb.PackageCommand) (*pb.ActionStatus, error) {
+	if !validPackageName(req.PackageName) {
+		return &pb.ActionStatus{Success: false, Message: "Invalid package name", ErrorCode: 1}, nil
+	}
 	cmd := exec.Command("apt-get", "remove", "-y", req.PackageName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -167,6 +176,9 @@ func (s *systemMonitorServer) RemovePackage(ctx context.Context, req *pb.Package
 
 // UpdatePackage updates a specific package using apt
 func (s *systemMonitorServer) UpdatePackage(ctx context.Context, req *pb.PackageCommand) (*pb.ActionStatus, error) {
+	if !validPackageName(req.PackageName) {
+		return &pb.ActionStatus{Success: false, Message: "Invalid package name", ErrorCode: 1}, nil
+	}
 	cmd := exec.Command("apt-get", "install", "--only-upgrade", "-y", req.PackageName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -221,6 +233,9 @@ func (s *systemMonitorServer) UpgradePackages(ctx context.Context, req *pb.Empty
 
 // GetPackageDetails returns detailed information about a specific package
 func (s *systemMonitorServer) GetPackageDetails(ctx context.Context, req *pb.PackageDetailsRequest) (*pb.PackageDetails, error) {
+	if !validPackageName(req.PackageName) {
+		return nil, fmt.Errorf("invalid package name")
+	}
 	// Get detailed package information using apt-cache show
 	cmd := exec.Command("apt-cache", "show", req.PackageName)
 	output, err := cmd.Output()
@@ -308,6 +323,9 @@ func (s *systemMonitorServer) GetPackageDetails(ctx context.Context, req *pb.Pac
 
 // GetPackageDependencies returns dependency information for a package
 func (s *systemMonitorServer) GetPackageDependencies(ctx context.Context, req *pb.PackageDetailsRequest) (*pb.PackageDependencies, error) {
+	if !validPackageName(req.PackageName) {
+		return nil, fmt.Errorf("invalid package name")
+	}
 	deps := &pb.PackageDependencies{
 		PackageName: req.PackageName,
 		Depends:     []string{},
@@ -345,18 +363,11 @@ func (s *systemMonitorServer) GetPackageDependencies(ctx context.Context, req *p
 	}
 
 	// Get reverse dependencies (what requires this package)
-	rdepsCmd := exec.Command("apt-cache", "rdepends", req.PackageName)
+	// Only installed packages that really depend on it, each once
+	rdepsCmd := exec.Command("apt-cache", "rdepends", "--installed", "--no-recommends", "--no-suggests",
+		"--no-conflicts", "--no-breaks", "--no-replaces", "--no-enhances", req.PackageName)
 	if output, err := rdepsCmd.Output(); err == nil {
-		scanner := bufio.NewScanner(bytes.NewReader(output))
-		scanner.Scan() // Skip first line (package name)
-		scanner.Scan() // Skip "Reverse Depends:" line
-
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if line != "" && !strings.HasPrefix(line, "|") {
-				deps.RequiredBy = append(deps.RequiredBy, line)
-			}
-		}
+		deps.RequiredBy = parseRdepends(string(output))
 	}
 
 	return deps, nil
@@ -438,8 +449,24 @@ func (s *systemMonitorServer) GetSystemUpdateStatus(ctx context.Context, req *pb
 	// Get last update time from apt cache
 	if info, err := os.Stat("/var/lib/apt/lists/partial"); err == nil {
 		status.LastUpdate = info.ModTime().Format("2006-01-02 15:04:05")
+		status.LastUpdateUnix = info.ModTime().Unix()
 	} else if info, err := os.Stat("/var/cache/apt/pkgcache.bin"); err == nil {
 		status.LastUpdate = info.ModTime().Format("2006-01-02 15:04:05")
+		status.LastUpdateUnix = info.ModTime().Unix()
+	}
+
+	// Debian/Ubuntu mark a needed reboot (new kernel, libc, ...) with these files
+	if _, err := os.Stat("/var/run/reboot-required"); err == nil {
+		status.RebootRequired = true
+		if data, err := os.ReadFile("/var/run/reboot-required.pkgs"); err == nil {
+			seen := map[string]bool{}
+			for _, p := range strings.Fields(string(data)) {
+				if !seen[p] {
+					seen[p] = true
+					status.RebootPackages = append(status.RebootPackages, p)
+				}
+			}
+		}
 	}
 
 	// Get upgradable packages
@@ -493,11 +520,17 @@ func parseUpgradableLine(line string) *pb.UpgradablePackage {
 		oldVersion = strings.TrimSuffix(strings.TrimSpace(tail), "]")
 	}
 
+	source := parts[0]
+	if i := strings.Index(source, ","); i >= 0 {
+		source = source[:i]
+	}
 	return &pb.UpgradablePackage{
 		Name:           name,
 		CurrentVersion: oldVersion,
 		NewVersion:     newVersion,
 		Architecture:   arch,
+		Source:         source,
+		Security:       strings.Contains(parts[0], "-security"),
 	}
 }
 
@@ -509,7 +542,9 @@ func (s *systemMonitorServer) StreamSystemUpgrade(req *pb.Empty, stream pb.Syste
 	}
 
 	// Phase 2: apt upgrade
-	if err := streamCommand(stream, "upgrade", exec.Command("apt-get", "upgrade", "-y")); err != nil {
+	// Keep changed config files instead of stopping at dpkg's question
+	upgrade := exec.Command("apt-get", "-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "upgrade", "-y")
+	if err := streamCommand(stream, "upgrade", upgrade); err != nil {
 		return err
 	}
 
@@ -571,4 +606,20 @@ func streamCommand(stream pb.SystemMonitor_StreamSystemUpgradeServer, phase stri
 	}
 
 	return nil
+}
+
+// parseRdepends reads `apt-cache rdepends` output: a header, "Reverse Depends:",
+// then one package per line ("|" marks alternatives)
+func parseRdepends(output string) []string {
+	result := []string{}
+	seen := map[string]bool{}
+	for i, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "|"))
+		if i < 2 || line == "" || seen[line] {
+			continue
+		}
+		seen[line] = true
+		result = append(result, line)
+	}
+	return result
 }

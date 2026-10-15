@@ -6,7 +6,7 @@ import '../models/ssh_connection.dart';
 class AgentVersionService {
   // Current app version that expects this agent version
   // Temporarily set to 3.2.0 to test the update banner
-  static const String requiredAgentVersion = '3.4.0';
+  static const String requiredAgentVersion = '4.0.0';
 
   /// Get the app version from package info
   static Future<String> getAppVersion() async {
@@ -114,7 +114,7 @@ class AgentVersionService {
   static String getInstallCommand() {
     return '''
 # Stop the agent if running
-sudo pkill -f "/opt/pi-control/agent" || true
+sudo pkill -f "^/opt/pi-control/agent " || true
 
 # Create directory if needed
 sudo mkdir -p /opt/pi-control
@@ -126,7 +126,7 @@ sudo mv /tmp/pi-control-agent /opt/pi-control/agent
 sudo chmod +x /opt/pi-control/agent
 
 # Start agent
-sudo nohup /opt/pi-control/agent --host 0.0.0.0 --port 50051 > /opt/pi-control/agent.log 2>&1 &
+sudo nohup /opt/pi-control/agent --host 127.0.0.1 --port 50051 > /opt/pi-control/agent.log 2>&1 &
 
 echo "Agent updated to version $requiredAgentVersion"
 ''';

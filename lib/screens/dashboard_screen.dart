@@ -1,231 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import '../theme/app_theme.dart';
 import '../providers/app_providers.dart';
-import '../providers/file_providers.dart';
 import '../providers/dashboard_provider.dart';
-import '../widgets/dashboard_widgets/system_vitals_widget.dart';
-import '../widgets/dashboard_widgets/disk_usage_widget.dart';
-import '../widgets/dashboard_widgets/quick_actions_widget.dart';
-import '../widgets/dashboard_widgets/connection_info_widget.dart';
 import '../services/agent_version_service.dart';
+import '../ui/ui.dart';
 import '../widgets/agent_update_banner.dart';
+import 'alerts/alerts_screen.dart';
+import 'dashboard/dashboard_sections.dart';
+import 'tools/tool_registry.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final widgetOrder = ref.watch(dashboardLayoutProvider);
+    final layout = ref.watch(dashboardLayoutProvider);
+    final connection = ref.watch(currentConnectionProvider);
+    final outdated = connection != null &&
+        AgentVersionService.checkVersion(connection.agentVersion) == AgentVersionStatus.outdated;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        automaticallyImplyLeading: false,
-        scrolledUnderElevation: 0,
-        actions: [
-          Builder(
-            builder: (innerContext) => IconButton(
-              icon: const Icon(Icons.widgets_outlined),
-              tooltip: 'Customize Widgets',
-              onPressed: () => _showWidgetPicker(innerContext, ref),
-            ),
-          ),
-        ],
-      ),
-      body: _buildBody(context, ref, widgetOrder),
-    );
-  }
-
-  Widget _buildBody(
-    BuildContext context,
-    WidgetRef ref,
-    List<DashboardWidgetType> order,
-  ) {
-    final currentConnection = ref.watch(currentConnectionProvider);
-
-    Widget buildWidgetForType(DashboardWidgetType type) {
-      switch (type) {
-        case DashboardWidgetType.connectionInfo:
-          return ConnectionInfoWidget(
-            key: const Key('connectionInfo'),
-            onDisconnect: () => _disconnect(context, ref),
-          );
-        case DashboardWidgetType.systemVitals:
-          return const SystemVitalsWidget(key: Key('systemVitals'));
-        case DashboardWidgetType.diskUsage:
-          return const DiskUsageWidget(key: Key('diskUsage'));
-        case DashboardWidgetType.quickActions:
-          return const QuickActionsWidget(key: Key('quickActions'));
+    Widget section(DashboardSection s) {
+      switch (s) {
+        case DashboardSection.vitals:
+          return const VitalsSection();
+        case DashboardSection.activity:
+          return const ActivitySection();
+        case DashboardSection.apps:
+          return const AppsSection();
+        case DashboardSection.tools:
+          return const PinnedToolsSection();
+        case DashboardSection.processes:
+          return const TopProcessesSection();
+        case DashboardSection.storage:
+          return const StorageSection();
       }
     }
 
-    // Build agent update banner if needed
-    Widget? updateBanner;
-    if (currentConnection != null &&
-        AgentVersionService.checkVersion(currentConnection.agentVersion) ==
-            AgentVersionStatus.outdated) {
-      updateBanner = Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        child: AgentUpdateBanner(
-          connection: currentConnection,
-          onDismiss: () {},
-        ),
-      );
+    Widget? trailing(DashboardSection s) {
+      if (s == DashboardSection.tools) {
+        return TextButton(
+          onPressed: () => ref.read(currentScreenProvider.notifier).setScreen(1),
+          child: const Text('All tools'),
+        );
+      }
+      final tool = switch (s) {
+        DashboardSection.activity => toolById('stats'),
+        DashboardSection.processes => toolById('processes'),
+        _ => null,
+      };
+      if (tool == null) return null;
+      return TextButton(onPressed: () => tool.open(context), child: const Text('Details'));
     }
 
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-      header: updateBanner,
-      itemCount: order.length,
-      onReorder: (oldIndex, newIndex) {
-        ref.read(dashboardLayoutProvider.notifier).reorder(oldIndex, newIndex);
-      },
-      proxyDecorator: (child, index, animation) {
-        return AnimatedBuilder(
-          animation: animation,
-          builder: (context, child) {
-            return Material(
-              elevation: 6 * animation.value,
-              borderRadius: BorderRadius.circular(16),
-              shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-              color: Colors.transparent,
-              child: child,
-            );
-          },
-          child: child,
-        );
-      },
-      itemBuilder: (context, index) {
-        final type = order[index];
-        return Padding(
-          key: Key(type.name),
-          padding: const EdgeInsets.only(bottom: 12),
-          child: buildWidgetForType(type),
-        );
-      },
-    );
-  }
-
-  void _showWidgetPicker(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(dashboardLayoutProvider.notifier);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final order = ref.watch(dashboardLayoutProvider);
-          return Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF111111),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-              border: Border.all(color: AppTheme.glassBorder),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.widgets_outlined,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const Gap(8),
-                    Text(
-                      'Dashboard Widgets',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-                const Gap(4),
-                Text(
-                  'Long-press on the dashboard to reorder. Toggle visibility here.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const Gap(16),
-                ...DashboardWidgetType.values.map((type) {
-                  final isVisible = order.contains(type);
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      _iconForWidget(type),
-                      color: isVisible
-                          ? Theme.of(context).colorScheme.primary
-                          : AppTheme.textTertiary,
-                    ),
-                    title: Text(type.displayName),
-                    trailing: Switch(
-                      value: isVisible,
-                      onChanged: (_) => notifier.toggleWidget(type),
-                      activeColor: Theme.of(context).colorScheme.primary,
-                    ),
-                  );
-                }),
-                const Gap(8),
-              ],
-            ),
-          );
+    return PageScaffold(
+      title: 'Home',
+      automaticallyImplyLeading: false,
+      actions: [
+        const AlertsButton(),
+        IconButton(
+          tooltip: 'Customize dashboard',
+          icon: const Icon(Icons.tune),
+          onPressed: () => _customize(context),
+        ),
+      ],
+      body: PageList(
+        onRefresh: () async {
+          ref.invalidate(diskInfoProvider);
+          ref.invalidate(appsSummaryProvider);
         },
-      ),
-    );
-  }
-
-  IconData _iconForWidget(DashboardWidgetType type) {
-    switch (type) {
-      case DashboardWidgetType.connectionInfo:
-        return Icons.computer;
-      case DashboardWidgetType.systemVitals:
-        return Icons.monitor_heart;
-      case DashboardWidgetType.diskUsage:
-        return Icons.storage;
-      case DashboardWidgetType.quickActions:
-        return Icons.bolt;
-    }
-  }
-
-  Future<void> _disconnect(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        title: const Text('Disconnect?'),
-        content: const Text(
-          'Are you sure you want to disconnect from this device?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
+        children: [
+          if (outdated) ...[
+            AgentUpdateBanner(connection: connection, onDismiss: () {}),
+            const Gap(Insets.md),
+          ],
+          const DeviceHeader(),
+          for (final s in layout.visible) ...[
+            SectionHeader(title: s.label, trailing: trailing(s)),
+            section(s),
+          ],
+          if (layout.visible.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: Insets.xxl),
+              child: EmptyState(
+                icon: Icons.dashboard_customize_outlined,
+                title: 'Your dashboard is empty',
+                action: FilledButton.tonal(onPressed: () => _customize(context), child: const Text('Add sections')),
+              ),
             ),
-            child: const Text('Disconnect'),
-          ),
         ],
       ),
     );
+  }
 
-    if (confirmed == true && context.mounted) {
-      ref.read(fileTransfersProvider.notifier).clearAll();
-      ref.read(currentConnectionProvider.notifier).setConnection(null);
-      final connectionManager = ref.read(connectionManagerProvider);
-      connectionManager
-          .disconnect()
-          .timeout(
-            const Duration(seconds: 2),
-            onTimeout: () => debugPrint('Disconnect timeout'),
-          )
-          .catchError((e) => debugPrint('Disconnect error: $e'));
-      Navigator.of(context).pushReplacementNamed('/');
-    }
+  void _customize(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _CustomizeSheet(),
+    );
+  }
+}
+
+class _CustomizeSheet extends ConsumerWidget {
+  const _CustomizeSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final layout = ref.watch(dashboardLayoutProvider);
+    final notifier = ref.read(dashboardLayoutProvider.notifier);
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Insets.xl, 0, Insets.md, Insets.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Customize dashboard', style: context.tt.titleLarge),
+                        Text(
+                          'Drag to reorder, switch sections on or off',
+                          style: context.tt.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(onPressed: notifier.reset, child: const Text('Reset')),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ReorderableListView(
+                shrinkWrap: true,
+                buildDefaultDragHandles: false,
+                onReorderItem: notifier.reorderItem,
+                children: [
+                  for (var i = 0; i < layout.order.length; i++)
+                    ListTile(
+                      key: ValueKey(layout.order[i]),
+                      leading: ReorderableDragStartListener(
+                        index: i,
+                        child: const Icon(Icons.drag_indicator),
+                      ),
+                      title: Text(layout.order[i].label),
+                      subtitle: Text(layout.order[i].description),
+                      trailing: Switch(
+                        value: !layout.hidden.contains(layout.order[i]),
+                        onChanged: (v) => notifier.setVisible(layout.order[i], v),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Gap(Insets.sm),
+          ],
+        ),
+      ),
+    );
   }
 }

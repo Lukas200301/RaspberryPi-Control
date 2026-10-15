@@ -1,526 +1,382 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
-import '../theme/app_theme.dart';
-import '../widgets/glass_card.dart';
-import '../providers/app_providers.dart';
 import '../generated/pi_control.pb.dart';
+import '../providers/app_providers.dart';
+import '../services/session_actions.dart';
+import '../theme/app_theme.dart';
+import '../ui/ui.dart';
+import 'packages_screen.dart';
 
-class SystemUpdateScreen extends ConsumerStatefulWidget {
-  const SystemUpdateScreen({super.key});
+/// Upgradable packages, OS info and whether a reboot is needed
+final updateStatusProvider = FutureProvider.autoDispose<SystemUpdateStatus>((ref) {
+  ref.watch(grpcSessionProvider);
+  return ref.read(grpcServiceProvider).getSystemUpdateStatus();
+});
 
-  @override
-  ConsumerState<SystemUpdateScreen> createState() => _SystemUpdateScreenState();
+String _ago(int unix) {
+  if (unix <= 0) return 'never';
+  final d = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(unix * 1000));
+  if (d.inMinutes < 1) return 'just now';
+  if (d.inHours < 1) return '${d.inMinutes} min ago';
+  if (d.inDays < 1) return '${d.inHours} h ago';
+  return '${d.inDays} ${d.inDays == 1 ? 'day' : 'days'} ago';
 }
 
-class _SystemUpdateScreenState extends ConsumerState<SystemUpdateScreen> {
-  SystemUpdateStatus? _status;
-  bool _isLoading = true;
-  bool _isUpgrading = false;
-  final List<String> _upgradeLog = [];
-  String _upgradePhase = '';
-  String? _error;
-  StreamSubscription? _upgradeSubscription;
-  final Set<String> _upgradingSingle = {};
+/// The Updates tab of the Packages screen: install all or single updates,
+/// reboot when needed
+class UpdatesView extends ConsumerStatefulWidget {
+  const UpdatesView({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _checkForUpdates();
-  }
+  ConsumerState<UpdatesView> createState() => _UpdatesViewState();
+}
+
+class _UpdatesViewState extends ConsumerState<UpdatesView> {
+  bool _checking = false;
+  bool _upgrading = false;
+  bool? _upgradeOk;
+  String _phase = '';
+  int _total = 0;
+  int _done = 0;
+  bool _showLog = false;
+  String _query = '';
+  final List<String> _log = [];
+  final Set<String> _single = {};
+  StreamSubscription<UpgradeProgress>? _sub;
 
   @override
   void dispose() {
-    _upgradeSubscription?.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 
-  Future<void> _checkForUpdates() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
+  /// apt-get update, then read the list again
+  Future<void> _check() async {
+    setState(() => _checking = true);
     try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final status = await grpcService.getSystemUpdateStatus();
-      if (mounted) {
-        setState(() {
-          _status = status;
-          _isLoading = false;
-        });
-      }
+      final r = await ref.read(grpcServiceProvider).updatePackageList();
+      if (mounted && !r.success) showToast(context, r.message, tone: Tone.danger);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _startUpgrade() {
-    setState(() {
-      _isUpgrading = true;
-      _upgradeLog.clear();
-      _upgradePhase = 'update';
-    });
-
-    final grpcService = ref.read(grpcServiceProvider);
-    _upgradeSubscription = grpcService.streamSystemUpgrade().listen(
-      (progress) {
-        if (mounted) {
-          setState(() {
-            if (progress.line.isNotEmpty) {
-              _upgradeLog.add(progress.line);
-            }
-            _upgradePhase = progress.phase;
-            if (progress.isComplete) {
-              _isUpgrading = false;
-              if (progress.success) {
-                _checkForUpdates(); // Refresh status
-              }
-            }
-          });
-        }
-      },
-      onError: (e) {
-        if (mounted) {
-          setState(() {
-            _isUpgrading = false;
-            _upgradeLog.add('Error: $e');
-          });
-        }
-      },
-    );
-  }
-
-  Future<void> _upgradeSinglePackage(String packageName) async {
-    setState(() => _upgradingSingle.add(packageName));
-    try {
-      final grpcService = ref.read(grpcServiceProvider);
-      final result = await grpcService.updatePackage(packageName);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.success
-                  ? 'Updated $packageName'
-                  : 'Failed: ${result.message}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: result.success
-                ? AppTheme.successGreen
-                : Theme.of(context).colorScheme.error,
-          ),
-        );
-        if (result.success) _checkForUpdates();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Error: $e',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      if (mounted) showToast(context, describeError(e), tone: Tone.danger);
     } finally {
-      if (mounted) setState(() => _upgradingSingle.remove(packageName));
+      ref.invalidate(updateStatusProvider);
+      if (mounted) setState(() => _checking = false);
     }
   }
+
+  void _upgradeAll(int count) {
+    setState(() {
+      _upgrading = true;
+      _upgradeOk = null;
+      _log.clear();
+      _phase = 'update';
+      _total = count;
+      _done = 0;
+    });
+    _sub = ref
+        .read(grpcServiceProvider)
+        .streamSystemUpgrade()
+        .listen(
+          (p) {
+            if (!mounted) return;
+            setState(() {
+              if (p.line.isNotEmpty) _log.add(p.line);
+              if (p.line.startsWith('Setting up ')) _done++;
+              _phase = p.phase;
+              if (p.isComplete) {
+                _upgrading = false;
+                _upgradeOk = p.success;
+              }
+            });
+            if (p.isComplete) ref.invalidate(updateStatusProvider);
+          },
+          onError: (Object e) {
+            if (!mounted) return;
+            setState(() {
+              _upgrading = false;
+              _upgradeOk = false;
+              _log.add('Error: ${describeError(e)}');
+            });
+          },
+          onDone: () {
+            if (mounted && _upgrading) setState(() => _upgrading = false);
+          },
+        );
+  }
+
+  Future<void> _upgradeOne(String name) async {
+    setState(() => _single.add(name));
+    try {
+      final r = await ref.read(grpcServiceProvider).updatePackage(name);
+      if (!mounted) return;
+      showToast(context, r.success ? 'Updated $name' : r.message, tone: r.success ? Tone.success : Tone.danger);
+      if (r.success) ref.invalidate(updateStatusProvider);
+    } catch (e) {
+      if (mounted) showToast(context, describeError(e), tone: Tone.danger);
+    } finally {
+      if (mounted) setState(() => _single.remove(name));
+    }
+  }
+
+  String get _phaseLabel => switch (_phase) {
+    'update' => 'Refreshing package lists…',
+    'upgrade' => _total > 0 ? 'Installing ($_done of $_total)…' : 'Installing…',
+    'done' => 'Done',
+    'error' => 'Failed',
+    _ => 'Working…',
+  };
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('System Updates'),
-        scrolledUnderElevation: 0,
-        actions: [
-          if (!_isUpgrading)
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _checkForUpdates,
-              tooltip: 'Check for updates',
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? _buildErrorState()
-          : _buildContent(),
-    );
-  }
+    final async = ref.watch(updateStatusProvider);
 
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return PopScope(
+      // Leaving does not stop apt, but the progress would be lost
+      canPop: !_upgrading,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) showToast(context, 'Wait until the upgrade has finished');
+      },
+      child: Stack(
         children: [
-          Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
-          const Gap(16),
-          Text(
-            'Failed to load update status',
-            style: Theme.of(context).textTheme.titleMedium,
+          AsyncView(
+            value: async,
+            onRetry: () => ref.invalidate(updateStatusProvider),
+            loadingMessage: 'Reading package status…',
+            data: (s) => _content(s),
           ),
-          const Gap(8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              _error!,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const Gap(16),
-          FilledButton.icon(
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-            onPressed: _checkForUpdates,
-          ),
+          if (_checking) const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator()),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildSystemInfoCard(),
-        const Gap(16),
-        _buildUpdateSummaryCard(),
-        const Gap(16),
-        if (_status != null && _status!.upgradablePackages.isNotEmpty)
-          _buildPackageList(),
-        if (_upgradeLog.isNotEmpty) ...[const Gap(16), _buildUpgradeLogCard()],
-      ],
-    );
-  }
+  Widget _content(SystemUpdateStatus s) {
+    final packages = [...s.upgradablePackages]
+      ..sort((a, b) => a.security != b.security ? (a.security ? -1 : 1) : a.name.compareTo(b.name));
+    final security = packages.where((p) => p.security).length;
+    final q = _query.toLowerCase();
+    final shown = q.isEmpty ? packages : packages.where((p) => p.name.toLowerCase().contains(q)).toList();
+    final count = packages.length;
 
-  Widget _buildSystemInfoCard() {
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.computer,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 24,
-                  ),
-                ),
-                const Gap(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'System Information',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      if (_status?.osName.isNotEmpty == true)
+    return PageList(
+      onRefresh: _check,
+      children: [
+        if (s.rebootRequired)
+          Padding(
+            padding: const EdgeInsets.only(bottom: Insets.md),
+            child: AppCard(
+              accent: context.ac.warning,
+              child: Row(
+                children: [
+                  const IconBadge(Icons.restart_alt, tone: Tone.warning),
+                  const Gap(Insets.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Restart required', style: context.tt.titleSmall),
                         Text(
-                          _status!.osName,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppTheme.textSecondary),
+                          s.rebootPackages.isEmpty
+                              ? 'Installed updates take effect after a reboot.'
+                              : 'For ${s.rebootPackages.take(4).join(', ')}${s.rebootPackages.length > 4 ? ' and ${s.rebootPackages.length - 4} more' : ''}.',
+                          style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
                         ),
-                    ],
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _upgrading ? null : () => confirmPower(context, ref, PowerOp.POWER_REBOOT),
+                    child: const Text('Reboot'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        AppCard(
+          variant: CardVariant.raised,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  IconBadge(
+                    _upgrading
+                        ? Icons.downloading
+                        : count == 0
+                        ? Icons.verified_outlined
+                        : Icons.system_update_alt,
+                    tone: _upgrading
+                        ? Tone.info
+                        : count == 0
+                        ? Tone.success
+                        : (security > 0 ? Tone.danger : Tone.warning),
+                    size: 48,
+                  ),
+                  const Gap(Insets.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _upgrading
+                              ? _phaseLabel
+                              : count == 0
+                              ? 'Up to date'
+                              : '$count ${count == 1 ? 'update' : 'updates'} available',
+                          style: context.tt.titleMedium,
+                        ),
+                        Text(
+                          _upgrading
+                              ? 'Keep the app open until it has finished.'
+                              : count == 0
+                              ? 'Checked ${_ago(s.lastUpdateUnix.toInt())}. Pull down to check again.'
+                              : security > 0
+                              ? '$security security ${security == 1 ? 'update' : 'updates'} included'
+                              : 'Checked ${_ago(s.lastUpdateUnix.toInt())}',
+                          style: context.tt.bodySmall?.copyWith(color: context.cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_upgrading) ...[
+                const Gap(Insets.md),
+                LinearProgressIndicator(
+                  value: _phase == 'upgrade' && _total > 0 ? (_done / _total).clamp(0.0, 1.0) : null,
+                ),
+              ] else if (count > 0) ...[
+                const Gap(Insets.lg),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      if (await showConfirmDialog(
+                        context,
+                        title: 'Install $count ${count == 1 ? 'update' : 'updates'}?',
+                        message:
+                            'Runs apt-get update and apt-get upgrade. Changed configuration files are kept. '
+                            'Services may restart briefly.',
+                        confirmLabel: 'Install',
+                        icon: Icons.system_update_alt,
+                      )) {
+                        _upgradeAll(count);
+                      }
+                    },
+                    icon: const Icon(Icons.system_update_alt),
+                    label: const Text('Install all'),
                   ),
                 ),
               ],
+              if (_upgradeOk != null && !_upgrading) ...[
+                const Gap(Insets.md),
+                StatusPill(
+                  _upgradeOk! ? 'Last upgrade finished' : 'Last upgrade failed, see the log',
+                  tone: _upgradeOk! ? Tone.success : Tone.danger,
+                  icon: _upgradeOk! ? Icons.check : Icons.error_outline,
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (_log.isNotEmpty) ...[
+          SectionHeader(
+            title: 'Output',
+            trailing: TextButton(
+              onPressed: () => setState(() => _showLog = !_showLog),
+              child: Text(_showLog ? 'Hide' : 'Show ${_log.length} lines'),
             ),
-            const Divider(height: 24, color: AppTheme.glassBorder),
-            _buildInfoRow(
-              Icons.memory,
-              'Kernel',
-              _status?.kernelVersion ?? 'N/A',
+          ),
+          if (_showLog || _upgrading)
+            Container(
+              height: 260,
+              decoration: BoxDecoration(color: context.ac.codeBackground, borderRadius: Radii.mdAll),
+              padding: const EdgeInsets.all(Insets.md),
+              child: ListView.builder(
+                reverse: true,
+                itemCount: _log.length,
+                itemBuilder: (context, i) {
+                  final line = _log[_log.length - 1 - i];
+                  return Text(
+                    line,
+                    style: AppTheme.mono(
+                      size: 11.5,
+                      color: line.startsWith('Error') || line.startsWith('E:')
+                          ? context.cs.error
+                          : context.ac.codeForeground,
+                    ),
+                  );
+                },
+              ),
             ),
-            const Gap(8),
-            _buildInfoRow(
-              Icons.architecture,
-              'Architecture',
-              _status?.architecture ?? 'N/A',
-            ),
-            const Gap(8),
-            _buildInfoRow(
-              Icons.timer_outlined,
-              'Uptime',
-              _status?.uptime ?? 'N/A',
-            ),
-            const Gap(8),
-            _buildInfoRow(
-              Icons.update,
-              'Last Checked',
-              _status?.lastUpdate.isNotEmpty == true
-                  ? _status!.lastUpdate
-                  : 'Never',
-            ),
+        ],
+        if (count > 0) ...[
+          SectionHeader(title: 'Packages', subtitle: security > 0 ? 'Security updates first' : null),
+          if (count > 8) ...[
+            SearchField(hint: 'Search packages', onChanged: (v) => setState(() => _query = v)),
+            const Gap(Insets.sm),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppTheme.textSecondary),
-        const Gap(8),
-        Text(
-          '$label: ',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-        ),
-        Expanded(
-          child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
+          if (shown.isEmpty)
+            AppCard(
+              child: Text(
+                'No update for "$_query".',
+                style: context.tt.bodyMedium?.copyWith(color: context.cs.onSurfaceVariant),
+              ),
+            )
+          else
+            TileGroup(
+              children: [
+                for (final p in shown)
+                  ListTile(
+                    leading: Icon(
+                      p.security ? Icons.shield_outlined : Icons.arrow_circle_up_outlined,
+                      color: p.security ? context.cs.error : context.cs.onSurfaceVariant,
+                    ),
+                    title: Row(
+                      children: [
+                        Flexible(child: Text(p.name, overflow: TextOverflow.ellipsis)),
+                        if (p.security) ...[const Gap(Insets.xs), const StatusPill('security', tone: Tone.danger)],
+                      ],
+                    ),
+                    subtitle: Text(
+                      '${p.currentVersion.isEmpty ? '?' : p.currentVersion}  →  ${p.newVersion}',
+                      style: AppTheme.mono(size: 11.5, color: context.cs.onSurfaceVariant),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: _single.contains(p.name)
+                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            tooltip: 'Update ${p.name}',
+                            icon: const Icon(Icons.download_outlined),
+                            onPressed: _upgrading ? null : () => _upgradeOne(p.name),
+                          ),
+                  ),
+              ],
+            ),
+        ],
+        const SectionHeader(title: 'System'),
+        AppCard(
+          child: Column(
+            children: [
+              InfoRow('Operating system', s.osName),
+              InfoRow('Kernel', s.kernelVersion, mono: true),
+              InfoRow('Architecture', s.architecture),
+              InfoRow('Uptime', s.uptime),
+            ],
+          ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildUpdateSummaryCard() {
-    final count = _status?.upgradableCount ?? 0;
-    final hasUpdates = count > 0;
-    final color = hasUpdates ? AppTheme.warningAmber : AppTheme.successGreen;
-    final icon = hasUpdates ? Icons.system_update : Icons.check_circle;
+/// Old entry point: opens the Packages screen on its Updates tab
+class SystemUpdateScreen extends StatelessWidget {
+  const SystemUpdateScreen({super.key});
 
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-                const Gap(12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hasUpdates
-                            ? '$count update${count == 1 ? '' : 's'} available'
-                            : 'System is up to date',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        hasUpdates
-                            ? 'Tap upgrade to install all updates'
-                            : 'No packages need updating',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (hasUpdates) ...[
-              const Gap(16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: _isUpgrading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.system_update_alt),
-                  label: Text(_isUpgrading ? _getPhaseLabel() : 'Upgrade All'),
-                  onPressed: _isUpgrading ? null : _startUpgrade,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getPhaseLabel() {
-    switch (_upgradePhase) {
-      case 'update':
-        return 'Updating package list...';
-      case 'upgrade':
-        return 'Upgrading packages...';
-      case 'done':
-        return 'Complete!';
-      case 'error':
-        return 'Error occurred';
-      default:
-        return 'Working...';
-    }
-  }
-
-  Widget _buildPackageList() {
-    final packages = _status!.upgradablePackages;
-
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Upgradable Packages',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Gap(12),
-            ...packages.map(
-              (pkg) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.arrow_upward,
-                      size: 14,
-                      color: AppTheme.warningAmber,
-                    ),
-                    const Gap(8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pkg.name,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            '${pkg.currentVersion.isNotEmpty ? pkg.currentVersion : "?"} → ${pkg.newVersion}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                  fontFamily: 'Courier',
-                                  fontSize: 11,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_upgradingSingle.contains(pkg.name))
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      IconButton(
-                        icon: const Icon(
-                          Icons.upgrade,
-                          size: 20,
-                          color: AppTheme.successGreen,
-                        ),
-                        onPressed: _isUpgrading
-                            ? null
-                            : () => _upgradeSinglePackage(pkg.name),
-                        tooltip: 'Upgrade ${pkg.name}',
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.all(4),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpgradeLogCard() {
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Upgrade Log',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  onPressed: () => setState(() => _upgradeLog.clear()),
-                  tooltip: 'Clear log',
-                ),
-              ],
-            ),
-            const Gap(8),
-            Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxHeight: 300),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SingleChildScrollView(
-                reverse: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _upgradeLog
-                      .map(
-                        (line) => Text(
-                          line,
-                          style: TextStyle(
-                            color: line.startsWith('Error')
-                                ? Theme.of(context).colorScheme.error
-                                : Colors.white70,
-                            fontFamily: 'Courier',
-                            fontSize: 11,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) => const PackagesScreen(initialTab: PackagesTab.updates);
 }

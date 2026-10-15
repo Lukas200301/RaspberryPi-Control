@@ -10,11 +10,15 @@ class GrpcService {
 
   ClientChannel? get channel => _channel;
 
+  /// Changes on every connect and disconnect, so data from one device or
+  /// connection is never shown for the next (see grpcSessionProvider)
+  final session = ValueNotifier<int>(0);
+
   /// Connect to the gRPC server (via SSH tunnel on localhost)
   Future<void> connect(int port) async {
     try {
       _channel = ClientChannel(
-        'localhost',
+        '127.0.0.1',
         port: port,
         options: const ChannelOptions(
           credentials: ChannelCredentials.insecure(),
@@ -22,6 +26,7 @@ class GrpcService {
       );
 
       _client = SystemMonitorClient(_channel!);
+      session.value++;
 
       debugPrint('gRPC connected to localhost:$port');
     } catch (e) {
@@ -42,8 +47,12 @@ class GrpcService {
 
     while (true) {
       try {
+        // Disconnected while waiting for a retry: end quietly, a new session
+        // restarts the stream
+        final client = _client;
+        if (client == null) return;
         debugPrint('Starting stats stream (attempt ${retryCount + 1})');
-        final stream = _client!.streamStats(Empty());
+        final stream = client.streamStats(Empty());
         retryCount = 0; // Reset retry count on successful connection
 
         await for (final stats in stream) {
@@ -387,6 +396,7 @@ class GrpcService {
     await _channel?.shutdown();
     _channel = null;
     _client = null;
+    session.value++;
     debugPrint('gRPC disconnected');
   }
 }

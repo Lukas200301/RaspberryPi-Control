@@ -1,201 +1,175 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/grpc_file_transfer_service.dart';
+import 'package:gap/gap.dart';
 import '../providers/app_providers.dart';
-import 'glass_card.dart';
+import '../services/grpc_file_transfer_service.dart';
+import '../ui/ui.dart';
 
-/// Panel to display active file transfers using gRPC streaming
-class GrpcFileTransferPanel extends ConsumerWidget {
+/// Running and recent uploads/downloads, shown under the file list
+class GrpcFileTransferPanel extends ConsumerStatefulWidget {
   const GrpcFileTransferPanel({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final transferService = ref.watch(grpcFileTransferServiceProvider);
+  ConsumerState<GrpcFileTransferPanel> createState() => _GrpcFileTransferPanelState();
+}
 
-    // Listen to changes
-    final activeTransfers = transferService.activeTransfers;
-    final completedTransfers = transferService.completedTransfers
-        .take(5)
-        .toList();
+class _GrpcFileTransferPanelState extends ConsumerState<GrpcFileTransferPanel> {
+  bool _expanded = true;
+  Timer? _hide;
 
-    if (activeTransfers.isEmpty && completedTransfers.isEmpty) {
-      return const SizedBox.shrink();
+  @override
+  void dispose() {
+    _hide?.cancel();
+    super.dispose();
+  }
+
+  /// Successful transfers disappear a few seconds after the last one ends;
+  /// failures stay until cleared, so they are not missed
+  void _scheduleHide(GrpcFileTransferService service, bool done, bool failed) {
+    if (!done || failed) {
+      _hide?.cancel();
+      _hide = null;
+      return;
     }
+    _hide ??= Timer(const Duration(seconds: 5), () {
+      _hide = null;
+      if (mounted && service.activeTransfers.isEmpty) service.clearCompleted();
+    });
+  }
 
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  @override
+  Widget build(BuildContext context) {
+    final service = ref.watch(grpcFileTransferServiceProvider);
+    final active = service.activeTransfers;
+    final recent = service.completedTransfers.take(5).toList();
+    if (active.isEmpty && recent.isEmpty) return const SizedBox.shrink();
+    final failed = recent.where((t) => t.error != null).length;
+    _scheduleHide(service, active.isEmpty, failed > 0);
+
+    return Material(
+      color: context.cs.surfaceContainerHigh,
+      child: SafeArea(
+        top: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'File Transfers',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                if (completedTransfers.isNotEmpty)
-                  TextButton(
-                    onPressed: () => transferService.clearCompleted(),
-                    child: Text(
-                      'Clear',
-                      style: TextStyle(color: Colors.blue[400]),
+            ListTile(
+              dense: true,
+              leading: active.isNotEmpty
+                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(
+                      failed > 0 ? Icons.error_outline : Icons.check_circle_outline,
+                      color: failed > 0 ? context.cs.error : context.ac.success,
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Active transfers
-            if (activeTransfers.isNotEmpty) ...[
-              Text(
-                'Active (${activeTransfers.length})',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              title: Text(
+                active.isNotEmpty
+                    ? '${active.length} ${active.length == 1 ? 'transfer' : 'transfers'} running'
+                    : failed > 0
+                    ? '$failed ${failed == 1 ? 'transfer' : 'transfers'} failed'
+                    : 'Transfers finished',
               ),
-              const SizedBox(height: 8),
-              ...activeTransfers.map(
-                (transfer) => _buildTransferItem(
-                  context,
-                  transfer,
-                  isActive: true,
-                  onCancel: () => transferService.cancelTransfer(transfer.id),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (active.isEmpty) TextButton(onPressed: service.clearCompleted, child: const Text('Clear')),
+                  IconButton(
+                    tooltip: _expanded ? 'Collapse' : 'Expand',
+                    icon: Icon(_expanded ? Icons.expand_more : Icons.expand_less),
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                  ),
+                ],
+              ),
+            ),
+            if (_expanded)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
+                  children: [
+                    for (final t in active)
+                      _TransferRow(
+                        transfer: t,
+                        active: true,
+                        stopping: service.isCancelling(t.id),
+                        onCancel: () => service.cancelTransfer(t.id),
+                      ),
+                    for (final t in recent) _TransferRow(transfer: t, active: false),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-            ],
-
-            // Recently completed transfers
-            if (completedTransfers.isNotEmpty) ...[
-              Text(
-                'Recent',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              ...completedTransfers.map(
-                (transfer) =>
-                    _buildTransferItem(context, transfer, isActive: false),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildTransferItem(
-    BuildContext context,
-    FileTransferProgress transfer, {
-    required bool isActive,
-    VoidCallback? onCancel,
-  }) {
-    final hasError = transfer.error != null;
+class _TransferRow extends StatelessWidget {
+  final FileTransferProgress transfer;
+  final bool active;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: hasError
-              ? Colors.red.shade700.withValues(alpha: 0.3)
-              : Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
+  /// Cancel was pressed; the transfer ends at the next chunk
+  final bool stopping;
+  final VoidCallback? onCancel;
+
+  const _TransferRow({required this.transfer, required this.active, this.stopping = false, this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = transfer;
+    final error = t.error != null;
+    final color = error
+        ? context.cs.error
+        : active
+        ? context.cs.primary
+        : context.ac.success;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Insets.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Filename and status
           Row(
             children: [
-              Icon(
-                transfer.isUpload ? Icons.upload : Icons.download,
-                size: 16,
-                color: hasError
-                    ? Colors.red[700]
-                    : (isActive ? Colors.blue[400] : Colors.green[600]),
-              ),
-              const SizedBox(width: 8),
+              Icon(t.isUpload ? Icons.upload : Icons.download, size: 18, color: color),
+              const Gap(Insets.sm),
               Expanded(
-                child: Text(
-                  transfer.filename,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(t.filename, overflow: TextOverflow.ellipsis, style: context.tt.bodyMedium),
               ),
-              if (isActive && onCancel != null)
+              Text(
+                error
+                    ? 'failed'
+                    : stopping
+                    ? 'stopping…'
+                    : active
+                    ? '${t.speedString} · ${t.progressString}'
+                    : t.transferredString,
+                style: context.tt.labelSmall?.copyWith(color: color, fontFeatures: tabularFigures),
+              ),
+              if (active && onCancel != null && !stopping)
                 IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Cancel',
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: onCancel,
-                  color: Colors.white54,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                )
-              else if (hasError)
-                Icon(Icons.error_outline, size: 18, color: Colors.red[700])
-              else if (!isActive)
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 18,
-                  color: Colors.green[600],
                 ),
             ],
           ),
-
-          const SizedBox(height: 8),
-
-          // Progress bar (only for active transfers)
-          if (isActive) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: transfer.progress / 100,
-                backgroundColor: Colors.white.withValues(alpha: 0.1),
-                valueColor: AlwaysStoppedAnimation(Colors.blue[400]),
-                minHeight: 4,
-              ),
-            ),
-            const SizedBox(height: 6),
+          if (active) ...[
+            const Gap(Insets.xs),
+            UsageBar(value: (t.progress / 100).clamp(0, 1), color: color, height: 4),
           ],
-
-          // Transfer details
-          if (hasError)
-            Text(
-              transfer.error!,
-              style: TextStyle(color: Colors.red[700], fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            )
-          else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  transfer.transferredString,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                if (isActive) ...[
-                  Text(
-                    '${transfer.speedString} • ${transfer.progressString}',
-                    style: TextStyle(color: Colors.blue[400], fontSize: 12),
-                  ),
-                ] else ...[
-                  Text(
-                    'Complete',
-                    style: TextStyle(color: Colors.green[600], fontSize: 12),
-                  ),
-                ],
-              ],
+          if (error)
+            Padding(
+              padding: const EdgeInsets.only(left: 26, top: 2),
+              child: Text(
+                t.error!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.tt.bodySmall?.copyWith(color: context.cs.error),
+              ),
             ),
         ],
       ),

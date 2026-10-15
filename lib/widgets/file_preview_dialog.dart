@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../ui/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../models/file_item.dart';
 import '../providers/file_providers.dart';
-import '../theme/app_theme.dart';
 import 'glass_card.dart';
 
 class FilePreviewDialog extends ConsumerStatefulWidget {
@@ -75,6 +75,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
     return Dialog(
       backgroundColor: Colors.transparent,
       child: GlassCard(
+        solid: true,
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.9,
           height: MediaQuery.of(context).size.height * 0.8,
@@ -93,23 +94,14 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
                         children: [
                           Text(
                             widget.file.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            widget.file.formattedSize,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
+                          Text(widget.file.formattedSize, style: Theme.of(context).textTheme.bodySmall),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                   ],
                 ),
               ),
@@ -134,11 +126,11 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            Icon(Icons.error_outline, size: 64, color: context.cs.error),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: context.cs.error),
               textAlign: TextAlign.center,
             ),
           ],
@@ -161,14 +153,13 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
   }
 
   Widget _buildTextPreview() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: SelectableText(
-        _content!,
-        style: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 12,
-          color: _getTextColor(),
+    return Container(
+      color: context.ac.codeBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: SelectableText(
+          _content!,
+          style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: _getTextColor()),
         ),
       ),
     );
@@ -186,12 +177,9 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.broken_image, size: 64, color: Colors.grey),
+                Icon(Icons.broken_image, size: 64, color: context.cs.outline),
                 const SizedBox(height: 16),
-                Text(
-                  'Failed to display image: $error',
-                  style: const TextStyle(color: Colors.grey),
-                ),
+                Text('Failed to display image: $error', style: TextStyle(color: context.cs.outline)),
               ],
             );
           },
@@ -205,15 +193,11 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            widget.file.icon,
-            size: 80,
-            color: widget.file.color.withValues(alpha: 0.5),
-          ),
+          Icon(widget.file.icon, size: 80, color: widget.file.color.withValues(alpha: 0.5)),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Preview not available for this file type',
-            style: TextStyle(fontSize: 16, color: AppTheme.textSecondary),
+            style: TextStyle(fontSize: 16, color: context.cs.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -221,7 +205,7 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
             label: const Text('Download & Open'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             onPressed: _downloadAndOpen,
@@ -273,14 +257,14 @@ class _FilePreviewDialogState extends ConsumerState<FilePreviewDialog> {
       case 'json':
       case 'yaml':
       case 'yml':
-        return Theme.of(context).colorScheme.secondary;
+        return context.ac.series[1];
       case 'log':
-        return Colors.grey;
+        return context.ac.codeForeground.withValues(alpha: 0.75);
       case 'sh':
       case 'bash':
-        return Colors.green;
+        return context.ac.series[3];
       default:
-        return Colors.white;
+        return context.ac.codeForeground;
     }
   }
 }
@@ -322,11 +306,7 @@ class SyntaxHighlighter {
     if (comments != null && line.trimLeft().startsWith(comments)) {
       return TextSpan(
         text: line,
-        style: const TextStyle(
-          color: Colors.grey,
-          fontStyle: FontStyle.italic,
-          fontFamily: 'monospace',
-        ),
+        style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic, fontFamily: 'monospace'),
       );
     }
 
@@ -341,41 +321,28 @@ class SyntaxHighlighter {
         spans.add(
           TextSpan(
             text: word,
-            style: TextStyle(
-              color: primaryColor,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
-            ),
+            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
           ),
         );
       } else if (word.startsWith('"') || word.startsWith("'")) {
         spans.add(
           TextSpan(
             text: word,
-            style: const TextStyle(
-              color: Colors.green,
-              fontFamily: 'monospace',
-            ),
+            style: const TextStyle(color: Colors.green, fontFamily: 'monospace'),
           ),
         );
       } else if (RegExp(r'^\d+$').hasMatch(word)) {
         spans.add(
           TextSpan(
             text: word,
-            style: const TextStyle(
-              color: Colors.orange,
-              fontFamily: 'monospace',
-            ),
+            style: const TextStyle(color: Colors.orange, fontFamily: 'monospace'),
           ),
         );
       } else {
         spans.add(
           TextSpan(
             text: word,
-            style: const TextStyle(
-              color: Colors.white,
-              fontFamily: 'monospace',
-            ),
+            style: const TextStyle(color: Colors.white, fontFamily: 'monospace'),
           ),
         );
       }

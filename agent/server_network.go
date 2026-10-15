@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
 	"net"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -119,70 +121,110 @@ func (s *systemMonitorServer) GetNetworkConnections(ctx context.Context, req *pb
 
 // ==================== Network Tools Implementation ====================
 
-// PingHost - Ping a host and stream results
+var (
+	pingReply   = regexp.MustCompile(`bytes from ([^\s:]+)(?: \(([^)]+)\))?: icmp_seq=(\d+) ttl=(\d+) time=([\d.]+) ms`)
+	pingSummary = regexp.MustCompile(`(\d+) packets transmitted, (\d+) (?:packets )?received.*?([\d.]+)% packet loss`)
+	pingRtt     = regexp.MustCompile(`= ([\d.]+)/([\d.]+)/([\d.]+)`)
+	pingTimeout = regexp.MustCompile(`no answer yet for icmp_seq=(\d+)`)
+)
+
+// PingHost pings a host and streams one message per reply, then the statistics
 func (s *systemMonitorServer) PingHost(req *pb.PingRequest, stream pb.SystemMonitor_PingHostServer) error {
-	log.Printf("Ping request: host=%s, count=%d, timeout=%d", req.Host, req.Count, req.Timeout)
-
-	count := int(req.Count)
-	timeout := int(req.Timeout)
-	packetSize := int(req.PacketSize)
-
-	if count <= 0 {
-		count = 4 // Default count
+	host := strings.TrimSpace(req.Host)
+	if !validHost(host) {
+		return stream.Send(&pb.PingResponse{Host: host, Error: "Invalid host name or IP address", Finished: true})
 	}
-	if timeout <= 0 {
-		timeout = 5 // Default timeout
-	}
-	if packetSize <= 0 {
-		packetSize = 56 // Default packet size
-	}
+	count := clampInt(int(req.Count), 1, 100, 4)
+	timeout := clampInt(int(req.Timeout), 1, 30, 5)
+	size := clampInt(int(req.PacketSize), 16, 1472, 56)
 
-	// Use the ping command (cross-platform)
-	var pingCmd string
-	if runtime.GOOS == "windows" {
-		// Windows: ping -n count -w timeout_ms host
-		pingCmd = fmt.Sprintf("ping -n %d -w %d %s", count, timeout*1000, req.Host)
-	} else {
-		// Linux/Unix: ping -c count -W timeout -s packet_size host
-		pingCmd = fmt.Sprintf("ping -c %d -W %d -s %d %s", count, timeout, packetSize, req.Host)
-	}
-
-	cmd := exec.Command("sh", "-c", pingCmd)
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", pingCmd)
-	}
-
-	output, err := cmd.CombinedOutput()
+	// No shell: the host is a single argument after "--"
+	cmd := exec.CommandContext(stream.Context(), "ping", "-n", "-O", "-c", strconv.Itoa(count),
+		"-W", strconv.Itoa(timeout), "-s", strconv.Itoa(size), "--", host)
+	cmd.Env = append(cmd.Environ(), "LANG=C", "LC_ALL=C")
+	out, err := cmd.StdoutPipe()
 	if err != nil {
-		return stream.Send(&pb.PingResponse{
-			Success:  false,
-			Host:     req.Host,
-			Error:    fmt.Sprintf("Ping failed: %v", err),
-			Finished: true,
-		})
+		return err
+	}
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		return stream.Send(&pb.PingResponse{Host: host, Error: "ping is not available: " + err.Error(), Finished: true})
 	}
 
-	// Parse output (simplified - send summary)
-	lines := strings.Split(string(output), "\n")
-	for i, line := range lines {
-		if strings.Contains(line, "time=") || strings.Contains(line, "ms") {
-			err := stream.Send(&pb.PingResponse{
-				Success:  true,
-				Host:     req.Host,
-				Sequence: int32(i + 1),
-				Finished: i == len(lines)-1,
-			})
-			if err != nil {
+	stats := &pb.PingStats{}
+	var lastError string
+	scanner := bufio.NewScanner(out)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if m := pingReply.FindStringSubmatch(line); m != nil {
+			ip := m[2]
+			if ip == "" {
+				ip = m[1]
+			}
+			seq, _ := strconv.Atoi(m[3])
+			ttl, _ := strconv.Atoi(m[4])
+			ms, _ := strconv.ParseFloat(m[5], 64)
+			if err := stream.Send(&pb.PingResponse{
+				Success: true, Host: host, Ip: ip, Latency: ms, Sequence: int32(seq), Ttl: int32(ttl),
+			}); err != nil {
 				return err
 			}
+			continue
+		}
+		if m := pingTimeout.FindStringSubmatch(line); m != nil {
+			seq, _ := strconv.Atoi(m[1])
+			if err := stream.Send(&pb.PingResponse{Host: host, Sequence: int32(seq), Error: "no reply"}); err != nil {
+				return err
+			}
+			continue
+		}
+		if m := pingSummary.FindStringSubmatch(line); m != nil {
+			sent, _ := strconv.Atoi(m[1])
+			received, _ := strconv.Atoi(m[2])
+			loss, _ := strconv.ParseFloat(m[3], 64)
+			stats.PacketsSent, stats.PacketsReceived, stats.PacketLoss = int32(sent), int32(received), loss
+			continue
+		}
+		// "rtt min/avg/max/mdev = 20.1/22.0/23.9/1.9 ms" (busybox: "round-trip min/avg/max")
+		if strings.HasPrefix(line, "rtt ") || strings.HasPrefix(line, "round-trip ") {
+			if m := pingRtt.FindStringSubmatch(line); m != nil {
+				stats.MinLatency, _ = strconv.ParseFloat(m[1], 64)
+				stats.AvgLatency, _ = strconv.ParseFloat(m[2], 64)
+				stats.MaxLatency, _ = strconv.ParseFloat(m[3], 64)
+			}
+			continue
+		}
+		if t := strings.TrimSpace(line); t != "" && !strings.HasPrefix(t, "PING") && !strings.HasPrefix(t, "---") {
+			// e.g. "ping: unknown host" or "Destination Host Unreachable"
+			lastError = t
 		}
 	}
+	waitErr := cmd.Wait()
+	if stream.Context().Err() != nil {
+		return nil
+	}
 
-	return stream.Send(&pb.PingResponse{
-		Success:  true,
-		Host:     req.Host,
-		Finished: true,
-	})
+	final := &pb.PingResponse{Host: host, Finished: true, Success: stats.PacketsReceived > 0, Statistics: stats}
+	if stats.PacketsReceived == 0 {
+		final.Error = lastError
+		if final.Error == "" && waitErr != nil {
+			final.Error = "No replies"
+		}
+	}
+	return stream.Send(final)
+}
+
+func clampInt(v, min, max, fallback int) int {
+	if v <= 0 {
+		return fallback
+	}
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }
 
 // ScanPorts - Scan ports on a host and stream results
@@ -261,18 +303,18 @@ func (s *systemMonitorServer) Traceroute(req *pb.TracerouteRequest, stream pb.Sy
 		maxHops = 30
 	}
 
-	// Use traceroute command (cross-platform)
-	var traceCmd string
-	switch runtime.GOOS {
-	case "windows":
-		traceCmd = fmt.Sprintf("tracert -h %d -w 3000 %s", maxHops, req.Host)
-	default:
-		traceCmd = fmt.Sprintf("traceroute -m %d -w 3 -q 1 %s", maxHops, req.Host)
+	host := strings.TrimSpace(req.Host)
+	if !validHost(host) {
+		return stream.Send(&pb.TracerouteResponse{Error: "Invalid host name or IP address", Finished: true})
+	}
+	if maxHops > 64 {
+		maxHops = 64
 	}
 
-	cmd := exec.Command("sh", "-c", traceCmd)
+	// No shell: the host is a single argument
+	cmd := exec.CommandContext(stream.Context(), "traceroute", "-m", strconv.Itoa(maxHops), "-w", "3", "-q", "1", "--", host)
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", traceCmd)
+		cmd = exec.CommandContext(stream.Context(), "tracert", "-h", strconv.Itoa(maxHops), "-w", "3000", host)
 	}
 
 	output, err := cmd.CombinedOutput()

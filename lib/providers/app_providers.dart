@@ -5,16 +5,28 @@ import '../services/storage_service.dart';
 import '../services/agent_manager.dart';
 import '../services/grpc_service.dart';
 import '../services/grpc_file_transfer_service.dart';
+import '../services/session_keepalive.dart';
 import '../services/network_discovery_service.dart';
 import '../services/connection_manager.dart';
 import '../models/ssh_connection.dart';
 import '../models/agent_info.dart';
 import '../models/app_settings.dart';
+import 'settings_provider.dart';
 
 // Services
 final storageServiceProvider = Provider((ref) => StorageService());
 
-final sshServiceProvider = Provider((ref) => SSHService());
+final sshServiceProvider = Provider((ref) {
+  final service = SSHService();
+  void apply(AppSettings s) {
+    service.connectTimeout = Duration(seconds: s.connectTimeoutSeconds);
+    service.keepAliveInterval = Duration(seconds: s.keepAliveSeconds);
+  }
+
+  apply(ref.read(settingsProvider));
+  ref.listen(settingsProvider, (_, s) => apply(s));
+  return service;
+});
 
 final agentManagerProvider = Provider((ref) {
   final sshService = ref.watch(sshServiceProvider);
@@ -23,9 +35,30 @@ final agentManagerProvider = Provider((ref) {
 
 final grpcServiceProvider = Provider((ref) => GrpcService());
 
+/// The current agent connection; everything that loads data from the device
+/// watches it so a device switch or reconnect starts fresh
+final grpcSessionProvider = Provider<int>((ref) {
+  final session = ref.watch(grpcServiceProvider).session;
+  void changed() => ref.invalidateSelf();
+  session.addListener(changed);
+  ref.onDispose(() => session.removeListener(changed));
+  return session.value;
+});
+
 final grpcFileTransferServiceProvider = ChangeNotifierProvider((ref) {
   final grpcService = ref.watch(grpcServiceProvider);
   return GrpcFileTransferService(grpcService);
+});
+
+/// Keeps the session (and transfers) alive while the app is in the
+/// background; watched by the app root so it lives as long as the app
+final sessionKeepAliveProvider = Provider<SessionKeepAlive>((ref) {
+  // .notifier: the instance only. Watching the ChangeNotifier itself would
+  // rebuild (and restart the service) on every progress update.
+  final keepAlive = SessionKeepAlive(ref.watch(grpcFileTransferServiceProvider.notifier));
+  ref.listen(currentConnectionProvider, (_, device) => keepAlive.device = device?.name, fireImmediately: true);
+  ref.onDispose(keepAlive.dispose);
+  return keepAlive;
 });
 
 final networkDiscoveryServiceProvider = Provider(
@@ -142,6 +175,7 @@ final currentScreenProvider = NotifierProvider<CurrentScreenNotifier, int>(
 // Live Stats Stream with keepAlive to maintain connection
 final liveStatsProvider = StreamProvider.autoDispose((ref) {
   final grpcService = ref.watch(grpcServiceProvider);
+  ref.watch(grpcSessionProvider);
 
   // Keep the provider alive for 30 seconds after last listener
   ref.keepAlive();
@@ -152,17 +186,16 @@ final liveStatsProvider = StreamProvider.autoDispose((ref) {
 // Service List Provider
 final serviceListProvider = FutureProvider.autoDispose((ref) async {
   final grpcService = ref.watch(grpcServiceProvider);
+  ref.watch(grpcSessionProvider);
   return await grpcService.listServices();
 });
 
 // Disk Info Provider
 final diskInfoProvider = FutureProvider.autoDispose((ref) async {
   final grpcService = ref.watch(grpcServiceProvider);
+  ref.watch(grpcSessionProvider);
   return await grpcService.getDiskInfo();
 });
-
-// App Settings Provider
-final appSettingsProvider = Provider((ref) => AppSettings());
 
 // Agent Elevation Status Provider (checks if agent is running as root)
 // Using StateNotifierProvider for better control over refresh
@@ -195,5 +228,6 @@ class AgentElevationNotifier extends StateNotifier<AsyncValue<bool>> {
 final agentElevationProvider =
     StateNotifierProvider<AgentElevationNotifier, AsyncValue<bool>>((ref) {
       final grpcService = ref.watch(grpcServiceProvider);
+      ref.watch(grpcSessionProvider);
       return AgentElevationNotifier(grpcService);
     });

@@ -305,7 +305,7 @@ class ConnectionManager {
       try {
         final localPort = await _sshService.forwardLocal(
           50051,
-          'localhost',
+          '127.0.0.1',
           50051,
         );
         debugPrint('✓ SSH tunnel: localhost:$localPort -> Pi:50051');
@@ -392,11 +392,9 @@ class ConnectionManager {
   }
 
   /// Disconnect from current connection
+  /// Closes gRPC and SSH. Always runs both: sessions opened by ConnectFlow
+  /// do not go through this manager's state.
   Future<void> disconnect() async {
-    if (_state is DisconnectedState) {
-      return; // Already disconnected
-    }
-
     _updateState(const ConnectionManagerState.disconnecting());
 
     try {

@@ -22,17 +22,23 @@
 
     <!-- Background service permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Permission to install packages -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- App lock with fingerprint or face -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <application
         android:label="Raspberry Pi Control"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -61,12 +67,26 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Background Service -->
+        <!-- Background Service: watches the user's devices for alerts -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:exported="true"
-            android:foregroundServiceType="dataSync"
-            tools:replace="android:exported" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            tools:replace="android:exported,android:foregroundServiceType">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Periodically checks the user's own Raspberry Pi servers over SSH and notifies about outages, overheating and failed services" />
+        </service>
+
+        <!-- Keeps the SSH session alive while the app is in the background -->
+        <service
+            android:name=".SessionService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the user's SSH session to their own server open while the app is in the background, so file transfers and the terminal continue" />
+        </service>
 
         <!-- FileProvider for APK installation -->
         <provider

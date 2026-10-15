@@ -562,6 +562,25 @@ service DockerService {
 
   // Get container logs
   rpc GetContainerLogs (LogRequest) returns (stream LogEntry);
+
+  // Engine version and counts; fails when Docker is missing or not reachable
+  rpc GetDockerInfo (Empty) returns (DockerInfo);
+
+  // Pause, unpause, kill or remove a container
+  rpc ContainerAction (ContainerActionRequest) returns (ActionStatus);
+
+  // Configuration and state of one container
+  rpc InspectContainer (ContainerId) returns (ContainerDetails);
+
+  // One sample of a running container's resource usage
+  rpc GetContainerStats (ContainerId) returns (ContainerStats);
+
+  // Images
+  rpc ListImages (Empty) returns (ImageList);
+  rpc RemoveImage (ImageRemoveRequest) returns (ActionStatus);
+
+  // Delete unused containers, images, volumes, networks or build cache
+  rpc Prune (PruneRequest) returns (PruneResult);
 }
 
 // ==================== Docker Messages ====================
@@ -586,6 +605,109 @@ message ContainerInfo {
   string status = 5; // Human readable status
   int64 created = 6;
   repeated string ports = 7;
+  string compose_project = 8; // com.docker.compose.project label
+  string compose_service = 9;
+}
+
+message DockerInfo {
+  string server_version = 1;
+  int32 containers = 2;
+  int32 running = 3;
+  int32 paused = 4;
+  int32 stopped = 5;
+  int32 images = 6;
+  string storage_driver = 7;
+  string operating_system = 8;
+  string architecture = 9;
+  uint64 memory_total = 10;
+  int32 cpus = 11;
+}
+
+enum ContainerOp {
+  CONTAINER_PAUSE = 0;
+  CONTAINER_UNPAUSE = 1;
+  CONTAINER_KILL = 2;
+  CONTAINER_REMOVE = 3;
+}
+
+message ContainerActionRequest {
+  string id = 1;
+  ContainerOp op = 2;
+  bool force = 3;          // Remove: also when running
+  bool remove_volumes = 4; // Remove: also anonymous volumes
+}
+
+message ContainerMount {
+  string type = 1; // bind, volume, tmpfs
+  string source = 2;
+  string destination = 3;
+  bool read_write = 4;
+  string name = 5; // Volume name
+}
+
+message ContainerDetails {
+  ContainerInfo info = 1;
+  string command = 2;
+  string restart_policy = 3;
+  string health = 4; // healthy, unhealthy, starting or empty
+  int32 exit_code = 5;
+  int64 started_at = 6;
+  int64 finished_at = 7;
+  repeated string networks = 8;
+  repeated string ip_addresses = 9;
+  repeated ContainerMount mounts = 10;
+  repeated string env = 11; // KEY=VALUE
+  string hostname = 12;
+  int32 restart_count = 13;
+  bool tty = 14;
+}
+
+message ContainerStats {
+  double cpu_percent = 1;
+  uint64 memory_usage = 2;
+  uint64 memory_limit = 3;
+  uint64 net_rx = 4;
+  uint64 net_tx = 5;
+  uint64 block_read = 6;
+  uint64 block_write = 7;
+  uint64 pids = 8;
+}
+
+message DockerImage {
+  string id = 1;
+  repeated string tags = 2;
+  int64 size = 3;
+  int64 created = 4;
+  int32 containers = 5; // Containers using it (-1 when unknown)
+}
+
+message ImageList {
+  repeated DockerImage images = 1;
+}
+
+message ImageRemoveRequest {
+  string id = 1;
+  bool force = 2;
+}
+
+enum PruneTarget {
+  PRUNE_CONTAINERS = 0;   // Stopped containers
+  PRUNE_IMAGES = 1;       // Dangling images
+  PRUNE_ALL_IMAGES = 2;   // Every image no container uses
+  PRUNE_VOLUMES = 3;      // Unused volumes
+  PRUNE_NETWORKS = 4;     // Unused networks
+  PRUNE_BUILD_CACHE = 5;
+}
+
+message PruneRequest {
+  PruneTarget target = 1;
+}
+
+message PruneResult {
+  bool success = 1;
+  string message = 2;
+  uint64 space_reclaimed = 3;
+  int32 deleted = 4;
 }
 
 message LogRequest {
@@ -604,6 +726,9 @@ message SystemUpdateStatus {
   repeated UpgradablePackage upgradable_packages = 5;
   string last_update = 6;      // Timestamp of last apt update
   string uptime = 7;           // System uptime string
+  bool reboot_required = 8;    // /var/run/reboot-required exists
+  repeated string reboot_packages = 9; // Packages that asked for the reboot
+  int64 last_update_unix = 10; // last_update as Unix seconds (0 = unknown)
 }
 
 message UpgradablePackage {
@@ -611,6 +736,8 @@ message UpgradablePackage {
   string current_version = 2;
   string new_version = 3;
   string architecture = 4;
+  bool security = 5;    // Comes from a -security suite
+  string source = 6;    // Suite, e.g. "bookworm-security"
 }
 
 message UpgradeProgress {
@@ -619,4 +746,525 @@ message UpgradeProgress {
   int32 percent = 3;      // Progress percentage (0-100) if available
   bool is_complete = 4;   // Whether the entire operation is done
   bool success = 5;       // Whether it completed successfully
+}
+
+// ==================== PM2 Process Manager Services ====================
+
+// PM2 is per-user: the agent runs PM2 as the user that started the agent
+// via sudo (SUDO_USER), so the app sees the same processes as `pm2 ls` over SSH.
+service Pm2Service {
+  // PM2 installation, daemon, startup and dump status
+  rpc GetPm2Info (Empty) returns (Pm2Info);
+
+  // List all processes and modules (pm2 jlist)
+  rpc ListPm2Processes (Empty) returns (Pm2ProcessList);
+
+  // Full details of one process incl. environment (pm2 describe / pm2 env)
+  rpc DescribePm2Process (Pm2Target) returns (Pm2ProcessDetails);
+
+  // Start a script/binary, an ecosystem file or a static file server
+  rpc StartPm2Process (Pm2StartRequest) returns (Pm2CommandResult);
+
+  // Act on existing process(es): restart, reload, stop, delete, scale, ...
+  rpc ControlPm2Process (Pm2ControlRequest) returns (Pm2CommandResult);
+
+  // Stream process log files (pm2 logs)
+  rpc StreamPm2Logs (Pm2LogRequest) returns (stream Pm2LogLine);
+
+  // Daemon, persistence, startup, modules, config, deploy and diagnostics.
+  // Streams the command output, the last message has done = true.
+  rpc RunPm2Operation (Pm2OperationRequest) returns (stream Pm2OutputLine);
+}
+
+// ==================== PM2 Messages ====================
+
+message Pm2Info {
+  bool installed = 1;
+  string version = 2;           // PM2 version on disk
+  string pm2_path = 3;          // Resolved pm2 binary
+  string node_version = 4;
+  string user = 5;              // User PM2 runs as
+  string home = 6;              // Home directory of that user
+  string pm2_home = 7;          // ~/.pm2
+  bool daemon_running = 8;
+  int32 daemon_pid = 9;
+  bool startup_enabled = 10;    // Boot startup hook installed
+  string startup_service = 11;  // e.g. pm2-pi
+  bool dump_exists = 12;        // pm2 save was run
+  int32 dump_process_count = 13;
+  string module_config_json = 14; // Contents of ~/.pm2/module_conf.json
+  bool npm_available = 15;      // npm found (PM2 can be installed)
+  bool agent_is_root = 16;      // Startup/logrotate need root
+  string error = 17;
+}
+
+message Pm2ProcessList {
+  repeated Pm2Process processes = 1;
+}
+
+message Pm2Process {
+  int32 pm_id = 1;
+  string name = 2;
+  string namespace = 3;
+  int32 pid = 4;
+  string status = 5;            // online, stopping, stopped, launching, errored, one-launch-status
+  double cpu = 6;               // Percent
+  uint64 memory = 7;            // Bytes
+  int64 started_at = 8;         // pm_uptime, unix ms
+  int64 created_at = 9;         // unix ms
+  int32 restarts = 10;
+  int32 unstable_restarts = 11;
+  string exec_mode = 12;        // fork or cluster
+  int32 instances = 13;
+  bool watch = 14;
+  bool autorestart = 15;
+  string version = 16;          // App version from package.json
+  string script = 17;
+  string cwd = 18;
+  string interpreter = 19;
+  string node_version = 20;
+  bool is_module = 21;
+  string user = 22;
+  string out_log = 23;
+  string err_log = 24;
+  int64 max_memory_restart = 25; // Bytes, 0 = disabled
+  string cron_restart = 26;
+  repeated string args = 27;
+  repeated string custom_actions = 28; // Actions usable with pm2 trigger
+  repeated Pm2Metric metrics = 29;     // Custom metrics (axm_monitor)
+  Pm2Versioning versioning = 30;
+  int32 exit_code = 31;
+  string interpreter_args = 32;
+}
+
+message Pm2Metric {
+  string name = 1;
+  string value = 2;
+  string unit = 3;
+}
+
+message Pm2Versioning {
+  bool present = 1;
+  string type = 2;
+  string url = 3;
+  string branch = 4;
+  string revision = 5;
+  string comment = 6;
+  bool unstaged = 7;
+  int64 update_time = 8;
+  string repo_path = 9;
+}
+
+message Pm2Target {
+  string target = 1;            // pm_id, name, namespace or "all"
+}
+
+message Pm2ProcessDetails {
+  Pm2Process process = 1;
+  map<string, string> env = 2;
+  string raw_json = 3;          // Complete jlist entry (pm2 describe)
+}
+
+enum Pm2StartMode {
+  PM2_START_SCRIPT = 0;         // pm2 start <script|binary> -- args
+  PM2_START_ECOSYSTEM = 1;      // pm2 start ecosystem.config.js
+  PM2_START_SERVE = 2;          // pm2 serve <path> <port>
+}
+
+message Pm2StartRequest {
+  Pm2StartMode mode = 1;
+
+  // General
+  string script = 2;
+  string name = 3;
+  string cwd = 4;
+  repeated string args = 5;
+  string interpreter = 6;
+  string interpreter_args = 7;
+  string namespace = 8;
+  map<string, string> env = 9;
+
+  // Scaling
+  string instances = 10;        // "", "max", "-1" or a number
+
+  // Watch
+  bool watch = 11;
+  string ignore_watch = 12;     // Space separated patterns
+  string watch_delay = 13;
+
+  // Restart strategy
+  string max_memory_restart = 14; // e.g. 300M
+  string cron_restart = 15;
+  bool no_autorestart = 16;
+  int32 restart_delay = 17;
+  int32 exp_backoff_restart_delay = 18;
+  int32 max_restarts = 19;
+  string stop_exit_codes = 20;  // Space separated
+
+  // Logs
+  bool time = 21;
+  string log_date_format = 22;
+  bool merge_logs = 23;
+  string output_log = 24;
+  string error_log = 25;
+  string combined_log = 26;
+  bool disable_logs = 27;
+
+  // Control flow
+  int32 kill_timeout = 28;
+  int32 listen_timeout = 29;
+  bool wait_ready = 30;
+  bool shutdown_with_message = 31;
+  bool no_treekill = 32;
+  bool no_autostart = 33;
+  bool no_vizion = 34;
+  bool force = 35;
+
+  // Ecosystem
+  string config_file = 36;
+  string env_name = 37;         // --env <name>
+  string only = 38;             // --only app1,app2
+  bool update_env = 39;
+
+  // Serve
+  string serve_path = 40;
+  int32 serve_port = 41;
+  bool spa = 42;
+  string basic_auth_username = 43;
+  string basic_auth_password = 44;
+}
+
+enum Pm2Action {
+  PM2_ACTION_START = 0;
+  PM2_ACTION_RESTART = 1;
+  PM2_ACTION_RELOAD = 2;
+  PM2_ACTION_STOP = 3;
+  PM2_ACTION_DELETE = 4;
+  PM2_ACTION_RESET = 5;
+  PM2_ACTION_SCALE = 6;
+  PM2_ACTION_SEND_SIGNAL = 7;
+  PM2_ACTION_TRIGGER = 8;
+  PM2_ACTION_FLUSH = 9;
+  PM2_ACTION_SEND_STDIN = 10;
+  PM2_ACTION_TOGGLE_WATCH = 11;
+  PM2_ACTION_PULL = 12;
+  PM2_ACTION_FORWARD = 13;
+  PM2_ACTION_BACKWARD = 14;
+}
+
+message Pm2ControlRequest {
+  Pm2Action action = 1;
+  string target = 2;            // pm_id, name, namespace, "all" or ecosystem file
+  bool update_env = 3;          // --update-env
+  string env_name = 4;          // --env (ecosystem targets)
+  string only = 5;              // --only (ecosystem targets)
+  string value = 6;             // scale: "4" / "+2", signal: SIGUSR2, stdin: line, pull: commit id
+  string action_name = 7;       // trigger
+  string action_param = 8;      // trigger
+}
+
+message Pm2CommandResult {
+  bool success = 1;
+  string output = 2;
+  string command = 3;           // The executed pm2 command line
+  int32 exit_code = 4;
+}
+
+message Pm2LogRequest {
+  string target = 1;            // pm_id, name or "" / "all"
+  int32 lines = 2;              // Lines of history per file
+  bool follow = 3;
+  bool include_out = 4;
+  bool include_err = 5;
+  bool include_daemon = 6;      // ~/.pm2/pm2.log
+}
+
+message Pm2LogLine {
+  string app_name = 1;
+  int32 pm_id = 2;              // -1 for the PM2 daemon log
+  string stream = 3;            // out, err, pm2
+  string text = 4;               // Raw line as written to the log file
+  int64 received_at = 5;        // unix ms
+  int64 timestamp = 6;          // unix ms, 0 = unknown (history line without a timestamp)
+  bool timestamp_from_log = 7;  // timestamp parsed from the line, otherwise the time it was read
+  bool history = 8;             // Written before the stream started
+  string message = 9;           // text without its leading timestamp
+}
+
+enum Pm2Operation {
+  PM2_OP_SAVE = 0;
+  PM2_OP_RESURRECT = 1;
+  PM2_OP_CLEAR_DUMP = 2;
+  PM2_OP_UPDATE = 3;            // Update in-memory PM2
+  PM2_OP_KILL = 4;
+  PM2_OP_PING = 5;
+  PM2_OP_FLUSH_ALL = 6;
+  PM2_OP_RELOAD_LOGS = 7;
+  PM2_OP_STARTUP = 8;
+  PM2_OP_UNSTARTUP = 9;
+  PM2_OP_INSTALL_MODULE = 10;
+  PM2_OP_UPDATE_MODULE = 11;
+  PM2_OP_UNINSTALL_MODULE = 12;
+  PM2_OP_SET_CONFIG = 13;
+  PM2_OP_UNSET_CONFIG = 14;
+  PM2_OP_DEPLOY = 15;
+  PM2_OP_REPORT = 16;
+  PM2_OP_INIT_ECOSYSTEM = 17;
+  PM2_OP_INSTALL_PM2 = 18;      // npm install -g pm2@latest (+ pm2 update)
+  PM2_OP_PROFILE_CPU = 19;
+  PM2_OP_PROFILE_MEM = 20;
+  PM2_OP_LOGROTATE = 21;        // System logrotate config (/etc/logrotate.d)
+}
+
+message Pm2OperationRequest {
+  Pm2Operation operation = 1;
+  string name = 2;              // Module name or config key
+  string value = 3;             // Config value, profile duration
+  string config_file = 4;       // Deploy ecosystem file
+  string deploy_env = 5;        // Deploy environment, e.g. production
+  string deploy_command = 6;    // setup, update, revert, curr, prev, list, exec, ref
+  string deploy_args = 7;       // revert count, exec command or ref
+  string cwd = 8;               // Directory for init ecosystem
+  bool force = 9;
+  string mode = 10;             // init ecosystem: "simple" or "full"
+}
+
+message Pm2OutputLine {
+  string text = 1;
+  bool is_error = 2;
+  bool done = 3;
+  bool success = 4;
+  int32 exit_code = 5;
+}
+
+// ==================== System Administration ====================
+
+service SystemAdmin {
+  // Cron jobs of a user plus the system cron files (read only)
+  rpc GetCrontab (CrontabRequest) returns (Crontab);
+  rpc SetCrontab (Crontab) returns (CommandOutput);
+  // Runs a command once as a user (e.g. to test a cron job)
+  rpc RunAsUser (RunAsUserRequest) returns (CommandOutput);
+
+  // Firewall (ufw)
+  rpc GetFirewall (Empty) returns (FirewallStatus);
+  rpc FirewallAction (FirewallRequest) returns (CommandOutput);
+
+  // Users and groups
+  rpc ListUsers (Empty) returns (UserList);
+  rpc UserAction (UserRequest) returns (CommandOutput);
+
+  // Hardware and GPIO
+  rpc GetHardwareInfo (Empty) returns (HardwareInfo);
+  rpc GetGpio (Empty) returns (GpioState);
+  rpc SetGpio (GpioRequest) returns (CommandOutput);
+
+  // Reboot / shutdown
+  rpc Power (PowerRequest) returns (CommandOutput);
+}
+
+message CommandOutput {
+  bool success = 1;
+  string output = 2;
+  int32 exit_code = 3;
+  string command = 4;
+}
+
+// ---------- Cron ----------
+
+message CrontabRequest {
+  string user = 1;              // empty = the user that started the agent
+}
+
+message Crontab {
+  string user = 1;
+  string content = 2;
+  bool exists = 3;
+  repeated CronFile system_files = 4;
+  repeated string users_with_crontab = 5;
+}
+
+message CronFile {
+  string path = 1;
+  string content = 2;
+}
+
+message RunAsUserRequest {
+  string user = 1;
+  string command = 2;
+  int32 timeout_seconds = 3;
+}
+
+// ---------- Firewall ----------
+
+message FirewallStatus {
+  bool installed = 1;
+  bool active = 2;
+  string default_incoming = 3;
+  string default_outgoing = 4;
+  string default_routed = 5;
+  string logging = 6;
+  repeated FirewallRule rules = 7;
+  string raw = 8;
+  int32 ssh_port = 9;
+  repeated string app_profiles = 10;
+}
+
+message FirewallRule {
+  int32 number = 1;
+  string to = 2;
+  string action = 3;            // ALLOW IN, DENY OUT, LIMIT IN, ...
+  string from = 4;
+  bool v6 = 5;
+  string comment = 6;
+  string spec = 7;              // ufw rule definition (rules of an inactive firewall have no number)
+}
+
+enum FirewallOp {
+  FW_ENABLE = 0;
+  FW_DISABLE = 1;
+  FW_RELOAD = 2;
+  FW_RESET = 3;
+  FW_ADD_RULE = 4;
+  FW_DELETE_RULE = 5;
+  FW_SET_DEFAULT = 6;
+  FW_SET_LOGGING = 7;
+  FW_INSTALL = 8;
+}
+
+message FirewallRequest {
+  FirewallOp op = 1;
+  string rule_action = 2;       // allow, deny, reject, limit
+  string direction = 3;         // in, out
+  string port = 4;              // 80, 8000:8100 or an app profile name
+  string protocol = 5;          // tcp, udp, any
+  string from = 6;              // IP or subnet, empty = any
+  string to = 7;
+  string comment = 8;
+  int32 number = 9;             // rule to delete
+  string policy = 10;           // allow, deny, reject (defaults)
+  string chain = 11;            // incoming, outgoing, routed (defaults)
+  string logging = 12;          // off, low, medium, high, full
+  string interface = 13;
+  string rule_spec = 14;        // Delete by definition instead of number
+}
+
+// ---------- Users ----------
+
+message UserList {
+  repeated SystemUser users = 1;
+  repeated SystemGroup groups = 2;
+  string agent_user = 3;        // The user that started the agent
+  repeated string shells = 4;
+}
+
+message SystemUser {
+  string name = 1;
+  int32 uid = 2;
+  int32 gid = 3;
+  string full_name = 4;
+  string home = 5;
+  string shell = 6;
+  repeated string groups = 7;
+  bool locked = 8;
+  bool is_system = 9;
+  bool can_sudo = 10;
+  bool has_password = 11;
+}
+
+message SystemGroup {
+  string name = 1;
+  int32 gid = 2;
+  repeated string members = 3;
+  bool is_system = 4;
+}
+
+enum UserOp {
+  USER_CREATE = 0;
+  USER_DELETE = 1;
+  USER_SET_PASSWORD = 2;
+  USER_LOCK = 3;
+  USER_UNLOCK = 4;
+  USER_ADD_GROUP = 5;
+  USER_REMOVE_GROUP = 6;
+  USER_SET_SHELL = 7;
+  USER_SET_FULL_NAME = 8;
+  GROUP_CREATE = 9;
+  GROUP_DELETE = 10;
+}
+
+message UserRequest {
+  UserOp op = 1;
+  string username = 2;
+  string password = 3;
+  string group = 4;
+  string shell = 5;
+  string full_name = 6;
+  bool remove_home = 7;
+  bool sudo = 8;
+  repeated string groups = 9;
+}
+
+// ---------- Hardware ----------
+
+message HardwareInfo {
+  bool is_raspberry_pi = 1;
+  string model = 2;
+  string serial = 3;
+  string revision = 4;
+  string soc = 5;
+  string architecture = 6;
+  int32 cpu_cores = 7;
+  repeated int64 cpu_freq_mhz = 8;
+  int64 cpu_min_mhz = 9;
+  int64 cpu_max_mhz = 10;
+  string governor = 11;
+  uint64 memory_total = 12;
+  string gpu_memory = 13;
+  double cpu_temp = 14;
+  bool vcgencmd_available = 15;
+  string throttled_raw = 16;
+  repeated string throttled_now = 17;   // Active conditions
+  repeated string throttled_past = 18;  // Occurred since boot
+  map<string, string> voltages = 19;
+  map<string, string> clocks = 20;
+  string firmware = 21;
+  string bootloader = 22;
+  string kernel = 23;
+  string os = 24;
+  string hostname = 25;
+  repeated string usb_devices = 26;
+}
+
+message GpioState {
+  bool supported = 1;
+  string tool = 2;              // pinctrl or raspi-gpio
+  repeated GpioPin pins = 3;
+  string error = 4;
+}
+
+message GpioPin {
+  int32 gpio = 1;
+  string mode = 2;              // input, output, alt0..alt5, none
+  string pull = 3;              // up, down, none
+  bool level = 4;               // true = high
+  string function = 5;          // e.g. GPIO4, TXD0
+}
+
+message GpioRequest {
+  int32 gpio = 1;
+  string mode = 2;              // input or output
+  bool level = 3;               // output level
+  string pull = 4;              // up, down, none (input)
+}
+
+// ---------- Power ----------
+
+enum PowerOp {
+  POWER_REBOOT = 0;
+  POWER_SHUTDOWN = 1;
+}
+
+message PowerRequest {
+  PowerOp op = 1;
 }
